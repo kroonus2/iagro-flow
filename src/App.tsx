@@ -11,6 +11,11 @@ import DashboardOperacional from "./pages/DashboardOperacional";
 import Defensivos from "./pages/Defensivos";
 import CargaSmartCalda from "./pages/CargaSmartCalda";
 import ReceitasSmartCalda from "./pages/ReceitasSmartCalda";
+import Usuarios from "./pages/Usuarios";
+import Cargas from "./pages/Cargas";
+import OrdensProducao from "./pages/OrdensProducao";
+import Entregas from "./pages/Entregas";
+import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,12 +36,12 @@ const App = () => (
             <Route path="/defensivos" element={<Defensivos />} />
             <Route path="/carga-smart-calda" element={<CargaSmartCalda />} />
             <Route path="/receitas" element={<ReceitasSmartCalda />} />
-            {/* Páginas em desenvolvimento */}
-            <Route path="/usuarios" element={<div className="p-6"><h1 className="text-2xl font-bold">Usuários - Em Desenvolvimento</h1></div>} />
-            <Route path="/cargas" element={<div className="p-6"><h1 className="text-2xl font-bold">Cargas - Em Desenvolvimento</h1></div>} />
-            <Route path="/ordens-producao" element={<div className="p-6"><h1 className="text-2xl font-bold">Ordens de Produção - Em Desenvolvimento</h1></div>} />
-            <Route path="/entregas" element={<div className="p-6"><h1 className="text-2xl font-bold">Entregas - Em Desenvolvimento</h1></div>} />
-            <Route path="/configuracoes" element={<div className="p-6"><h1 className="text-2xl font-bold">Configurações - Em Desenvolvimento</h1></div>} />
+            {/* Páginas completas */}
+            <Route path="/usuarios" element={<Usuarios />} />
+            <Route path="/cargas" element={<Cargas />} />
+            <Route path="/ordens-producao" element={<OrdensProducao />} />
+            <Route path="/entregas" element={<Entregas />} />
+            <Route path="/configuracoes" element={<Configuracoes />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
