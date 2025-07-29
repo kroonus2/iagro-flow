@@ -11,9 +11,12 @@ import {
   Activity,
   ChevronDown,
   ChevronRight,
-  X
+  X,
+  LogOut,
+  Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 interface MenuItem {
@@ -50,7 +53,7 @@ const menuItems: MenuItem[] = [
     title: "Serviços",
     icon: FlaskConical,
     subItems: [
-      { title: "Cargas", icon: Package, path: "/cargas" },
+      { title: "Estoque Geral", icon: Package, path: "/cargas" },
       { title: "Receitas", icon: FlaskConical, path: "/receitas" },
       { title: "Ordens de Produção", icon: Activity, path: "/ordens-producao" }
     ]
@@ -138,7 +141,7 @@ const Sidebar = ({ onClose }: SidebarProps) => {
   };
 
   return (
-    <div className="h-full bg-iagro-sidebar text-white">
+    <div className="h-full bg-iagro-sidebar text-white flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <div className="flex items-center gap-2">
@@ -158,6 +161,35 @@ const Sidebar = ({ onClose }: SidebarProps) => {
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map(item => renderMenuItem(item))}
       </nav>
+
+      {/* User Profile */}
+      <div className="p-4 border-t border-gray-700 space-y-3">
+        <div className="flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src="/placeholder.svg" alt="João Silva" />
+            <AvatarFallback className="bg-primary text-primary-foreground">JS</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">João Silva</p>
+            <p className="text-xs text-gray-400 truncate">Operador</p>
+            <div className="flex items-center gap-1 mt-1">
+              <Building2 className="h-3 w-3 text-gray-400" />
+              <p className="text-xs text-gray-400 truncate">Usina Primavera - Unidade 1</p>
+            </div>
+          </div>
+        </div>
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start text-gray-300 hover:bg-gray-700 hover:text-white"
+          onClick={() => {
+            // Handle logout
+            console.log('Logout clicked');
+          }}
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Sair da conta
+        </Button>
+      </div>
     </div>
   );
 };
