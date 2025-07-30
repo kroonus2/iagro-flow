@@ -55,7 +55,8 @@ const menuItems: MenuItem[] = [
     subItems: [
       { title: "Estoque Geral", icon: Package, path: "/cargas" },
       { title: "Receitas", icon: FlaskConical, path: "/receitas" },
-      { title: "Ordens de Produção", icon: Activity, path: "/ordens-producao" }
+      { title: "Ordens de Produção", icon: Activity, path: "/ordens-producao" },
+      { title: "Supervisório", icon: Activity, path: "/supervisorio" }
     ]
   },
   {

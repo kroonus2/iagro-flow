@@ -16,6 +16,7 @@ import Cargas from "./pages/Cargas";
 import OrdensProducao from "./pages/OrdensProducao";
 import Entregas from "./pages/Entregas";
 import Configuracoes from "./pages/Configuracoes";
+import Supervisorio from "./pages/Supervisorio";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/ordens-producao" element={<OrdensProducao />} />
             <Route path="/entregas" element={<Entregas />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/supervisorio" element={<Supervisorio />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
