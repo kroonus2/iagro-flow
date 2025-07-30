@@ -60,7 +60,7 @@ const menuItems: MenuItem[] = [
     ]
   },
   {
-    title: "Entrega",
+    title: "Romaneios",
     icon: Truck,
     path: "/entregas"
   },
