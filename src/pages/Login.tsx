@@ -105,6 +105,31 @@ const Login = () => {
                 {loading ? "Conectando..." : "Login"}
               </Button>
 
+              {/* Informações de Teste para Desenvolvedores */}
+              <div className="bg-muted/50 rounded-lg p-4 text-xs space-y-2">
+                <h4 className="font-semibold text-foreground">Acessos para Teste:</h4>
+                <div className="space-y-1">
+                  <div>
+                    <span className="font-medium text-primary">Acesso Master:</span>
+                    <div className="text-muted-foreground">
+                      • Usuário: master, admin, sede (qualquer senha)
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      → Vai para seleção de unidades
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-primary">Acesso Normal:</span>
+                    <div className="text-muted-foreground">
+                      • Usuário: operador, usuario, etc (qualquer senha)
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      → Vai direto para home
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="text-center">
                 <button
                   type="button"
