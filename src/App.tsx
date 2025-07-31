@@ -18,6 +18,7 @@ import Entregas from "./pages/Entregas";
 import Configuracoes from "./pages/Configuracoes";
 import Supervisorio from "./pages/Supervisorio";
 import NotFound from "./pages/NotFound";
+import SelecionarUnidade from "./pages/SelecionarUnidade";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/selecionar-unidade" element={<SelecionarUnidade />} />
           <Route element={<Layout />}>
             <Route path="/home" element={<Home />} />
             <Route path="/dashboard-gerencial" element={<DashboardGerencial />} />

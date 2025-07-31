@@ -20,8 +20,20 @@ const Login = () => {
     // Simulando autenticação
     setTimeout(() => {
       if (usuario && senha) {
-        toast.success("Login realizado com sucesso!");
-        navigate("/home");
+        // Verificar se é usuário master (sede)
+        const isMaster = usuario.toLowerCase().includes("master") || 
+                        usuario.toLowerCase().includes("sede") ||
+                        usuario.toLowerCase().includes("admin");
+        
+        if (isMaster) {
+          // Usuário master vai para seleção de unidades
+          toast.success("Login master realizado com sucesso!");
+          navigate("/selecionar-unidade");
+        } else {
+          // Usuário normal vai direto para home
+          toast.success("Login realizado com sucesso!");
+          navigate("/home");
+        }
       } else {
         toast.error("Usuário e senha são obrigatórios");
       }
