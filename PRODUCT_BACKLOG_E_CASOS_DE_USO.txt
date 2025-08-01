@@ -1,0 +1,580 @@
+================================================================================
+                        SISTEMA IAGRO - CONTROLE INDUSTRIAL
+                     PRODUCT BACKLOG & DIAGRAMA DE CASOS DE USO
+================================================================================
+
+VERSÃO: 1.0
+DATA: Janeiro 2025
+PROJETO: Sistema de Controle Industrial para Usinas
+
+================================================================================
+                                PRODUCT BACKLOG
+================================================================================
+
+ÉPICOS PRINCIPAIS:
+==================
+
+1. AUTENTICAÇÃO E CONTROLE DE ACESSO
+2. GESTÃO DE UNIDADES E FILIAIS
+3. DASHBOARDS E RELATÓRIOS
+4. GESTÃO DE DEFENSIVOS
+5. SISTEMA SMART CALDA
+6. GESTÃO DE USUÁRIOS
+7. CONTROLE DE ESTOQUE E CARGAS
+8. ORDENS DE PRODUÇÃO
+9. GESTÃO DE ENTREGAS
+10. SISTEMA SUPERVISÓRIO
+11. CONFIGURAÇÕES DO SISTEMA
+
+================================================================================
+
+ÉPICO 1: AUTENTICAÇÃO E CONTROLE DE ACESSO
+===========================================
+
+USER STORIES:
+-------------
+
+US001 - Login no Sistema
+- Como usuário, quero fazer login no sistema para acessar as funcionalidades
+- Critérios de Aceitação:
+  * Validação de credenciais (usuário/senha)
+  * Redirecionamento baseado no tipo de acesso
+  * Mensagens de erro para credenciais inválidas
+  * Loading state durante autenticação
+
+US002 - Acesso Diferenciado por Tipo de Usuário
+- Como administrador master, quero ter acesso a todas as unidades da usina
+- Como operador de filial, quero acessar diretamente minha unidade específica
+- Critérios de Aceitação:
+  * Usuários master/sede/admin: redirecionam para seleção de unidades
+  * Usuários normais: redirecionam diretamente para home
+  * Validação automática do tipo de acesso
+
+US003 - Logout Seguro
+- Como usuário, quero fazer logout para encerrar minha sessão com segurança
+- Critérios de Aceitação:
+  * Limpeza da sessão
+  * Redirecionamento para página de login
+  * Confirmação de logout
+
+================================================================================
+
+ÉPICO 2: GESTÃO DE UNIDADES E FILIAIS
+======================================
+
+USER STORIES:
+-------------
+
+US004 - Seleção de Unidade (Acesso Master)
+- Como usuário master, quero selecionar a unidade que desejo gerenciar
+- Critérios de Aceitação:
+  * Lista de todas as filiais da usina
+  * Informações de cada unidade (nome, localização, status)
+  * Lista de Smart Caldas por unidade
+  * Status operacional de cada Smart Calda
+
+US005 - Visualização de Smart Caldas por Unidade
+- Como usuário master, quero ver os Smart Caldas de cada unidade
+- Critérios de Aceitação:
+  * Status: Ativo, Manutenção, Offline
+  * Informações técnicas básicas
+  * Indicadores visuais de status
+
+================================================================================
+
+ÉPICO 3: DASHBOARDS E RELATÓRIOS
+=================================
+
+USER STORIES:
+-------------
+
+US006 - Dashboard Gerencial
+- Como gestor, quero visualizar indicadores estratégicos da operação
+- Critérios de Aceitação:
+  * Métricas de produção
+  * Indicadores financeiros
+  * Gráficos de tendência
+  * Alertas gerenciais
+
+US007 - Dashboard Operacional
+- Como operador, quero acompanhar indicadores operacionais em tempo real
+- Critérios de Aceitação:
+  * Status de equipamentos
+  * Métricas de produção atual
+  * Alertas operacionais
+  * Indicadores de performance
+
+================================================================================
+
+ÉPICO 4: GESTÃO DE DEFENSIVOS
+==============================
+
+USER STORIES:
+-------------
+
+US008 - Cadastro de Defensivos
+- Como usuário, quero cadastrar novos defensivos no sistema
+- Critérios de Aceitação:
+  * Formulário de cadastro completo
+  * Validação de dados obrigatórios
+  * Confirmação de inclusão
+
+US009 - Controle de Estoque de Defensivos
+- Como usuário, quero controlar o estoque de defensivos
+- Critérios de Aceitação:
+  * Visualização de níveis de estoque
+  * Alertas de estoque baixo
+  * Histórico de movimentações
+
+================================================================================
+
+ÉPICO 5: SISTEMA SMART CALDA
+=============================
+
+USER STORIES:
+-------------
+
+US010 - Gerenciamento de Cargas Smart Calda
+- Como operador, quero gerenciar cargas do Smart Calda
+- Critérios de Aceitação:
+  * Inclusão de novas cargas
+  * Seleção de defensivos
+  * Definição de quantidades
+  * Controle de datas
+
+US011 - Receitas Smart Calda
+- Como operador, quero gerenciar receitas do Smart Calda
+- Critérios de Aceitação:
+  * Criação de receitas
+  * Gestão de ingredientes
+  * Controle de proporções
+  * Histórico de receitas
+
+US012 - Status de Equipamentos Smart Calda
+- Como operador, quero monitorar o status dos equipamentos
+- Critérios de Aceitação:
+  * Status: Ativo, Manutenção, Parado
+  * Indicadores de eficiência
+  * Alertas de manutenção
+
+================================================================================
+
+ÉPICO 6: GESTÃO DE USUÁRIOS
+============================
+
+USER STORIES:
+-------------
+
+US013 - Cadastro de Usuários
+- Como administrador, quero cadastrar novos usuários no sistema
+- Critérios de Aceitação:
+  * Formulário de cadastro completo
+  * Definição de níveis de acesso
+  * Associação com unidades
+  * Validação de dados
+
+US014 - Gerenciamento de Perfis de Acesso
+- Como administrador, quero gerenciar perfis de acesso dos usuários
+- Critérios de Aceitação:
+  * Níveis: Administrador, Operador, Supervisor
+  * Permissões específicas por perfil
+  * Alteração de perfis
+
+US015 - Controle de Status de Usuários
+- Como administrador, quero controlar o status dos usuários
+- Critérios de Aceitação:
+  * Status: Ativo, Inativo, Bloqueado
+  * Histórico de acessos
+  * Controle de sessões
+
+================================================================================
+
+ÉPICO 7: CONTROLE DE ESTOQUE E CARGAS
+======================================
+
+USER STORIES:
+-------------
+
+US016 - Gestão de Estoque
+- Como usuário, quero controlar o estoque de produtos
+- Critérios de Aceitação:
+  * Visualização de níveis de estoque
+  * Controle de estoque mínimo
+  * Alertas de reposição
+  * Categorização por localização
+
+US017 - Requisições de Material
+- Como operador, quero solicitar reposição de materiais
+- Critérios de Aceitação:
+  * Formulário de requisição
+  * Aprovação de solicitações
+  * Acompanhamento de status
+  * Histórico de requisições
+
+US018 - Controle de Descartes
+- Como usuário, quero registrar descartes de materiais
+- Critérios de Aceitação:
+  * Registro de motivo do descarte
+  * Quantidades descartadas
+  * Aprovação de descartes
+  * Relatórios de descarte
+
+US019 - Movimentações de Estoque
+- Como usuário, quero acompanhar movimentações de estoque
+- Critérios de Aceitação:
+  * Histórico de entradas e saídas
+  * Rastreabilidade de lotes
+  * Controle de validade
+  * Relatórios de movimentação
+
+================================================================================
+
+ÉPICO 8: ORDENS DE PRODUÇÃO
+============================
+
+USER STORIES:
+-------------
+
+US020 - Criação de Ordens de Produção
+- Como planejador, quero criar ordens de produção
+- Critérios de Aceitação:
+  * Definição de produtos e quantidades
+  * Cronograma de produção
+  * Alocação de recursos
+  * Validação de disponibilidade
+
+US021 - Acompanhamento de Ordens
+- Como operador, quero acompanhar o progresso das ordens
+- Critérios de Aceitação:
+  * Status em tempo real
+  * Percentual de conclusão
+  * Identificação de desvios
+  * Alertas de atraso
+
+================================================================================
+
+ÉPICO 9: GESTÃO DE ENTREGAS
+============================
+
+USER STORIES:
+-------------
+
+US022 - Programação de Entregas
+- Como logístico, quero programar entregas de produtos
+- Critérios de Aceitação:
+  * Agendamento de entregas
+  * Definição de rotas
+  * Alocação de veículos
+  * Controle de prazos
+
+US023 - Rastreamento de Entregas
+- Como usuário, quero rastrear o status das entregas
+- Critérios de Aceitação:
+  * Status: Programada, Em trânsito, Entregue
+  * Localização em tempo real
+  * Previsão de chegada
+  * Confirmação de entrega
+
+================================================================================
+
+ÉPICO 10: SISTEMA SUPERVISÓRIO
+===============================
+
+USER STORIES:
+-------------
+
+US024 - Monitoramento em Tempo Real
+- Como operador, quero monitorar equipamentos em tempo real
+- Critérios de Aceitação:
+  * Visualização de status dos equipamentos
+  * Indicadores de performance
+  * Alertas de anomalias
+  * Interface gráfica intuitiva
+
+================================================================================
+
+ÉPICO 11: CONFIGURAÇÕES DO SISTEMA
+===================================
+
+USER STORIES:
+-------------
+
+US025 - Configurações Gerais
+- Como administrador, quero configurar parâmetros do sistema
+- Critérios de Aceitação:
+  * Configurações de unidade
+  * Parâmetros operacionais
+  * Configurações de alertas
+  * Backup de configurações
+
+================================================================================
+                            DIAGRAMA DE CASOS DE USO
+================================================================================
+
+ATORES:
+=======
+
+1. USUÁRIO MASTER/SEDE
+   - Acesso a todas as unidades
+   - Gestão centralizada
+   - Relatórios consolidados
+
+2. ADMINISTRADOR DE UNIDADE
+   - Gestão completa da unidade específica
+   - Cadastro de usuários locais
+   - Configurações da unidade
+
+3. SUPERVISOR
+   - Acompanhamento operacional
+   - Aprovações de processos
+   - Relatórios gerenciais
+
+4. OPERADOR
+   - Operação diária do sistema
+   - Registro de dados operacionais
+   - Consultas básicas
+
+5. SISTEMA EXTERNO
+   - Integração com equipamentos
+   - APIs externas
+   - Sistemas legados
+
+================================================================================
+
+CASOS DE USO POR ATOR:
+======================
+
+USUÁRIO MASTER/SEDE:
+-------------------
+[UC001] Autenticar no Sistema
+[UC002] Selecionar Unidade de Trabalho
+[UC003] Visualizar Dashboard Consolidado
+[UC004] Gerenciar Usuários de Todas as Unidades
+[UC005] Configurar Parâmetros Globais
+[UC006] Gerar Relatórios Consolidados
+[UC007] Monitorar Todas as Smart Caldas
+
+ADMINISTRADOR DE UNIDADE:
+------------------------
+[UC001] Autenticar no Sistema
+[UC008] Gerenciar Usuários da Unidade
+[UC009] Configurar Parâmetros da Unidade
+[UC010] Aprovar Requisições
+[UC011] Gerenciar Estoque Local
+[UC012] Configurar Smart Calda
+[UC013] Gerar Relatórios da Unidade
+
+SUPERVISOR:
+----------
+[UC001] Autenticar no Sistema
+[UC014] Acompanhar Produção
+[UC015] Aprovar Ordens de Produção
+[UC016] Monitorar Indicadores
+[UC017] Aprovar Descartes
+[UC018] Visualizar Dashboards Gerenciais
+
+OPERADOR:
+--------
+[UC001] Autenticar no Sistema
+[UC019] Registrar Cargas Smart Calda
+[UC020] Executar Receitas
+[UC021] Registrar Movimentações de Estoque
+[UC022] Criar Requisições de Material
+[UC023] Acompanhar Ordens de Produção
+[UC024] Registrar Entregas
+[UC025] Monitorar Equipamentos
+
+SISTEMA EXTERNO:
+---------------
+[UC026] Enviar Dados de Equipamentos
+[UC027] Receber Comandos de Controle
+[UC028] Sincronizar Dados de Produção
+[UC029] Integrar com Sistema de Gestão
+
+================================================================================
+
+FLUXOS PRINCIPAIS:
+==================
+
+FLUXO DE AUTENTICAÇÃO:
+---------------------
+1. Usuário acessa página de login
+2. Sistema valida credenciais
+3. Sistema identifica tipo de usuário
+4. SE usuário master ENTÃO redireciona para seleção de unidade
+5. SENÃO redireciona para home da unidade
+6. Usuário acessa funcionalidades conforme permissões
+
+FLUXO DE GESTÃO DE ESTOQUE:
+--------------------------
+1. Operador consulta estoque atual
+2. Sistema apresenta níveis de estoque
+3. SE estoque baixo ENTÃO sistema gera alerta
+4. Operador cria requisição de reposição
+5. Supervisor aprova requisição
+6. Sistema atualiza status da requisição
+7. Operador registra entrada de material
+8. Sistema atualiza níveis de estoque
+
+FLUXO DE PRODUÇÃO SMART CALDA:
+-----------------------------
+1. Operador seleciona receita
+2. Sistema verifica disponibilidade de ingredientes
+3. Operador confirma carga
+4. Sistema registra início da produção
+5. Equipamento executa receita automaticamente
+6. Sistema monitora progresso
+7. Sistema registra conclusão
+8. Operador confirma qualidade do produto
+
+================================================================================
+
+REQUISITOS NÃO FUNCIONAIS:
+===========================
+
+PERFORMANCE:
+-----------
+- Tempo de resposta < 2 segundos para consultas
+- Suporte a 100 usuários simultâneos
+- Disponibilidade 99.5%
+
+SEGURANÇA:
+----------
+- Autenticação obrigatória
+- Controle de acesso baseado em perfis
+- Logs de auditoria
+- Criptografia de dados sensíveis
+
+USABILIDADE:
+-----------
+- Interface responsiva (desktop/mobile)
+- Navegação intuitiva
+- Feedback visual para ações
+- Temas claro/escuro
+
+INTEGRAÇÃO:
+----------
+- APIs RESTful para integrações
+- Conectividade com equipamentos industriais
+- Exportação de dados (Excel, PDF)
+- Backup automático de dados
+
+================================================================================
+
+TECNOLOGIAS UTILIZADAS:
+========================
+
+FRONTEND:
+--------
+- React 18
+- TypeScript
+- Tailwind CSS
+- React Router DOM
+- Radix UI Components
+- Lucide Icons
+- React Hook Form
+- Tanstack Query
+
+BACKEND:
+-------
+- Supabase (Database + Auth + Storage)
+- PostgreSQL
+- Row Level Security (RLS)
+
+INFRAESTRUTURA:
+--------------
+- Vite (Build Tool)
+- ESLint (Code Quality)
+- Git (Version Control)
+
+================================================================================
+
+CRONOGRAMA DE DESENVOLVIMENTO:
+===============================
+
+SPRINT 1 (2 semanas):
+- Sistema de autenticação
+- Estrutura básica de layout
+- Navegação entre páginas
+
+SPRINT 2 (2 semanas):
+- Gestão de usuários
+- Controle de acesso por perfis
+- Seleção de unidades (master)
+
+SPRINT 3 (2 semanas):
+- Dashboard operacional básico
+- Gestão de defensivos
+- CRUD básico de estoque
+
+SPRINT 4 (2 semanas):
+- Sistema Smart Calda
+- Gestão de cargas e receitas
+- Monitoramento de equipamentos
+
+SPRINT 5 (2 semanas):
+- Ordens de produção
+- Gestão de entregas
+- Relatórios básicos
+
+SPRINT 6 (2 semanas):
+- Sistema supervisório
+- Dashboards avançados
+- Configurações do sistema
+
+SPRINT 7 (2 semanas):
+- Integração com equipamentos
+- Otimizações de performance
+- Testes finais
+
+SPRINT 8 (2 semanas):
+- Documentação final
+- Deploy em produção
+- Treinamento de usuários
+
+================================================================================
+
+DEFINIÇÃO DE PRONTO (DoD):
+===========================
+
+Para uma User Story ser considerada pronta, deve:
+- [ ] Código implementado conforme critérios de aceitação
+- [ ] Testes unitários implementados
+- [ ] Interface responsiva (desktop/mobile)
+- [ ] Validações de entrada implementadas
+- [ ] Tratamento de erros implementado
+- [ ] Documentação atualizada
+- [ ] Code review aprovado
+- [ ] Testes de aceitação passando
+- [ ] Deploy em ambiente de teste realizado
+- [ ] Aprovação do Product Owner
+
+================================================================================
+
+MÉTRICAS DE SUCESSO:
+====================
+
+TÉCNICAS:
+--------
+- Tempo de resposta médio < 2s
+- Uptime > 99.5%
+- 0 bugs críticos em produção
+- Cobertura de testes > 80%
+
+NEGÓCIO:
+-------
+- Redução de 30% no tempo de operação
+- Aumento de 25% na precisão de dados
+- 95% de satisfação dos usuários
+- ROI positivo em 6 meses
+
+USUÁRIO:
+-------
+- Taxa de adoção > 90%
+- Tempo de treinamento < 4 horas
+- Número de erros de usuário < 5%
+- Net Promoter Score > 8
+
+================================================================================
+                                FIM DO DOCUMENTO
+================================================================================
