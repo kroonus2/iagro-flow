@@ -13,7 +13,12 @@ import {
   ChevronRight,
   X,
   LogOut,
-  Building2
+  Building2,
+  UserCheck,
+  Store,
+  Database,
+  Download,
+  HelpCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -45,8 +50,11 @@ const menuItems: MenuItem[] = [
     icon: Package,
     subItems: [
       { title: "Usuários", icon: Users, path: "/usuarios" },
+      { title: "Gerenciar Usuários", icon: UserCheck, path: "/gerenciamento-usuarios" },
+      { title: "Fornecedores", icon: Store, path: "/fornecedores" },
       { title: "Defensivos", icon: Package, path: "/defensivos" },
-      { title: "Smart Calda", icon: FlaskConical, path: "/carga-smart-calda" }
+      { title: "Smart Calda", icon: FlaskConical, path: "/carga-smart-calda" },
+      { title: "Gestão Smart Caldas", icon: FlaskConical, path: "/gestao-smart-caldas" }
     ]
   },
   {
@@ -54,7 +62,9 @@ const menuItems: MenuItem[] = [
     icon: FlaskConical,
     subItems: [
       { title: "Estoque Geral", icon: Package, path: "/cargas" },
+      { title: "Estoque Avançado", icon: Database, path: "/estoque-avancado" },
       { title: "Receitas", icon: FlaskConical, path: "/receitas" },
+      { title: "Importar Receitas", icon: Download, path: "/importacao-receitas" },
       { title: "Ordens de Produção", icon: Activity, path: "/ordens-producao" },
       { title: "Supervisório", icon: Activity, path: "/supervisorio" }
     ]
@@ -68,6 +78,11 @@ const menuItems: MenuItem[] = [
     title: "Configurações",
     icon: Settings,
     path: "/configuracoes"
+  },
+  {
+    title: "Sobre",
+    icon: HelpCircle,
+    path: "/sobre"
   }
 ];
 

@@ -19,6 +19,12 @@ import Configuracoes from "./pages/Configuracoes";
 import Supervisorio from "./pages/Supervisorio";
 import NotFound from "./pages/NotFound";
 import SelecionarUnidade from "./pages/SelecionarUnidade";
+import GerenciamentoUsuarios from "./pages/GerenciamentoUsuarios";
+import Fornecedores from "./pages/Fornecedores";
+import GestaoSmartCaldas from "./pages/GestaoSmartCaldas";
+import EstoqueAvancado from "./pages/EstoqueAvancado";
+import ImportacaoReceitas from "./pages/ImportacaoReceitas";
+import Sobre from "./pages/Sobre";
 
 const queryClient = new QueryClient();
 
@@ -41,11 +47,17 @@ const App = () => (
             <Route path="/receitas" element={<ReceitasSmartCalda />} />
             {/* Páginas completas */}
             <Route path="/usuarios" element={<Usuarios />} />
+            <Route path="/gerenciamento-usuarios" element={<GerenciamentoUsuarios />} />
+            <Route path="/fornecedores" element={<Fornecedores />} />
+            <Route path="/gestao-smart-caldas" element={<GestaoSmartCaldas />} />
             <Route path="/cargas" element={<Cargas />} />
+            <Route path="/estoque-avancado" element={<EstoqueAvancado />} />
+            <Route path="/importacao-receitas" element={<ImportacaoReceitas />} />
             <Route path="/ordens-producao" element={<OrdensProducao />} />
             <Route path="/entregas" element={<Entregas />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
             <Route path="/supervisorio" element={<Supervisorio />} />
+            <Route path="/sobre" element={<Sobre />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
