@@ -204,13 +204,13 @@ const EstoqueAvancado = () => {
     setDataEmissaoNF(undefined);
   };
 
-  const getCategoriaBadge = (categoria: string) => {
+  const getCategoriaBadge = (categoria: string): "default" | "destructive" | "secondary" | "outline" => {
     const cores = {
-      defensivos: "destructive",
-      fertilizantes: "default",
-      sementes: "secondary",
-      equipamentos: "outline",
-      outros: "outline"
+      defensivos: "destructive" as const,
+      fertilizantes: "default" as const,
+      sementes: "secondary" as const,
+      equipamentos: "outline" as const,
+      outros: "outline" as const
     };
     return cores[categoria as keyof typeof cores] || "outline";
   };
