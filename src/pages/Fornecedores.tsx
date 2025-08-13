@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Edit2, Trash2, Search, Building, MapPin, Phone, Mail, FileText } from "lucide-react";
@@ -273,14 +273,14 @@ const Fornecedores = () => {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-4">
+            <DialogFooter>
               <Button variant="outline" onClick={() => setDialogAberto(false)}>
                 Cancelar
               </Button>
               <Button onClick={handleCriarFornecedor}>
                 {fornecedorEditando ? "Atualizar" : "Cadastrar"} Fornecedor
               </Button>
-            </div>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

@@ -158,33 +158,33 @@ const Sidebar = ({ onClose }: SidebarProps) => {
   };
 
   return (
-    <div className="h-full bg-iagro-sidebar text-white flex flex-col">
+    <div className="h-full bg-gray-900 text-white flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
+      <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-900">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-accent rounded-full flex items-center justify-center">
-            <span className="text-xs font-bold">IA</span>
+          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+            <span className="text-xs font-bold text-white">IA</span>
           </div>
           <span className="text-lg font-bold">IAGRO</span>
         </div>
         {onClose && (
-          <Button variant="ghost" size="sm" onClick={onClose} className="lg:hidden">
+          <Button variant="ghost" size="sm" onClick={onClose} className="lg:hidden text-gray-300 hover:text-white">
             <X className="h-4 w-4" />
           </Button>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 overflow-y-auto bg-gray-900 p-4 space-y-2">
         {menuItems.map(item => renderMenuItem(item))}
       </nav>
 
       {/* User Profile */}
-      <div className="p-4 border-t border-gray-700 space-y-3">
-        <div className="flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg">
+      <div className="p-4 border-t border-gray-700 space-y-3 bg-gray-900">
+        <div className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
           <Avatar className="h-10 w-10">
             <AvatarImage src="/placeholder.svg" alt="João Silva" />
-            <AvatarFallback className="bg-primary text-primary-foreground">JS</AvatarFallback>
+            <AvatarFallback className="bg-blue-600 text-white">JS</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">João Silva</p>
