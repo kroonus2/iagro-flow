@@ -24,6 +24,7 @@ import Fornecedores from "./pages/Fornecedores";
 import GestaoSmartCaldas from "./pages/GestaoSmartCaldas";
 import EstoqueAvancado from "./pages/EstoqueAvancado";
 import ImportacaoReceitas from "./pages/ImportacaoReceitas";
+import GerenciamentoUnidades from "./pages/GerenciamentoUnidades";
 import Sobre from "./pages/Sobre";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
             {/* Páginas completas */}
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/gerenciamento-usuarios" element={<GerenciamentoUsuarios />} />
+            <Route path="/gerenciamento-unidades" element={<GerenciamentoUnidades />} />
             <Route path="/fornecedores" element={<Fornecedores />} />
             <Route path="/gestao-smart-caldas" element={<GestaoSmartCaldas />} />
             <Route path="/cargas" element={<Cargas />} />

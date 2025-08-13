@@ -51,6 +51,7 @@ const menuItems: MenuItem[] = [
     subItems: [
       { title: "Usuários", icon: Users, path: "/usuarios" },
       { title: "Gerenciar Usuários", icon: UserCheck, path: "/gerenciamento-usuarios" },
+      { title: "Gerenciar Unidades", icon: Building2, path: "/gerenciamento-unidades" },
       { title: "Fornecedores", icon: Store, path: "/fornecedores" },
       { title: "Defensivos", icon: Package, path: "/defensivos" },
       { title: "Smart Calda", icon: FlaskConical, path: "/carga-smart-calda" },
