@@ -67,6 +67,7 @@ const GerenciamentoUsuarios = () => {
   const [nivelFilter, setNivelFilter] = useState("todos");
   const [dialogUsuarioAberto, setDialogUsuarioAberto] = useState(false);
   const [dialogPerfilAberto, setDialogPerfilAberto] = useState(false);
+  const [dialogEditarPerfilAberto, setDialogEditarPerfilAberto] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState<any>(null);
   const [perfilEditando, setPerfilEditando] = useState<any>(null);
 
@@ -79,6 +80,19 @@ const GerenciamentoUsuarios = () => {
   });
 
   const [novoPerfil, setNovoPerfil] = useState({
+    nome: "",
+    descricao: "",
+    permissoes: {
+      dashboard: { ler: false, escrever: false, excluir: false },
+      usuarios: { ler: false, escrever: false, excluir: false },
+      cargas: { ler: false, escrever: false, excluir: false },
+      estoque: { ler: false, escrever: false, excluir: false },
+      configuracoes: { ler: false, escrever: false, excluir: false }
+    }
+  });
+
+  const [perfilEditandoDados, setPerfilEditandoDados] = useState({
+    id: 0,
     nome: "",
     descricao: "",
     permissoes: {
@@ -127,6 +141,38 @@ const GerenciamentoUsuarios = () => {
 
   const atualizarPermissaoPerfil = (modulo: string, tipo: string, valor: boolean) => {
     setNovoPerfil(prev => ({
+      ...prev,
+      permissoes: {
+        ...prev.permissoes,
+        [modulo]: {
+          ...prev.permissoes[modulo as keyof typeof prev.permissoes],
+          [tipo]: valor
+        }
+      }
+    }));
+  };
+
+  const abrirEdicaoPerfil = (perfil: any) => {
+    setPerfilEditandoDados({
+      id: perfil.id,
+      nome: perfil.nome,
+      descricao: perfil.descricao,
+      permissoes: { ...perfil.permissoes }
+    });
+    setDialogEditarPerfilAberto(true);
+  };
+
+  const handleSalvarEdicaoPerfil = () => {
+    const perfisAtualizados = perfis.map(perfil => 
+      perfil.id === perfilEditandoDados.id ? { ...perfilEditandoDados } : perfil
+    );
+    setPerfis(perfisAtualizados);
+    setDialogEditarPerfilAberto(false);
+    toast({ title: "Perfil atualizado com sucesso!", variant: "default" });
+  };
+
+  const atualizarPermissaoEdicao = (modulo: string, tipo: string, valor: boolean) => {
+    setPerfilEditandoDados(prev => ({
       ...prev,
       permissoes: {
         ...prev.permissoes,
@@ -503,7 +549,7 @@ const GerenciamentoUsuarios = () => {
                       <CardTitle className="text-lg">{perfil.nome}</CardTitle>
                       <CardDescription>{perfil.descricao}</CardDescription>
                     </div>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => abrirEdicaoPerfil(perfil)}>
                       <Settings className="h-4 w-4" />
                     </Button>
                   </div>
@@ -526,6 +572,94 @@ const GerenciamentoUsuarios = () => {
               </Card>
             ))}
           </div>
+
+          {/* Dialog para Editar Perfil */}
+          <Dialog open={dialogEditarPerfilAberto} onOpenChange={setDialogEditarPerfilAberto}>
+            <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Editar Perfil de Acesso</DialogTitle>
+                <DialogDescription>
+                  Modifique as configurações e permissões do perfil selecionado.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nomePerfilEdicao">Nome do Perfil</Label>
+                    <Input
+                      id="nomePerfilEdicao"
+                      value={perfilEditandoDados.nome}
+                      onChange={(e) => setPerfilEditandoDados({ ...perfilEditandoDados, nome: e.target.value })}
+                      placeholder="Ex: Supervisor"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="descricaoPerfilEdicao">Descrição</Label>
+                    <Input
+                      id="descricaoPerfilEdicao"
+                      value={perfilEditandoDados.descricao}
+                      onChange={(e) => setPerfilEditandoDados({ ...perfilEditandoDados, descricao: e.target.value })}
+                      placeholder="Breve descrição do perfil"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Permissões por Módulo</h3>
+                  
+                  {Object.entries(perfilEditandoDados.permissoes).map(([modulo, perms]) => (
+                    <Card key={modulo}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base capitalize">{modulo}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`${modulo}-ler-edicao`}
+                              checked={perms.ler}
+                              onCheckedChange={(checked) => 
+                                atualizarPermissaoEdicao(modulo, 'ler', checked as boolean)
+                              }
+                            />
+                            <Label htmlFor={`${modulo}-ler-edicao`}>Visualizar</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`${modulo}-escrever-edicao`}
+                              checked={perms.escrever}
+                              onCheckedChange={(checked) => 
+                                atualizarPermissaoEdicao(modulo, 'escrever', checked as boolean)
+                              }
+                            />
+                            <Label htmlFor={`${modulo}-escrever-edicao`}>Editar</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`${modulo}-excluir-edicao`}
+                              checked={perms.excluir}
+                              onCheckedChange={(checked) => 
+                                atualizarPermissaoEdicao(modulo, 'excluir', checked as boolean)
+                              }
+                            />
+                            <Label htmlFor={`${modulo}-excluir-edicao`}>Excluir</Label>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setDialogEditarPerfilAberto(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSalvarEdicaoPerfil}>
+                  Salvar Alterações
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>
