@@ -11,7 +11,6 @@ import DashboardOperacional from "./pages/DashboardOperacional";
 import Defensivos from "./pages/Defensivos";
 import CargaSmartCalda from "./pages/CargaSmartCalda";
 import ReceitasSmartCalda from "./pages/ReceitasSmartCalda";
-import Usuarios from "./pages/Usuarios";
 import Cargas from "./pages/Cargas";
 import OrdensProducao from "./pages/OrdensProducao";
 import Entregas from "./pages/Entregas";
@@ -47,7 +46,6 @@ const App = () => (
             <Route path="/carga-smart-calda" element={<CargaSmartCalda />} />
             <Route path="/receitas" element={<ReceitasSmartCalda />} />
             {/* Páginas completas */}
-            <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/gerenciamento-usuarios" element={<GerenciamentoUsuarios />} />
             <Route path="/gerenciamento-unidades" element={<GerenciamentoUnidades />} />
             <Route path="/fornecedores" element={<Fornecedores />} />

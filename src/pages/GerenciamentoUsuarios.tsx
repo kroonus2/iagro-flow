@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { UserPlus, Edit2, Trash2, Shield, Eye, Settings, Users } from "lucide-react";
+import { UserPlus, Edit2, Trash2, Shield, Eye, Settings, Users, Search, User, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Mock data para demonstração
@@ -63,6 +63,8 @@ const GerenciamentoUsuarios = () => {
   const { toast } = useToast();
   const [usuarios, setUsuarios] = useState(mockUsuarios);
   const [perfis, setPerfis] = useState(mockPerfis);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [nivelFilter, setNivelFilter] = useState("todos");
   const [dialogUsuarioAberto, setDialogUsuarioAberto] = useState(false);
   const [dialogPerfilAberto, setDialogPerfilAberto] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState<any>(null);
@@ -149,6 +151,13 @@ const GerenciamentoUsuarios = () => {
     }
   };
 
+  const filteredUsuarios = usuarios.filter(usuario => {
+    const matchesSearch = usuario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         usuario.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesNivel = nivelFilter === "todos" || usuario.perfil.toLowerCase() === nivelFilter;
+    return matchesSearch && matchesNivel;
+  });
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -173,6 +182,81 @@ const GerenciamentoUsuarios = () => {
         </TabsList>
 
         <TabsContent value="usuarios" className="space-y-6">
+          {/* Cards de Estatísticas */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-6 text-center">
+                <UserCheck className="h-8 w-8 text-success mx-auto mb-2" />
+                <p className="text-2xl font-bold text-success">
+                  {usuarios.filter(u => u.status === "ativo").length}
+                </p>
+                <p className="text-sm text-muted-foreground">Usuários Ativos</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Shield className="h-8 w-8 text-primary mx-auto mb-2" />
+                <p className="text-2xl font-bold">
+                  {usuarios.filter(u => u.perfil === "administrador").length}
+                </p>
+                <p className="text-sm text-muted-foreground">Administradores</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6 text-center">
+                <User className="h-8 w-8 text-warning mx-auto mb-2" />
+                <p className="text-2xl font-bold">
+                  {usuarios.filter(u => u.perfil === "operador").length}
+                </p>
+                <p className="text-sm text-muted-foreground">Operadores</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6 text-center">
+                <User className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-2xl font-bold">{usuarios.length}</p>
+                <p className="text-sm text-muted-foreground">Total</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filtros */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Filtros de Pesquisa
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome ou e-mail"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={nivelFilter} onValueChange={setNivelFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filtrar por perfil" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os perfis</SelectItem>
+                    <SelectItem value="administrador">Administrador</SelectItem>
+                    <SelectItem value="operador">Operador</SelectItem>
+                    <SelectItem value="visualizador">Visualizador</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Lista de Usuários</h2>
             <Dialog open={dialogUsuarioAberto} onOpenChange={setDialogUsuarioAberto}>
@@ -276,7 +360,7 @@ const GerenciamentoUsuarios = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {usuarios.map((usuario) => (
+                  {filteredUsuarios.map((usuario) => (
                     <TableRow key={usuario.id}>
                       <TableCell className="font-medium">{usuario.nome}</TableCell>
                       <TableCell>{usuario.email}</TableCell>

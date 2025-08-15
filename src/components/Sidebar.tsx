@@ -49,7 +49,6 @@ const menuItems: MenuItem[] = [
     title: "Cadastros", 
     icon: Package,
     subItems: [
-      { title: "Usuários", icon: Users, path: "/usuarios" },
       { title: "Gerenciar Usuários", icon: UserCheck, path: "/gerenciamento-usuarios" },
       { title: "Gerenciar Unidades", icon: Building2, path: "/gerenciamento-unidades" },
       { title: "Fornecedores", icon: Store, path: "/fornecedores" },
