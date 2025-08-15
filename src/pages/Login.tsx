@@ -4,13 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { User, Lock } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { User, Lock, Mail, Key } from "lucide-react";
 import { toast } from "sonner";
 
 const Login = () => {
   const [usuario, setUsuario] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
+  const [dialogRecuperarAberto, setDialogRecuperarAberto] = useState(false);
+  const [emailRecuperacao, setEmailRecuperacao] = useState("");
+  const [loadingRecuperacao, setLoadingRecuperacao] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -39,6 +43,24 @@ const Login = () => {
       }
       setLoading(false);
     }, 1000);
+  };
+
+  const handleRecuperarSenha = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailRecuperacao) {
+      toast.error("Digite um e-mail válido");
+      return;
+    }
+
+    setLoadingRecuperacao(true);
+    
+    // Simulando envio de e-mail de recuperação
+    setTimeout(() => {
+      toast.success("E-mail de recuperação enviado com sucesso! Verifique sua caixa de entrada.");
+      setDialogRecuperarAberto(false);
+      setEmailRecuperacao("");
+      setLoadingRecuperacao(false);
+    }, 2000);
   };
 
   return (
@@ -130,10 +152,57 @@ const Login = () => {
                 </div>
               </div>
 
-              <div className="text-center">
+              <div className="text-center space-y-2">
+                <Dialog open={dialogRecuperarAberto} onOpenChange={setDialogRecuperarAberto}>
+                  <DialogTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-sm text-primary hover:text-primary/80 underline block mx-auto"
+                    >
+                      Esqueceu a senha?
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Key className="h-5 w-5" />
+                        Recuperar Senha
+                      </DialogTitle>
+                      <DialogDescription>
+                        Digite seu e-mail para receber as instruções de recuperação de senha.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleRecuperarSenha} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="emailRecuperacao">E-mail</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="emailRecuperacao"
+                            type="email"
+                            placeholder="seu@email.com"
+                            value={emailRecuperacao}
+                            onChange={(e) => setEmailRecuperacao(e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" type="button" onClick={() => setDialogRecuperarAberto(false)}>
+                          Cancelar
+                        </Button>
+                        <Button type="submit" disabled={loadingRecuperacao}>
+                          {loadingRecuperacao ? "Enviando..." : "Enviar E-mail"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+
                 <button
                   type="button"
-                  className="text-sm text-primary hover:text-primary-hover underline"
+                  className="text-sm text-muted-foreground hover:text-primary underline block mx-auto"
                   onClick={() => toast.info("Funcionalidade em desenvolvimento")}
                 >
                   Outra API? Configurar
