@@ -11,9 +11,13 @@ import {
   RotateCcw
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/contexts/LanguageContext";
+import LanguageSelector from "@/components/LanguageSelector";
 import smartCaldaPreview from "@/assets/smart-calda-3d-preview.jpg";
 
 const Home = () => {
+  const { t } = useLanguage();
+  
   // Dados simulados do sistema
   const systemStatus = {
     operacional: true,
@@ -30,10 +34,10 @@ const Home = () => {
   ];
 
   const estatisticasRapidas = [
-    { titulo: "Receitas Hoje", valor: "12", variacao: "+3", icon: Activity },
-    { titulo: "Produtos Ativos", valor: "8", variacao: "=", icon: CheckCircle },
-    { titulo: "Alertas Pendentes", valor: "3", variacao: "+1", icon: AlertTriangle },
-    { titulo: "Tempo Médio", valor: "45min", variacao: "-5min", icon: Clock }
+    { titulo: t('home.recipesToday'), valor: "12", variacao: "+3", icon: Activity },
+    { titulo: t('home.activeProducts'), valor: "8", variacao: "=", icon: CheckCircle },
+    { titulo: t('home.pendingAlerts'), valor: "3", variacao: "+1", icon: AlertTriangle },
+    { titulo: t('home.averageTime'), valor: "45min", variacao: "-5min", icon: Clock }
   ];
 
   return (
@@ -41,17 +45,20 @@ const Home = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard IAGRO</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t('home.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            Controle da Planta Industrial - Unidade Principal
+            {t('home.subtitle')}
           </p>
         </div>
-        <Badge 
-          variant={systemStatus.operacional ? "default" : "destructive"}
-          className="text-sm px-3 py-1"
-        >
-          {systemStatus.operacional ? "Sistema Operacional" : "Sistema Inativo"}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge 
+            variant={systemStatus.operacional ? "default" : "destructive"}
+            className="text-sm px-3 py-1"
+          >
+            {systemStatus.operacional ? t('home.systemOperational') : t('home.systemInactive')}
+          </Badge>
+          <LanguageSelector />
+        </div>
       </div>
 
       {/* Status Cards */}
@@ -81,7 +88,7 @@ const Home = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Gauge className="h-5 w-5" />
-              Visualização 3D da Planta
+              {t('home.3dVisualization')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -98,19 +105,19 @@ const Home = () => {
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-white">
-                      Modelo 3D Interativo
+                      {t('home.interactive3d')}
                     </p>
                     <p className="text-sm text-white/90">
-                      Visualização completa do equipamento Smart Calda
+                      {t('home.completeVisualization')}
                     </p>
                   </div>
                   <Button variant="secondary" size="sm">
-                    Carregar Modelo 3D
+                    {t('home.load3d')}
                   </Button>
                 </div>
               </div>
               <Badge className="absolute top-4 right-4 bg-primary/90">
-                Preview 3D
+                {t('home.3dPreview')}
               </Badge>
             </div>
           </CardContent>
@@ -120,13 +127,13 @@ const Home = () => {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Status do Sistema</CardTitle>
+              <CardTitle className="text-lg">{t('home.systemStatus')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ThermometerSun className="h-4 w-4 text-orange-500" />
-                  <span className="text-sm">Temperatura</span>
+                  <span className="text-sm">{t('home.temperature')}</span>
                 </div>
                 <span className="font-medium">{systemStatus.temperatura}</span>
               </div>
@@ -134,7 +141,7 @@ const Home = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Gauge className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm">Pressão</span>
+                  <span className="text-sm">{t('home.pressure')}</span>
                 </div>
                 <span className="font-medium">{systemStatus.pressao}</span>
               </div>
@@ -142,13 +149,13 @@ const Home = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Droplets className="h-4 w-4 text-cyan-500" />
-                  <span className="text-sm">Fluxo</span>
+                  <span className="text-sm">{t('home.flow')}</span>
                 </div>
                 <span className="font-medium">{systemStatus.fluxo}</span>
               </div>
               
               <div className="pt-2 text-xs text-muted-foreground">
-                Última atualização: {systemStatus.ultimaAtualizacao}
+                {t('home.lastUpdate')} {systemStatus.ultimaAtualizacao}
               </div>
             </CardContent>
           </Card>
@@ -156,7 +163,7 @@ const Home = () => {
           {/* Alertas Recentes */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Alertas Recentes</CardTitle>
+              <CardTitle className="text-lg">{t('home.recentAlerts')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
