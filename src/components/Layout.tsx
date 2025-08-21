@@ -17,7 +17,10 @@ const Layout = () => {
       {/* Mobile Sidebar */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setSidebarOpen(false)}
+          />
           <div className="fixed left-0 top-0 bottom-0 w-64 bg-white">
             <Sidebar onClose={() => setSidebarOpen(false)} />
           </div>
@@ -28,15 +31,15 @@ const Layout = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
         <header className="bg-white border-b border-border px-4 py-3 flex items-center justify-between">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden"
           >
             <Menu className="h-5 w-5" />
           </Button>
-          
+
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">
               Sistema IAGRO - Controle Industrial
