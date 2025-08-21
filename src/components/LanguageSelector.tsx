@@ -13,9 +13,46 @@ const LanguageSelector: React.FC<{ variant?: 'default' | 'outline' | 'ghost' }> 
   const { language, setLanguage } = useLanguage();
 
   const languages = [
-    { code: 'pt', name: 'Português', flag: '🇧🇷' },
-    { code: 'en', name: 'English', flag: '🇺🇸' },
-    { code: 'es', name: 'Español', flag: '🇪🇸' },
+    { 
+      code: 'pt', 
+      name: 'Português', 
+      flag: (
+        <div className="w-6 h-4 bg-gradient-to-b from-emerald-500 to-yellow-400 rounded-sm overflow-hidden relative">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-3 h-3 bg-blue-600 rounded-full flex items-center justify-center">
+              <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    { 
+      code: 'en', 
+      name: 'English', 
+      flag: (
+        <div className="w-6 h-4 bg-gradient-to-r from-blue-600 via-white to-red-500 rounded-sm overflow-hidden relative">
+          <div className="absolute inset-0">
+            <div className="w-full h-1/3 bg-red-500"></div>
+            <div className="w-full h-1/3 bg-white"></div>
+            <div className="w-full h-1/3 bg-blue-600"></div>
+          </div>
+          <div className="absolute top-0 left-0 w-2/5 h-2/3 bg-blue-600 flex items-center justify-center">
+            <div className="text-white text-xs">★</div>
+          </div>
+        </div>
+      )
+    },
+    { 
+      code: 'es', 
+      name: 'Español', 
+      flag: (
+        <div className="w-6 h-4 bg-gradient-to-b from-red-500 via-yellow-400 to-red-500 rounded-sm overflow-hidden">
+          <div className="w-full h-1/3 bg-red-500"></div>
+          <div className="w-full h-1/3 bg-yellow-400"></div>
+          <div className="w-full h-1/3 bg-red-500"></div>
+        </div>
+      )
+    },
   ] as const;
 
   const currentLanguage = languages.find(lang => lang.code === language);
@@ -24,7 +61,7 @@ const LanguageSelector: React.FC<{ variant?: 'default' | 'outline' | 'ghost' }> 
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant={variant} size="sm" className="gap-2">
-          <span className="text-lg">{currentLanguage?.flag}</span>
+          {currentLanguage?.flag}
           <span className="hidden sm:inline">{currentLanguage?.name}</span>
           <ChevronDown className="h-4 w-4" />
         </Button>
@@ -36,7 +73,7 @@ const LanguageSelector: React.FC<{ variant?: 'default' | 'outline' | 'ghost' }> 
             onClick={() => setLanguage(lang.code)}
             className="gap-2 cursor-pointer"
           >
-            <span className="text-lg">{lang.flag}</span>
+            {lang.flag}
             <span>{lang.name}</span>
           </DropdownMenuItem>
         ))}

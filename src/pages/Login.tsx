@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LanguageSelector from "@/components/LanguageSelector";
 
+
 const Login = () => {
   const [usuario, setUsuario] = useState("");
   const [senha, setSenha] = useState("");
@@ -74,9 +75,16 @@ const Login = () => {
       <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
         {/* Logo e Branding */}
         <div className="text-center lg:text-left text-white space-y-6">
-          <div className="inline-block">
-            <h1 className="text-6xl font-bold tracking-wider">{t('login.title')}</h1>
-            <div className="h-1 bg-accent w-full mt-2"></div>
+          <div className="flex flex-col items-center lg:items-start space-y-4">
+            <img 
+              src="/iagro-logo.png" 
+              alt="IAGRO Logo" 
+              className="h-20 w-auto object-contain"
+            />
+            <div className="inline-block">
+              <h1 className="text-6xl font-bold tracking-wider">{t('login.title')}</h1>
+              <div className="h-1 bg-accent w-full mt-2"></div>
+            </div>
           </div>
           <p className="text-xl opacity-90">
             {t('login.subtitle')}
