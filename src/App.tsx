@@ -22,7 +22,6 @@ import SelecionarUnidade from "./pages/SelecionarUnidade";
 import GerenciamentoUsuarios from "./pages/GerenciamentoUsuarios";
 import Fornecedores from "./pages/Fornecedores";
 import GestaoSmartCaldas from "./pages/GestaoSmartCaldas";
-import EstoqueAvancado from "./pages/EstoqueAvancado";
 import ImportacaoReceitas from "./pages/ImportacaoReceitas";
 import GerenciamentoUnidades from "./pages/GerenciamentoUnidades";
 import Sobre from "./pages/Sobre";
@@ -42,19 +41,36 @@ const App = () => (
             <Route path="/selecionar-unidade" element={<SelecionarUnidade />} />
             <Route element={<Layout />}>
               <Route path="/home" element={<Home />} />
-              <Route path="/dashboard-gerencial" element={<DashboardGerencial />} />
-              <Route path="/dashboard-operacional" element={<DashboardOperacional />} />
+              <Route
+                path="/dashboard-gerencial"
+                element={<DashboardGerencial />}
+              />
+              <Route
+                path="/dashboard-operacional"
+                element={<DashboardOperacional />}
+              />
               <Route path="/defensivos" element={<Defensivos />} />
               <Route path="/carga-smart-calda" element={<CargaSmartCalda />} />
               <Route path="/receitas" element={<ReceitasSmartCalda />} />
               {/* Páginas completas */}
-              <Route path="/gerenciamento-usuarios" element={<GerenciamentoUsuarios />} />
-              <Route path="/gerenciamento-unidades" element={<GerenciamentoUnidades />} />
+              <Route
+                path="/gerenciamento-usuarios"
+                element={<GerenciamentoUsuarios />}
+              />
+              <Route
+                path="/gerenciamento-unidades"
+                element={<GerenciamentoUnidades />}
+              />
               <Route path="/fornecedores" element={<Fornecedores />} />
-              <Route path="/gestao-smart-caldas" element={<GestaoSmartCaldas />} />
+              <Route
+                path="/gestao-smart-caldas"
+                element={<GestaoSmartCaldas />}
+              />
               <Route path="/cargas" element={<Cargas />} />
-              <Route path="/estoque-avancado" element={<EstoqueAvancado />} />
-              <Route path="/importacao-receitas" element={<ImportacaoReceitas />} />
+              <Route
+                path="/importacao-receitas"
+                element={<ImportacaoReceitas />}
+              />
               <Route path="/ordens-producao" element={<OrdensProducao />} />
               <Route path="/entregas" element={<Entregas />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
@@ -63,11 +79,11 @@ const App = () => (
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </LanguageProvider>
-    </QueryClientProvider>
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </LanguageProvider>
+  </QueryClientProvider>
 );
 
 export default App;
