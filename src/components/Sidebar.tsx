@@ -82,7 +82,6 @@ const menuItems: MenuItem[] = [
     icon: FlaskConical,
     subItems: [
       { title: "Estoque Geral", icon: Package, path: "/cargas" },
-      { title: "Estoque Avançado", icon: Database, path: "/estoque-avancado" },
       { title: "Receitas", icon: FlaskConical, path: "/receitas" },
       {
         title: "Importar Receitas",
