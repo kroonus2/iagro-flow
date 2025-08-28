@@ -102,6 +102,15 @@ const translations = {
 
     // General
     'general.developmentFeature': 'Funcionalidade em desenvolvimento',
+    
+    // Footer
+    'footer.company': 'Sistema de Controle Industrial',
+    'footer.quickLinks': 'Links Rápidos',
+    'footer.contact': 'Contato',
+    'footer.support': 'Suporte Técnico',
+    'footer.rights': 'Todos os direitos reservados.',
+    'footer.version': 'Versão',
+    'footer.about': 'Sobre',
   },
   en: {
     // Login Page
@@ -160,6 +169,15 @@ const translations = {
 
     // General
     'general.developmentFeature': 'Feature under development',
+    
+    // Footer
+    'footer.company': 'Industrial Control System',
+    'footer.quickLinks': 'Quick Links',
+    'footer.contact': 'Contact',
+    'footer.support': 'Technical Support',
+    'footer.rights': 'All rights reserved.',
+    'footer.version': 'Version',
+    'footer.about': 'About',
   },
   es: {
     // Login Page
@@ -218,5 +236,14 @@ const translations = {
 
     // General
     'general.developmentFeature': 'Funcionalidad en desarrollo',
+    
+    // Footer
+    'footer.company': 'Sistema de Control Industrial',
+    'footer.quickLinks': 'Enlaces Rápidos',
+    'footer.contact': 'Contacto',
+    'footer.support': 'Soporte Técnico',
+    'footer.rights': 'Todos los derechos reservados.',
+    'footer.version': 'Versión',
+    'footer.about': 'Acerca de',
   },
 };

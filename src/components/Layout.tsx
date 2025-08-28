@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
+import Footer from "./Footer";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 
@@ -49,7 +50,12 @@ const Layout = () => {
 
         {/* Page Content */}
         <main className="flex-1 overflow-auto bg-muted/10">
-          <Outlet />
+          <div className="min-h-full flex flex-col">
+            <div className="flex-1">
+              <Outlet />
+            </div>
+            <Footer />
+          </div>
         </main>
       </div>
     </div>
