@@ -35,6 +35,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { 
@@ -50,8 +65,27 @@ import {
   ChevronRight,
   FileText,
   FileType,
-  X
+  X,
+  Upload,
+  Download
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+// Schema de validação
+const defensivoSchema = z.object({
+  codigo: z.string().min(1, "Código é obrigatório").max(20, "Código deve ter no máximo 20 caracteres"),
+  nomeComercial: z.string().min(1, "Nome comercial é obrigatório").max(200, "Nome deve ter no máximo 200 caracteres"),
+  unidade: z.string().min(1, "Unidade é obrigatória"),
+  principioAtivo: z.string().min(1, "Princípio ativo é obrigatório"),
+  fabricante: z.string().min(1, "Fabricante é obrigatório"),
+  indice: z.number().min(0, "Índice deve ser positivo"),
+  embalagem: z.string().min(1, "Embalagem é obrigatória"),
+  maximo: z.number().min(0, "Valor máximo deve ser positivo"),
+  minimo: z.number().min(0, "Valor mínimo deve ser positivo"),
+});
 import { toast } from "sonner";
 
 // Tipo para o defensivo
@@ -70,6 +104,7 @@ type Defensivo = {
 };
 
 const Defensivos = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<keyof Defensivo | null>(null);
@@ -79,11 +114,31 @@ const Defensivos = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showImportCSVDialog, setShowImportCSVDialog] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvPreview, setCsvPreview] = useState<any[]>([]);
+  const [isProcessingCSV, setIsProcessingCSV] = useState(false);
   const [filters, setFilters] = useState({
     nomeComercial: "",
     fabricante: "",
     embalagem: "",
     unidade: ""
+  });
+
+  // Formulário para cadastro/edição
+  const form = useForm<z.infer<typeof defensivoSchema>>({
+    resolver: zodResolver(defensivoSchema),
+    defaultValues: {
+      codigo: "",
+      nomeComercial: "",
+      unidade: "",
+      principioAtivo: "",
+      fabricante: "",
+      indice: 0,
+      embalagem: "",
+      maximo: 0,
+      minimo: 0,
+    },
   });
 
   // Dados simulados expandidos
@@ -327,7 +382,10 @@ const Defensivos = () => {
             : d
         )
       );
-      toast.success("Defensivo desativado com sucesso!");
+      toast({
+        title: "Sucesso",
+        description: "Defensivo desativado com sucesso!",
+      });
       setShowDeleteDialog(false);
       setSelectedDefensivo(null);
     }
@@ -335,15 +393,19 @@ const Defensivos = () => {
 
   const handleAddNew = () => {
     setSelectedDefensivo(null);
+    form.reset();
     setShowAddDialog(true);
   };
 
   const handleImportCSV = () => {
-    toast.info("Funcionalidade de importação CSV em desenvolvimento");
+    setShowImportCSVDialog(true);
   };
 
   const handleImportXML = () => {
-    toast.info("Funcionalidade de importação XML em desenvolvimento");
+    toast({
+      title: "Info",
+      description: "Funcionalidade de importação XML em desenvolvimento",
+    });
   };
 
   const clearFilters = () => {
@@ -360,6 +422,191 @@ const Defensivos = () => {
   const getSortIcon = (field: keyof Defensivo) => {
     if (sortField !== field) return <ArrowUpDown className="h-4 w-4" />;
     return sortDirection === 'asc' ? '↑' : '↓';
+  };
+
+  // Funções do formulário
+  const onSubmit = (values: z.infer<typeof defensivoSchema>) => {
+    try {
+      if (selectedDefensivo) {
+        // Editar defensivo existente
+        setDefensivos(prev => 
+          prev.map(d => 
+            d.id === selectedDefensivo.id 
+              ? { ...d, ...values }
+              : d
+          )
+        );
+        toast({
+          title: "Sucesso", 
+          description: "Defensivo editado com sucesso!",
+        });
+        setShowEditDialog(false);
+      } else {
+        // Adicionar novo defensivo
+        const newDefensivo: Defensivo = {
+          id: Math.max(...defensivos.map(d => d.id)) + 1,
+          codigo: values.codigo,
+          nomeComercial: values.nomeComercial,
+          unidade: values.unidade,
+          principioAtivo: values.principioAtivo,
+          fabricante: values.fabricante,
+          indice: values.indice,
+          embalagem: values.embalagem,
+          maximo: values.maximo,
+          minimo: values.minimo,
+          ativo: true
+        };
+        setDefensivos(prev => [...prev, newDefensivo]);
+        toast({
+          title: "Sucesso",
+          description: "Defensivo cadastrado com sucesso!",
+        });
+        setShowAddDialog(false);
+      }
+      form.reset();
+      setSelectedDefensivo(null);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar defensivo. Verifique os dados.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Funções de importação CSV
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'text/csv') {
+      setCsvFile(file);
+      previewCSV(file);
+    } else {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um arquivo CSV válido.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const previewCSV = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      // Verificar se as colunas obrigatórias estão presentes
+      const requiredColumns = ['codigo', 'nomeComercial', 'unidade', 'principioAtivo', 'fabricante', 'indice', 'embalagem', 'maximo', 'minimo'];
+      const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+      
+      if (missingColumns.length > 0) {
+        toast({
+          title: "Erro",
+          description: `Colunas obrigatórias ausentes: ${missingColumns.join(', ')}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Processar primeiras 5 linhas para preview
+      const preview = lines.slice(1, 6).map(line => {
+        const values = line.split(',').map(v => v.trim());
+        const row: any = {};
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        return row;
+      });
+
+      setCsvPreview(preview);
+    };
+    reader.readAsText(file);
+  };
+
+  const processCSVImport = async () => {
+    if (!csvFile) return;
+
+    setIsProcessingCSV(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        const lines = text.split('\n').filter(line => line.trim());
+        const headers = lines[0].split(',').map(h => h.trim());
+        
+        const newDefensivos: Defensivo[] = [];
+        let errors = 0;
+
+        lines.slice(1).forEach((line, index) => {
+          try {
+            const values = line.split(',').map(v => v.trim());
+            const row: any = {};
+            headers.forEach((header, idx) => {
+              row[header] = values[idx] || '';
+            });
+
+            // Validar e converter dados
+            const newDefensivo: Defensivo = {
+              id: Math.max(...defensivos.map(d => d.id), 0) + newDefensivos.length + 1,
+              codigo: row.codigo,
+              nomeComercial: row.nomeComercial,
+              unidade: row.unidade,
+              principioAtivo: row.principioAtivo,
+              fabricante: row.fabricante,
+              indice: parseFloat(row.indice) || 0,
+              embalagem: row.embalagem,
+              maximo: parseFloat(row.maximo) || 0,
+              minimo: parseFloat(row.minimo) || 0,
+              ativo: true
+            };
+
+            // Validação básica
+            if (!newDefensivo.codigo || !newDefensivo.nomeComercial) {
+              errors++;
+              return;
+            }
+
+            newDefensivos.push(newDefensivo);
+          } catch (error) {
+            errors++;
+          }
+        });
+
+        setDefensivos(prev => [...prev, ...newDefensivos]);
+        toast({
+          title: "Sucesso",
+          description: `${newDefensivos.length} defensivos importados com sucesso!${errors > 0 ? ` ${errors} linhas com erro foram ignoradas.` : ''}`,
+        });
+        setShowImportCSVDialog(false);
+        setCsvFile(null);
+        setCsvPreview([]);
+      };
+      reader.readAsText(csvFile);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao processar arquivo CSV.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingCSV(false);
+    }
+  };
+
+  const downloadCSVTemplate = () => {
+    const headers = ['codigo', 'nomeComercial', 'unidade', 'principioAtivo', 'fabricante', 'indice', 'embalagem', 'maximo', 'minimo'];
+    const csvContent = headers.join(',') + '\n' + 
+      'EXEMPLO1,Produto Exemplo 1,L,Glifosato,FabricanteA,1.2,BULK,1000,100\n' +
+      'EXEMPLO2,Produto Exemplo 2,KG,Atrazina,FabricanteB,0.8,Fracionado,500,50';
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'template_defensivos.csv';
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -755,7 +1002,10 @@ const Defensivos = () => {
               Cancelar
             </Button>
             <Button onClick={() => {
-              toast.success("Defensivo editado com sucesso!");
+              toast({
+                title: "Sucesso",
+                description: "Defensivo editado com sucesso!",
+              });
               setShowEditDialog(false);
             }}>
               Salvar Alterações
@@ -766,32 +1016,314 @@ const Defensivos = () => {
 
       {/* Modal de Adicionar */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Adicionar Novo Defensivo</DialogTitle>
             <DialogDescription>
-              Preencha as informações do novo defensivo
+              Preencha todas as informações obrigatórias do novo defensivo
             </DialogDescription>
           </DialogHeader>
-          {/* Form fields would go here - simplified for demo */}
-          <div className="text-center py-8 text-muted-foreground">
-            Formulário de cadastro em desenvolvimento
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="codigo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Código *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: NAPTOL" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="unidade"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unidade *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a unidade" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="L">Litros (L)</SelectItem>
+                          <SelectItem value="KG">Quilogramas (KG)</SelectItem>
+                          <SelectItem value="ML">Mililitros (ML)</SelectItem>
+                          <SelectItem value="G">Gramas (G)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="nomeComercial"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Nome Comercial *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: ACETRPILUNAS - BULK" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="principioAtivo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Princípio Ativo *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Glifosato" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="fabricante"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fabricante *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: AgroTech" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="embalagem"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Embalagem *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a embalagem" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="BULK">BULK</SelectItem>
+                          <SelectItem value="Fracionado">Fracionado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="indice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Índice *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.1" 
+                          placeholder="Ex: 1.2" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="maximo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor Máximo *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="Ex: 1000" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="minimo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor Mínimo *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="Ex: 100" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  Cadastrar Defensivo
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Importação CSV */}
+      <Dialog open={showImportCSVDialog} onOpenChange={setShowImportCSVDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Importar Defensivos via CSV</DialogTitle>
+            <DialogDescription>
+              Faça upload de um arquivo CSV com os dados dos defensivos
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Template Download */}
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+              <div>
+                <p className="font-medium">Precisa de um modelo?</p>
+                <p className="text-sm text-muted-foreground">
+                  Baixe o template CSV com a estrutura correta
+                </p>
+              </div>
+              <Button variant="outline" onClick={downloadCSVTemplate}>
+                <Download className="h-4 w-4 mr-2" />
+                Baixar Template
+              </Button>
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-4">
+              <Label htmlFor="csv-upload">Arquivo CSV</Label>
+              <div className="flex items-center gap-4">
+                <Input
+                  id="csv-upload"
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  className="flex-1"
+                />
+                {csvFile && (
+                  <Button variant="outline" onClick={() => {
+                    setCsvFile(null);
+                    setCsvPreview([]);
+                  }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {csvFile && (
+                <p className="text-sm text-muted-foreground">
+                  Arquivo selecionado: {csvFile.name}
+                </p>
+              )}
+            </div>
+
+            {/* Preview */}
+            {csvPreview.length > 0 && (
+              <div className="space-y-2">
+                <Label>Preview dos Dados (primeiras 5 linhas)</Label>
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="p-2 text-left">Código</th>
+                          <th className="p-2 text-left">Nome Comercial</th>
+                          <th className="p-2 text-left">Unidade</th>
+                          <th className="p-2 text-left">Princípio Ativo</th>
+                          <th className="p-2 text-left">Fabricante</th>
+                          <th className="p-2 text-left">Embalagem</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {csvPreview.map((row, index) => (
+                          <tr key={index} className="border-t">
+                            <td className="p-2">{row.codigo}</td>
+                            <td className="p-2">{row.nomeComercial}</td>
+                            <td className="p-2">{row.unidade}</td>
+                            <td className="p-2">{row.principioAtivo}</td>
+                            <td className="p-2">{row.fabricante}</td>
+                            <td className="p-2">{row.embalagem}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Instructions */}
+            <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-900/20">
+              <h4 className="font-medium mb-2">Instruções para o arquivo CSV:</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• O arquivo deve conter as colunas: codigo, nomeComercial, unidade, principioAtivo, fabricante, indice, embalagem, maximo, minimo</li>
+                <li>• A primeira linha deve conter os cabeçalhos</li>
+                <li>• Use vírgula (,) como separador</li>
+                <li>• Valores numéricos para indice, maximo e minimo</li>
+                <li>• Embalagem deve ser "BULK" ou "Fracionado"</li>
+              </ul>
+            </div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            <Button variant="outline" onClick={() => setShowImportCSVDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={() => {
-              toast.success("Novo defensivo cadastrado com sucesso!");
-              setShowAddDialog(false);
-            }}>
-              Cadastrar
+            <Button 
+              onClick={processCSVImport}
+              disabled={!csvFile || isProcessingCSV}
+            >
+              {isProcessingCSV ? (
+                <>
+                  <Upload className="h-4 w-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar Dados
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Modal de Confirmação de Desativação */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
