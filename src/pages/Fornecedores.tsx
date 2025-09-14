@@ -94,7 +94,6 @@ interface Fornecedor {
   email: string;
   status: "ativo" | "inativo";
   ultimaCompra: string;
-  categoria: string;
   observacoes: string;
 }
 
@@ -114,7 +113,6 @@ const mockFornecedores: Fornecedor[] = [
     email: "contato@agroquimica.com.br",
     status: "ativo",
     ultimaCompra: "2024-01-10",
-    categoria: "defensivos",
     observacoes: "Fornecedor principal de defensivos",
   },
   {
@@ -128,7 +126,6 @@ const mockFornecedores: Fornecedor[] = [
     email: "vendas@fertilnorte.com.br",
     status: "ativo",
     ultimaCompra: "2024-01-08",
-    categoria: "fertilizantes",
     observacoes: "Ótimo prazo de entrega",
   },
   {
@@ -142,7 +139,6 @@ const mockFornecedores: Fornecedor[] = [
     email: "comercial@sementespremium.com.br",
     status: "inativo",
     ultimaCompra: "2023-12-20",
-    categoria: "sementes",
     observacoes: "Verificar documentação pendente",
   },
   {
@@ -156,7 +152,6 @@ const mockFornecedores: Fornecedor[] = [
     email: "suporte@tecagro.com.br",
     status: "ativo",
     ultimaCompra: "2024-01-05",
-    categoria: "equipamentos",
     observacoes: "Fornecedor de equipamentos de alta tecnologia",
   },
   {
@@ -170,7 +165,6 @@ const mockFornecedores: Fornecedor[] = [
     email: "vendas@ruralinsumos.com.br",
     status: "ativo",
     ultimaCompra: "2024-01-12",
-    categoria: "fertilizantes",
     observacoes: "Fornecedor regional com boa qualidade",
   },
   {
@@ -184,7 +178,6 @@ const mockFornecedores: Fornecedor[] = [
     email: "comercial@agrosul.com.br",
     status: "ativo",
     ultimaCompra: "2024-01-15",
-    categoria: "servicos",
     observacoes: "Serviços de consultoria e aplicação",
   },
   {
@@ -198,7 +191,6 @@ const mockFornecedores: Fornecedor[] = [
     email: "vendas@equipnordeste.com.br",
     status: "inativo",
     ultimaCompra: "2023-11-30",
-    categoria: "equipamentos",
     observacoes: "Revisar contrato de fornecimento",
   },
   {
@@ -212,7 +204,6 @@ const mockFornecedores: Fornecedor[] = [
     email: "contato@bioorganic.com.br",
     status: "ativo",
     ultimaCompra: "2024-01-18",
-    categoria: "defensivos",
     observacoes: "Especializado em produtos orgânicos",
   },
   {
@@ -226,7 +217,6 @@ const mockFornecedores: Fornecedor[] = [
     email: "vendas@hibridasc.com.br",
     status: "ativo",
     ultimaCompra: "2024-01-20",
-    categoria: "sementes",
     observacoes: "Variedades adaptadas ao cerrado",
   },
   {
@@ -240,7 +230,6 @@ const mockFornecedores: Fornecedor[] = [
     email: "comercial@fertilespecial.com.br",
     status: "ativo",
     ultimaCompra: "2024-01-22",
-    categoria: "fertilizantes",
     observacoes: "Fertilizantes de liberação controlada",
   },
   {
@@ -254,7 +243,6 @@ const mockFornecedores: Fornecedor[] = [
     email: "contato@agroconsultoria.com.br",
     status: "inativo",
     ultimaCompra: "2023-10-15",
-    categoria: "servicos",
     observacoes: "Contrato suspenso temporariamente",
   },
   {
@@ -268,19 +256,10 @@ const mockFornecedores: Fornecedor[] = [
     email: "vendas@maqoeste.com.br",
     status: "ativo",
     ultimaCompra: "2024-01-25",
-    categoria: "equipamentos",
     observacoes: "Equipamentos de grande porte",
   },
 ];
 
-const categoriasFornecedor = [
-  { value: "defensivos", label: "Defensivos Agrícolas" },
-  { value: "fertilizantes", label: "Fertilizantes" },
-  { value: "sementes", label: "Sementes" },
-  { value: "equipamentos", label: "Equipamentos" },
-  { value: "servicos", label: "Serviços" },
-  { value: "outros", label: "Outros" },
-];
 
 const Fornecedores = () => {
   const { toast } = useToast();
@@ -297,7 +276,6 @@ const Fornecedores = () => {
   
   // Estados para filtros e busca
   const [termoPesquisa, setTermoPesquisa] = useState("");
-  const [filtroCategoria, setFiltroCategoria] = useState("todos");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   
   // Estados para ordenação
@@ -322,7 +300,6 @@ const Fornecedores = () => {
     endereco: "",
     telefone: "",
     email: "",
-    categoria: "",
     observacoes: "",
   });
 
@@ -345,13 +322,10 @@ const Fornecedores = () => {
         fornecedor.cnpjCpf.includes(termoPesquisa) ||
         fornecedor.email.toLowerCase().includes(termoPesquisa.toLowerCase());
       
-      const matchCategoria =
-        filtroCategoria === "todos" || fornecedor.categoria === filtroCategoria;
-      
       const matchStatus =
         filtroStatus === "todos" || fornecedor.status === filtroStatus;
 
-      return matchPesquisa && matchCategoria && matchStatus;
+      return matchPesquisa && matchStatus;
     });
 
     // Ordenação
@@ -401,7 +375,6 @@ const Fornecedores = () => {
       endereco: formulario.endereco || "",
       telefone: formulario.telefone || "",
       email: formulario.email || "",
-      categoria: formulario.categoria || "",
       observacoes: formulario.observacoes || "",
       status: "ativo",
       ultimaCompra: "Nunca",
@@ -445,7 +418,6 @@ const Fornecedores = () => {
   // Função para limpar filtros
   const limparFiltros = () => {
     setTermoPesquisa("");
-    setFiltroCategoria("todos");
     setFiltroStatus("todos");
     setPaginaAtual(1);
     toast({ title: "Filtros limpos!", variant: "default" });
@@ -461,7 +433,6 @@ const Fornecedores = () => {
       endereco: "",
       telefone: "",
       email: "",
-      categoria: "",
       observacoes: "",
     });
     setFornecedorEditando(null);
@@ -549,26 +520,6 @@ const Fornecedores = () => {
     return status === "ativo" ? "default" : "secondary";
   };
 
-  const getCategoriaBadge = (categoria: string) => {
-    const cores = {
-      defensivos: "destructive",
-      fertilizantes: "default",
-      sementes: "secondary",
-      equipamentos: "outline",
-      servicos: "outline",
-      outros: "outline",
-    };
-    return (cores[categoria as keyof typeof cores] || "outline") as
-      | "default"
-      | "destructive"
-      | "secondary"
-      | "outline";
-  };
-
-  const getCategoriaLabel = (categoria: string) => {
-    const cat = categoriasFornecedor.find((c) => c.value === categoria);
-    return cat ? cat.label : categoria;
-  };
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return <ArrowUpDown className="h-4 w-4" />;
@@ -745,26 +696,6 @@ const Fornecedores = () => {
                       placeholder="000.000.000.000"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="categoria">Categoria</Label>
-                    <Select
-                      value={formulario.categoria || ""}
-                      onValueChange={(value) =>
-                        setFormulario(prev => ({ ...prev, categoria: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoriasFornecedor.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            {cat.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <div className="space-y-2 col-span-2">
                     <Label htmlFor="endereco">Endereço Completo *</Label>
                     <Input
@@ -852,25 +783,6 @@ const Fornecedores = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select
-                value={filtroCategoria}
-                onValueChange={setFiltroCategoria}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas as categorias" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todas as categorias</SelectItem>
-                  {categoriasFornecedor.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
               <Label>Status</Label>
               <Select value={filtroStatus} onValueChange={setFiltroStatus}>
                 <SelectTrigger>
@@ -924,19 +836,6 @@ const Fornecedores = () => {
                 <p className="text-xs text-muted-foreground">
                   Fornecedores Ativos
                 </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <FileText className="h-8 w-8 text-warning" />
-              <div>
-                <p className="text-2xl font-bold">
-                  {categoriasFornecedor.length}
-                </p>
-                <p className="text-xs text-muted-foreground">Categorias</p>
               </div>
             </div>
           </CardContent>
@@ -1025,11 +924,6 @@ const Fornecedores = () => {
                 <TableRow key={fornecedor.id}>
                   <TableCell>
                     <div className="font-medium">{fornecedor.razaoSocial}</div>
-                    <div className="text-sm text-muted-foreground">
-                      <Badge variant={getCategoriaBadge(fornecedor.categoria)} className="text-xs">
-                        {getCategoriaLabel(fornecedor.categoria)}
-                      </Badge>
-                    </div>
                   </TableCell>
                   <TableCell>{fornecedor.nomeFantasia}</TableCell>
                   <TableCell className="font-mono text-sm">{fornecedor.cnpjCpf}</TableCell>
@@ -1207,14 +1101,6 @@ const Fornecedores = () => {
                   <Label>Inscrição Estadual</Label>
                   <div className="p-2 bg-muted rounded-md font-mono">
                     {fornecedorConsultando.inscricaoEstadual}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Categoria</Label>
-                  <div className="p-2 bg-muted rounded-md">
-                    <Badge variant={getCategoriaBadge(fornecedorConsultando.categoria)}>
-                      {getCategoriaLabel(fornecedorConsultando.categoria)}
-                    </Badge>
                   </div>
                 </div>
                 <div className="space-y-2 col-span-2">
