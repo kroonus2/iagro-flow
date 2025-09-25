@@ -69,7 +69,7 @@ const menuItems: MenuItem[] = [
       },
       { title: "Fornecedores", icon: Store, path: "/fornecedores" },
       { title: "Defensivos", icon: Package, path: "/defensivos" },
-      { title: "Smart Calda", icon: FlaskConical, path: "/carga-smart-calda" },
+      
       {
         title: "Gestão Smart Caldas",
         icon: FlaskConical,
