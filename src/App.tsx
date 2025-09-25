@@ -60,11 +60,11 @@ const App = () => (
                 path="/gerenciamento-unidades"
                 element={<GerenciamentoUnidades />}
               />
-              <Route path="/fornecedores" element={<Fornecedores />} />
               <Route
-                path="/gestao-smart-caldas"
+                path="/gerenciamento-smart-caldas"
                 element={<GestaoSmartCaldas />}
               />
+              <Route path="/fornecedores" element={<Fornecedores />} />
               <Route path="/cargas" element={<Cargas />} />
               <Route
                 path="/importacao-receitas"

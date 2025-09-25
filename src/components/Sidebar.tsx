@@ -67,14 +67,13 @@ const menuItems: MenuItem[] = [
         icon: Building2,
         path: "/gerenciamento-unidades",
       },
+      {
+        title: "Gerenciar Smart Caldas",
+        icon: FlaskConical,
+        path: "/gerenciamento-smart-caldas",
+      },
       { title: "Fornecedores", icon: Store, path: "/fornecedores" },
       { title: "Defensivos", icon: Package, path: "/defensivos" },
-      
-      {
-        title: "Gestão Smart Caldas",
-        icon: FlaskConical,
-        path: "/gestao-smart-caldas",
-      },
     ],
   },
   {
