@@ -82,17 +82,23 @@ interface Tanque {
   capacidade: number;
 }
 
+interface Fracionado {
+  id: number;
+  capacidade: number;
+}
+
 interface SmartCalda {
   id: number;
   nome: string;
   usinaVinculada: string;
   numeroSerie: string;
   dataInstalacao: string;
-  geoLocalizacao: string;
+  latitude: string;
+  longitude: string;
   identificacaoEquipamento: string;
   localizacao: string;
   ibcs: IBC[];
-  fracionado: { ativo: boolean; quantidade: number; capacidade: number };
+  fracionado: { ativo: boolean; unidades: Fracionado[] };
   silos: Silo[];
   tanqueCalda: Tanque;
   tanqueArmazenamento: Tanque;
@@ -117,17 +123,24 @@ const mockSmartCaldas: SmartCalda[] = [
     usinaVinculada: "Usina São João",
     numeroSerie: "SC-2024-001",
     dataInstalacao: "2024-01-10",
-    geoLocalizacao: "-23.5505, -46.6333",
+    latitude: "-23.5505",
+    longitude: "-46.6333",
     identificacaoEquipamento: "Caldas automática para defensivos agrícolas",
     localizacao: "Estufa A - Setor 1",
     ibcs: [
       { id: 1, capacidade: 300 },
-      { id: 2, capacidade: 250 }
+      { id: 2, capacidade: 250 },
     ],
-    fracionado: { ativo: true, quantidade: 2, capacidade: 100 },
+    fracionado: {
+      ativo: true,
+      unidades: [
+        { id: 1, capacidade: 100 },
+        { id: 2, capacidade: 100 },
+      ],
+    },
     silos: [
       { id: 1, capacidade: 500, balancas: 1 },
-      { id: 2, capacidade: 300, balancas: 2 }
+      { id: 2, capacidade: 300, balancas: 2 },
     ],
     tanqueCalda: { id: "TC-001", capacidade: 1000 },
     tanqueArmazenamento: { id: "TA-001", capacidade: 2000 },
@@ -149,16 +162,13 @@ const mockSmartCaldas: SmartCalda[] = [
     usinaVinculada: "Usina Boa Vista",
     numeroSerie: "SC-2024-002",
     dataInstalacao: "2024-01-05",
-    geoLocalizacao: "-22.9068, -43.1729",
+    latitude: "-22.9068",
+    longitude: "-43.1729",
     identificacaoEquipamento: "Caldas manual com controle semi-automático",
     localizacao: "Estufa B - Setor 2",
-    ibcs: [
-      { id: 1, capacidade: 200 }
-    ],
-    fracionado: { ativo: false, quantidade: 0, capacidade: 0 },
-    silos: [
-      { id: 1, capacidade: 400, balancas: 1 }
-    ],
+    ibcs: [{ id: 1, capacidade: 200 }],
+    fracionado: { ativo: false, unidades: [] },
+    silos: [{ id: 1, capacidade: 400, balancas: 1 }],
     tanqueCalda: { id: "TC-002", capacidade: 800 },
     tanqueArmazenamento: { id: "TA-002", capacidade: 1500 },
     observacoes: "Necessita calibração mensal",
@@ -179,18 +189,27 @@ const mockSmartCaldas: SmartCalda[] = [
     usinaVinculada: "Usina Verde Campo",
     numeroSerie: "SC-2024-003",
     dataInstalacao: "2023-12-20",
-    geoLocalizacao: "-20.4697, -54.6201",
+    latitude: "-20.4697",
+    longitude: "-54.6201",
     identificacaoEquipamento: "Caldas automática de alta capacidade",
     localizacao: "Estufa C - Setor 1",
     ibcs: [
       { id: 1, capacidade: 400 },
       { id: 2, capacidade: 350 },
-      { id: 3, capacidade: 300 }
+      { id: 3, capacidade: 300 },
     ],
-    fracionado: { ativo: true, quantidade: 4, capacidade: 50 },
+    fracionado: {
+      ativo: true,
+      unidades: [
+        { id: 1, capacidade: 50 },
+        { id: 2, capacidade: 50 },
+        { id: 3, capacidade: 50 },
+        { id: 4, capacidade: 50 },
+      ],
+    },
     silos: [
       { id: 1, capacidade: 600, balancas: 2 },
-      { id: 2, capacidade: 500, balancas: 1 }
+      { id: 2, capacidade: 500, balancas: 1 },
     ],
     tanqueCalda: { id: "TC-003", capacidade: 1500 },
     tanqueArmazenamento: { id: "TA-003", capacidade: 3000 },
@@ -219,22 +238,27 @@ const GestaoSmartCaldas = () => {
   const [smartCaldas, setSmartCaldas] = useState<SmartCalda[]>(mockSmartCaldas);
   const [dialogAberto, setDialogAberto] = useState(false);
   const [dialogDetalhes, setDialogDetalhes] = useState(false);
-  const [smartCaldaEditando, setSmartCaldaEditando] = useState<SmartCalda | null>(null);
-  const [smartCaldaDetalhes, setSmartCaldaDetalhes] = useState<SmartCalda | null>(null);
+  const [smartCaldaEditando, setSmartCaldaEditando] =
+    useState<SmartCalda | null>(null);
+  const [smartCaldaDetalhes, setSmartCaldaDetalhes] =
+    useState<SmartCalda | null>(null);
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [testConnectionId, setTestConnectionId] = useState<number | null>(null);
 
-  const [novaSmartCalda, setNovaSmartCalda] = useState<Omit<SmartCalda, 'id' | 'status' | 'ultimaConexao' | 'versaoFirmware'>>({
+  const [novaSmartCalda, setNovaSmartCalda] = useState<
+    Omit<SmartCalda, "id" | "status" | "ultimaConexao" | "versaoFirmware">
+  >({
     nome: "",
     usinaVinculada: "",
     numeroSerie: "",
     dataInstalacao: "",
-    geoLocalizacao: "",
+    latitude: "",
+    longitude: "",
     identificacaoEquipamento: "",
     localizacao: "",
     ibcs: [],
-    fracionado: { ativo: false, quantidade: 0, capacidade: 0 },
+    fracionado: { ativo: false, unidades: [] },
     silos: [],
     tanqueCalda: { id: "", capacidade: 0 },
     tanqueArmazenamento: { id: "", capacidade: 0 },
@@ -264,18 +288,23 @@ const GestaoSmartCaldas = () => {
       { campo: novaSmartCalda.usinaVinculada, nome: "Usina Vinculada" },
       { campo: novaSmartCalda.numeroSerie, nome: "Número de Série" },
       { campo: novaSmartCalda.dataInstalacao, nome: "Data da Instalação" },
-      { campo: novaSmartCalda.geoLocalizacao, nome: "Geo Localização" },
+      { campo: novaSmartCalda.latitude, nome: "Latitude" },
+      { campo: novaSmartCalda.longitude, nome: "Longitude" },
       { campo: novaSmartCalda.url, nome: "URL de Conexão" },
       { campo: novaSmartCalda.token, nome: "Token de Acesso" },
     ];
 
-    const camposFaltantes = camposObrigatorios.filter(item => !item.campo?.trim()).map(item => item.nome);
+    const camposFaltantes = camposObrigatorios
+      .filter((item) => !item.campo?.trim())
+      .map((item) => item.nome);
 
     if (camposFaltantes.length > 0) {
       toast({
         title: "Campos obrigatórios",
-        description: `Preencha os seguintes campos: ${camposFaltantes.join(", ")}`,
-        variant: "destructive"
+        description: `Preencha os seguintes campos: ${camposFaltantes.join(
+          ", "
+        )}`,
+        variant: "destructive",
       });
       return false;
     }
@@ -283,13 +312,29 @@ const GestaoSmartCaldas = () => {
     // Verificar se pelo menos um tipo de capacidade foi informado
     const temIBCs = novaSmartCalda.ibcs.length > 0;
     const temSilos = novaSmartCalda.silos.length > 0;
-    const temTanques = novaSmartCalda.tanqueCalda.capacidade > 0 || novaSmartCalda.tanqueArmazenamento.capacidade > 0;
+    const temTanques =
+      novaSmartCalda.tanqueCalda.capacidade > 0 ||
+      novaSmartCalda.tanqueArmazenamento.capacidade > 0;
+    const temFracionados = novaSmartCalda.fracionado.ativo
+      ? novaSmartCalda.fracionado.unidades.length > 0
+      : true;
 
     if (!temIBCs && !temSilos && !temTanques) {
       toast({
         title: "Configurações de capacidade obrigatórias",
-        description: "É necessário informar as configurações de capacidade (IBCs, silos ou tanques) desta Smart Calda.",
-        variant: "destructive"
+        description:
+          "É necessário informar as configurações de capacidade (IBCs, silos ou tanques) desta Smart Calda.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!temFracionados) {
+      toast({
+        title: "Configuração de fracionado obrigatória",
+        description:
+          "Quando o fracionado está ativo, é necessário adicionar pelo menos uma unidade.",
+        variant: "destructive",
       });
       return false;
     }
@@ -321,7 +366,8 @@ const GestaoSmartCaldas = () => {
       usinaVinculada: smartCalda.usinaVinculada,
       numeroSerie: smartCalda.numeroSerie,
       dataInstalacao: smartCalda.dataInstalacao,
-      geoLocalizacao: smartCalda.geoLocalizacao,
+      latitude: smartCalda.latitude,
+      longitude: smartCalda.longitude,
       identificacaoEquipamento: smartCalda.identificacaoEquipamento,
       localizacao: smartCalda.localizacao,
       ibcs: [...smartCalda.ibcs],
@@ -340,20 +386,24 @@ const GestaoSmartCaldas = () => {
   const handleSalvarEdicao = () => {
     if (!validarFormulario()) return;
 
-    setSmartCaldas(smartCaldas.map(sc => 
-      sc.id === smartCaldaEditando?.id 
-        ? { ...smartCaldaEditando, ...novaSmartCalda }
-        : sc
-    ));
+    setSmartCaldas(
+      smartCaldas.map((sc) =>
+        sc.id === smartCaldaEditando?.id
+          ? { ...smartCaldaEditando, ...novaSmartCalda }
+          : sc
+      )
+    );
     resetarFormulario();
     setDialogAberto(false);
     toast({ title: "Smart Calda atualizada com sucesso!", variant: "default" });
   };
 
   const handleExcluirSmartCalda = (id: number) => {
-    setSmartCaldas(smartCaldas.map(sc => 
-      sc.id === id ? { ...sc, status: "desativado" } : sc
-    ));
+    setSmartCaldas(
+      smartCaldas.map((sc) =>
+        sc.id === id ? { ...sc, status: "desativado" } : sc
+      )
+    );
     toast({ title: "Smart Calda desativada com sucesso!", variant: "default" });
   };
 
@@ -395,11 +445,12 @@ const GestaoSmartCaldas = () => {
       usinaVinculada: "",
       numeroSerie: "",
       dataInstalacao: "",
-      geoLocalizacao: "",
+      latitude: "",
+      longitude: "",
       identificacaoEquipamento: "",
       localizacao: "",
       ibcs: [],
-      fracionado: { ativo: false, quantidade: 0, capacidade: 0 },
+      fracionado: { ativo: false, unidades: [] },
       silos: [],
       tanqueCalda: { id: "", capacidade: 0 },
       tanqueArmazenamento: { id: "", capacidade: 0 },
@@ -417,51 +468,98 @@ const GestaoSmartCaldas = () => {
 
   // Funções para gerenciar IBCs
   const adicionarIBC = () => {
-    const novoId = Math.max(0, ...novaSmartCalda.ibcs.map(ibc => ibc.id)) + 1;
+    const novoId = Math.max(0, ...novaSmartCalda.ibcs.map((ibc) => ibc.id)) + 1;
     setNovaSmartCalda({
       ...novaSmartCalda,
-      ibcs: [...novaSmartCalda.ibcs, { id: novoId, capacidade: 0 }]
+      ibcs: [...novaSmartCalda.ibcs, { id: novoId, capacidade: 0 }],
     });
   };
 
   const removerIBC = (id: number) => {
     setNovaSmartCalda({
       ...novaSmartCalda,
-      ibcs: novaSmartCalda.ibcs.filter(ibc => ibc.id !== id)
+      ibcs: novaSmartCalda.ibcs.filter((ibc) => ibc.id !== id),
     });
   };
 
   const atualizarIBC = (id: number, capacidade: number) => {
     setNovaSmartCalda({
       ...novaSmartCalda,
-      ibcs: novaSmartCalda.ibcs.map(ibc => 
+      ibcs: novaSmartCalda.ibcs.map((ibc) =>
         ibc.id === id ? { ...ibc, capacidade } : ibc
-      )
+      ),
     });
   };
 
   // Funções para gerenciar Silos
   const adicionarSilo = () => {
-    const novoId = Math.max(0, ...novaSmartCalda.silos.map(silo => silo.id)) + 1;
+    const novoId =
+      Math.max(0, ...novaSmartCalda.silos.map((silo) => silo.id)) + 1;
     setNovaSmartCalda({
       ...novaSmartCalda,
-      silos: [...novaSmartCalda.silos, { id: novoId, capacidade: 0, balancas: 1 }]
+      silos: [
+        ...novaSmartCalda.silos,
+        { id: novoId, capacidade: 0, balancas: 1 },
+      ],
     });
   };
 
   const removerSilo = (id: number) => {
     setNovaSmartCalda({
       ...novaSmartCalda,
-      silos: novaSmartCalda.silos.filter(silo => silo.id !== id)
+      silos: novaSmartCalda.silos.filter((silo) => silo.id !== id),
     });
   };
 
   const atualizarSilo = (id: number, field: keyof Silo, value: number) => {
     setNovaSmartCalda({
       ...novaSmartCalda,
-      silos: novaSmartCalda.silos.map(silo => 
+      silos: novaSmartCalda.silos.map((silo) =>
         silo.id === id ? { ...silo, [field]: value } : silo
-      )
+      ),
+    });
+  };
+
+  // Funções para gerenciar Fracionados
+  const adicionarFracionado = () => {
+    const novoId =
+      Math.max(
+        0,
+        ...novaSmartCalda.fracionado.unidades.map((frac) => frac.id)
+      ) + 1;
+    setNovaSmartCalda({
+      ...novaSmartCalda,
+      fracionado: {
+        ...novaSmartCalda.fracionado,
+        unidades: [
+          ...novaSmartCalda.fracionado.unidades,
+          { id: novoId, capacidade: 0 },
+        ],
+      },
+    });
+  };
+
+  const removerFracionado = (id: number) => {
+    setNovaSmartCalda({
+      ...novaSmartCalda,
+      fracionado: {
+        ...novaSmartCalda.fracionado,
+        unidades: novaSmartCalda.fracionado.unidades.filter(
+          (frac) => frac.id !== id
+        ),
+      },
+    });
+  };
+
+  const atualizarFracionado = (id: number, capacidade: number) => {
+    setNovaSmartCalda({
+      ...novaSmartCalda,
+      fracionado: {
+        ...novaSmartCalda.fracionado,
+        unidades: novaSmartCalda.fracionado.unidades.map((frac) =>
+          frac.id === id ? { ...frac, capacidade } : frac
+        ),
+      },
     });
   };
 
@@ -516,7 +614,10 @@ const GestaoSmartCaldas = () => {
                     <Select
                       value={novaSmartCalda.usinaVinculada}
                       onValueChange={(value) =>
-                        setNovaSmartCalda({ ...novaSmartCalda, usinaVinculada: value })
+                        setNovaSmartCalda({
+                          ...novaSmartCalda,
+                          usinaVinculada: value,
+                        })
                       }
                     >
                       <SelectTrigger>
@@ -531,14 +632,17 @@ const GestaoSmartCaldas = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="numeroSerie">Número de Série *</Label>
                     <Input
                       id="numeroSerie"
                       value={novaSmartCalda.numeroSerie}
                       onChange={(e) =>
-                        setNovaSmartCalda({ ...novaSmartCalda, numeroSerie: e.target.value })
+                        setNovaSmartCalda({
+                          ...novaSmartCalda,
+                          numeroSerie: e.target.value,
+                        })
                       }
                       placeholder="SC-2024-001"
                     />
@@ -551,30 +655,52 @@ const GestaoSmartCaldas = () => {
                       type="date"
                       value={novaSmartCalda.dataInstalacao}
                       onChange={(e) =>
-                        setNovaSmartCalda({ ...novaSmartCalda, dataInstalacao: e.target.value })
+                        setNovaSmartCalda({
+                          ...novaSmartCalda,
+                          dataInstalacao: e.target.value,
+                        })
                       }
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="geoLocalizacao">Geo Localização *</Label>
-                    <Input
-                      id="geoLocalizacao"
-                      value={novaSmartCalda.geoLocalizacao}
-                      onChange={(e) =>
-                        setNovaSmartCalda({ ...novaSmartCalda, geoLocalizacao: e.target.value })
-                      }
-                      placeholder="-23.5505, -46.6333"
-                    />
+                    <Label>Geo Localização *</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        placeholder="Latitude (ex: -23.5505)"
+                        value={novaSmartCalda.latitude}
+                        onChange={(e) =>
+                          setNovaSmartCalda({
+                            ...novaSmartCalda,
+                            latitude: e.target.value,
+                          })
+                        }
+                      />
+                      <Input
+                        placeholder="Longitude (ex: -46.6333)"
+                        value={novaSmartCalda.longitude}
+                        onChange={(e) =>
+                          setNovaSmartCalda({
+                            ...novaSmartCalda,
+                            longitude: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2 col-span-2">
-                    <Label htmlFor="identificacaoEquipamento">Características do Equipamento</Label>
+                    <Label htmlFor="identificacaoEquipamento">
+                      Características do Equipamento
+                    </Label>
                     <Textarea
                       id="identificacaoEquipamento"
                       value={novaSmartCalda.identificacaoEquipamento}
                       onChange={(e) =>
-                        setNovaSmartCalda({ ...novaSmartCalda, identificacaoEquipamento: e.target.value })
+                        setNovaSmartCalda({
+                          ...novaSmartCalda,
+                          identificacaoEquipamento: e.target.value,
+                        })
                       }
                       placeholder="Caldas automática para defensivos agrícolas"
                       rows={2}
@@ -586,7 +712,12 @@ const GestaoSmartCaldas = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <Label>IBCs e suas capacidades</Label>
-                    <Button type="button" onClick={adicionarIBC} size="sm" variant="outline">
+                    <Button
+                      type="button"
+                      onClick={adicionarIBC}
+                      size="sm"
+                      variant="outline"
+                    >
                       <Plus className="h-4 w-4 mr-2" />
                       Adicionar IBC
                     </Button>
@@ -597,8 +728,10 @@ const GestaoSmartCaldas = () => {
                       <Input
                         type="number"
                         placeholder="Capacidade (L)"
-                        value={ibc.capacidade || ''}
-                        onChange={(e) => atualizarIBC(ibc.id, parseInt(e.target.value) || 0)}
+                        value={ibc.capacidade || ""}
+                        onChange={(e) =>
+                          atualizarIBC(ibc.id, parseInt(e.target.value) || 0)
+                        }
                         className="flex-1"
                       />
                       <Button
@@ -621,40 +754,54 @@ const GestaoSmartCaldas = () => {
                       onCheckedChange={(checked) =>
                         setNovaSmartCalda({
                           ...novaSmartCalda,
-                          fracionado: { ...novaSmartCalda.fracionado, ativo: checked }
+                          fracionado: {
+                            ...novaSmartCalda.fracionado,
+                            ativo: checked,
+                          },
                         })
                       }
                     />
                     <Label>Fracionado</Label>
                   </div>
                   {novaSmartCalda.fracionado.ativo && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Quantidade</Label>
-                        <Input
-                          type="number"
-                          value={novaSmartCalda.fracionado.quantidade || ''}
-                          onChange={(e) =>
-                            setNovaSmartCalda({
-                              ...novaSmartCalda,
-                              fracionado: { ...novaSmartCalda.fracionado, quantidade: parseInt(e.target.value) || 0 }
-                            })
-                          }
-                        />
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <Label>Fracionados</Label>
+                        <Button
+                          type="button"
+                          onClick={adicionarFracionado}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Adicionar Fracionado
+                        </Button>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Capacidade (L)</Label>
-                        <Input
-                          type="number"
-                          value={novaSmartCalda.fracionado.capacidade || ''}
-                          onChange={(e) =>
-                            setNovaSmartCalda({
-                              ...novaSmartCalda,
-                              fracionado: { ...novaSmartCalda.fracionado, capacidade: parseInt(e.target.value) || 0 }
-                            })
-                          }
-                        />
-                      </div>
+                      {novaSmartCalda.fracionado.unidades.map((frac) => (
+                        <div key={frac.id} className="flex gap-2 items-center">
+                          <Label>Fracionado {frac.id}:</Label>
+                          <Input
+                            type="number"
+                            placeholder="Capacidade (L)"
+                            value={frac.capacidade || ""}
+                            onChange={(e) =>
+                              atualizarFracionado(
+                                frac.id,
+                                parseInt(e.target.value) || 0
+                              )
+                            }
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            onClick={() => removerFracionado(frac.id)}
+                            size="sm"
+                            variant="outline"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -663,7 +810,12 @@ const GestaoSmartCaldas = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <Label>Silos e suas capacidades</Label>
-                    <Button type="button" onClick={adicionarSilo} size="sm" variant="outline">
+                    <Button
+                      type="button"
+                      onClick={adicionarSilo}
+                      size="sm"
+                      variant="outline"
+                    >
                       <Plus className="h-4 w-4 mr-2" />
                       Adicionar Silo
                     </Button>
@@ -674,15 +826,27 @@ const GestaoSmartCaldas = () => {
                       <Input
                         type="number"
                         placeholder="Capacidade (kg)"
-                        value={silo.capacidade || ''}
-                        onChange={(e) => atualizarSilo(silo.id, 'capacidade', parseInt(e.target.value) || 0)}
+                        value={silo.capacidade || ""}
+                        onChange={(e) =>
+                          atualizarSilo(
+                            silo.id,
+                            "capacidade",
+                            parseInt(e.target.value) || 0
+                          )
+                        }
                         className="flex-1"
                       />
                       <Input
                         type="number"
                         placeholder="Balanças"
-                        value={silo.balancas || ''}
-                        onChange={(e) => atualizarSilo(silo.id, 'balancas', parseInt(e.target.value) || 0)}
+                        value={silo.balancas || ""}
+                        onChange={(e) =>
+                          atualizarSilo(
+                            silo.id,
+                            "balancas",
+                            parseInt(e.target.value) || 0
+                          )
+                        }
                         className="w-24"
                       />
                       <Button
@@ -708,18 +872,24 @@ const GestaoSmartCaldas = () => {
                         onChange={(e) =>
                           setNovaSmartCalda({
                             ...novaSmartCalda,
-                            tanqueCalda: { ...novaSmartCalda.tanqueCalda, id: e.target.value }
+                            tanqueCalda: {
+                              ...novaSmartCalda.tanqueCalda,
+                              id: e.target.value,
+                            },
                           })
                         }
                       />
                       <Input
                         type="number"
                         placeholder="Capacidade (L)"
-                        value={novaSmartCalda.tanqueCalda.capacidade || ''}
+                        value={novaSmartCalda.tanqueCalda.capacidade || ""}
                         onChange={(e) =>
                           setNovaSmartCalda({
                             ...novaSmartCalda,
-                            tanqueCalda: { ...novaSmartCalda.tanqueCalda, capacidade: parseInt(e.target.value) || 0 }
+                            tanqueCalda: {
+                              ...novaSmartCalda.tanqueCalda,
+                              capacidade: parseInt(e.target.value) || 0,
+                            },
                           })
                         }
                       />
@@ -735,18 +905,26 @@ const GestaoSmartCaldas = () => {
                         onChange={(e) =>
                           setNovaSmartCalda({
                             ...novaSmartCalda,
-                            tanqueArmazenamento: { ...novaSmartCalda.tanqueArmazenamento, id: e.target.value }
+                            tanqueArmazenamento: {
+                              ...novaSmartCalda.tanqueArmazenamento,
+                              id: e.target.value,
+                            },
                           })
                         }
                       />
                       <Input
                         type="number"
                         placeholder="Capacidade (L)"
-                        value={novaSmartCalda.tanqueArmazenamento.capacidade || ''}
+                        value={
+                          novaSmartCalda.tanqueArmazenamento.capacidade || ""
+                        }
                         onChange={(e) =>
                           setNovaSmartCalda({
                             ...novaSmartCalda,
-                            tanqueArmazenamento: { ...novaSmartCalda.tanqueArmazenamento, capacidade: parseInt(e.target.value) || 0 }
+                            tanqueArmazenamento: {
+                              ...novaSmartCalda.tanqueArmazenamento,
+                              capacidade: parseInt(e.target.value) || 0,
+                            },
                           })
                         }
                       />
@@ -760,7 +938,10 @@ const GestaoSmartCaldas = () => {
                     id="observacoes"
                     value={novaSmartCalda.observacoes}
                     onChange={(e) =>
-                      setNovaSmartCalda({ ...novaSmartCalda, observacoes: e.target.value })
+                      setNovaSmartCalda({
+                        ...novaSmartCalda,
+                        observacoes: e.target.value,
+                      })
                     }
                     placeholder="Informações adicionais..."
                     rows={3}
@@ -776,7 +957,10 @@ const GestaoSmartCaldas = () => {
                       id="url"
                       value={novaSmartCalda.url}
                       onChange={(e) =>
-                        setNovaSmartCalda({ ...novaSmartCalda, url: e.target.value })
+                        setNovaSmartCalda({
+                          ...novaSmartCalda,
+                          url: e.target.value,
+                        })
                       }
                       placeholder="https://smartcalda-001.iagro.local:8080"
                     />
@@ -788,7 +972,10 @@ const GestaoSmartCaldas = () => {
                       type="password"
                       value={novaSmartCalda.token}
                       onChange={(e) =>
-                        setNovaSmartCalda({ ...novaSmartCalda, token: e.target.value })
+                        setNovaSmartCalda({
+                          ...novaSmartCalda,
+                          token: e.target.value,
+                        })
                       }
                       placeholder="sk_abc123..."
                     />
@@ -849,7 +1036,9 @@ const GestaoSmartCaldas = () => {
                         <Label htmlFor="backup">Backup Automático</Label>
                         <Switch
                           id="backup"
-                          checked={novaSmartCalda.configuracoes.backupAutomatico}
+                          checked={
+                            novaSmartCalda.configuracoes.backupAutomatico
+                          }
                           onCheckedChange={(checked) =>
                             setNovaSmartCalda({
                               ...novaSmartCalda,
@@ -871,7 +1060,13 @@ const GestaoSmartCaldas = () => {
               <Button variant="outline" onClick={() => setDialogAberto(false)}>
                 Cancelar
               </Button>
-              <Button onClick={smartCaldaEditando ? handleSalvarEdicao : handleCriarSmartCalda}>
+              <Button
+                onClick={
+                  smartCaldaEditando
+                    ? handleSalvarEdicao
+                    : handleCriarSmartCalda
+                }
+              >
                 {smartCaldaEditando ? "Atualizar" : "Cadastrar"} Smart Calda
               </Button>
             </div>
@@ -939,7 +1134,12 @@ const GestaoSmartCaldas = () => {
             <div className="flex items-center space-x-2">
               <Server className="h-8 w-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold">{smartCaldas.filter(sc => sc.status !== "desativado").length}</p>
+                <p className="text-2xl font-bold">
+                  {
+                    smartCaldas.filter((sc) => sc.status !== "desativado")
+                      .length
+                  }
+                </p>
                 <p className="text-xs text-muted-foreground">
                   Total Smart Caldas
                 </p>
@@ -996,16 +1196,17 @@ const GestaoSmartCaldas = () => {
         <CardHeader>
           <CardTitle>Smart Caldas Cadastradas</CardTitle>
           <CardDescription>
-            {smartCaldasFiltradas.length === 0 && smartCaldas.length === 0 
+            {smartCaldasFiltradas.length === 0 && smartCaldas.length === 0
               ? "Nenhuma Smart Calda cadastrada"
-              : `${smartCaldasFiltradas.length} Smart Calda(s) encontrada(s)`
-            }
+              : `${smartCaldasFiltradas.length} Smart Calda(s) encontrada(s)`}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {smartCaldasFiltradas.length === 0 && smartCaldas.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Nenhuma Smart Calda cadastrada</p>
+              <p className="text-muted-foreground">
+                Nenhuma Smart Calda cadastrada
+              </p>
             </div>
           ) : (
             <Table>
@@ -1071,14 +1272,23 @@ const GestaoSmartCaldas = () => {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar desativação</AlertDialogTitle>
+                              <AlertDialogTitle>
+                                Confirmar desativação
+                              </AlertDialogTitle>
                               <AlertDialogDescription>
-                                Tem certeza que deseja desativar esta Smart Calda? Ela não será mais exibida na lista principal, mas os dados serão mantidos no sistema.
+                                Tem certeza que deseja desativar esta Smart
+                                Calda? Ela não será mais exibida na lista
+                                principal, mas os dados serão mantidos no
+                                sistema.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleExcluirSmartCalda(smartCalda.id)}>
+                              <AlertDialogAction
+                                onClick={() =>
+                                  handleExcluirSmartCalda(smartCalda.id)
+                                }
+                              >
                                 Desativar
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -1103,18 +1313,31 @@ const GestaoSmartCaldas = () => {
               Visualização completa das configurações e capacidades
             </DialogDescription>
           </DialogHeader>
-          
+
           {smartCaldaDetalhes && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h4 className="font-medium mb-2">Informações Básicas</h4>
                   <div className="space-y-1 text-sm">
-                    <p><strong>Nome:</strong> {smartCaldaDetalhes.nome}</p>
-                    <p><strong>Usina:</strong> {smartCaldaDetalhes.usinaVinculada}</p>
-                    <p><strong>Série:</strong> {smartCaldaDetalhes.numeroSerie}</p>
-                    <p><strong>Instalação:</strong> {smartCaldaDetalhes.dataInstalacao}</p>
-                    <p><strong>Localização:</strong> {smartCaldaDetalhes.localizacao}</p>
+                    <p>
+                      <strong>Nome:</strong> {smartCaldaDetalhes.nome}
+                    </p>
+                    <p>
+                      <strong>Usina:</strong>{" "}
+                      {smartCaldaDetalhes.usinaVinculada}
+                    </p>
+                    <p>
+                      <strong>Série:</strong> {smartCaldaDetalhes.numeroSerie}
+                    </p>
+                    <p>
+                      <strong>Instalação:</strong>{" "}
+                      {smartCaldaDetalhes.dataInstalacao}
+                    </p>
+                    <p>
+                      <strong>Localização:</strong>{" "}
+                      {smartCaldaDetalhes.localizacao}
+                    </p>
                   </div>
                 </div>
                 <div>
@@ -1122,57 +1345,84 @@ const GestaoSmartCaldas = () => {
                   <div className="space-y-1 text-sm">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(smartCaldaDetalhes.status)}
-                      <Badge variant={getStatusBadge(smartCaldaDetalhes.status)}>
+                      <Badge
+                        variant={getStatusBadge(smartCaldaDetalhes.status)}
+                      >
                         {smartCaldaDetalhes.status}
                       </Badge>
                     </div>
-                    <p><strong>Última Conexão:</strong> {smartCaldaDetalhes.ultimaConexao}</p>
-                    <p><strong>Firmware:</strong> {smartCaldaDetalhes.versaoFirmware}</p>
+                    <p>
+                      <strong>Última Conexão:</strong>{" "}
+                      {smartCaldaDetalhes.ultimaConexao}
+                    </p>
+                    <p>
+                      <strong>Firmware:</strong>{" "}
+                      {smartCaldaDetalhes.versaoFirmware}
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div>
-                <h4 className="font-medium mb-2">Capacidades dos Equipamentos</h4>
+                <h4 className="font-medium mb-2">
+                  Capacidades dos Equipamentos
+                </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   {smartCaldaDetalhes.ibcs.length > 0 && (
                     <div>
                       <p className="font-medium">IBCs:</p>
                       {smartCaldaDetalhes.ibcs.map((ibc) => (
-                        <p key={ibc.id}>IBC {ibc.id}: {ibc.capacidade}L</p>
+                        <p key={ibc.id}>
+                          IBC {ibc.id}: {ibc.capacidade}L
+                        </p>
                       ))}
                     </div>
                   )}
-                  
+
                   {smartCaldaDetalhes.silos.length > 0 && (
                     <div>
                       <p className="font-medium">Silos:</p>
                       {smartCaldaDetalhes.silos.map((silo) => (
-                        <p key={silo.id}>Silo {silo.id}: {silo.capacidade}kg ({silo.balancas} balanças)</p>
+                        <p key={silo.id}>
+                          Silo {silo.id}: {silo.capacidade}kg ({silo.balancas}{" "}
+                          balanças)
+                        </p>
                       ))}
                     </div>
                   )}
-                  
+
                   <div>
                     <p className="font-medium">Tanques:</p>
                     {smartCaldaDetalhes.tanqueCalda.capacidade > 0 && (
-                      <p>Calda {smartCaldaDetalhes.tanqueCalda.id}: {smartCaldaDetalhes.tanqueCalda.capacidade}L</p>
+                      <p>
+                        Calda {smartCaldaDetalhes.tanqueCalda.id}:{" "}
+                        {smartCaldaDetalhes.tanqueCalda.capacidade}L
+                      </p>
                     )}
                     {smartCaldaDetalhes.tanqueArmazenamento.capacidade > 0 && (
-                      <p>Armazenamento {smartCaldaDetalhes.tanqueArmazenamento.id}: {smartCaldaDetalhes.tanqueArmazenamento.capacidade}L</p>
+                      <p>
+                        Armazenamento{" "}
+                        {smartCaldaDetalhes.tanqueArmazenamento.id}:{" "}
+                        {smartCaldaDetalhes.tanqueArmazenamento.capacidade}L
+                      </p>
                     )}
                   </div>
                 </div>
               </div>
 
-              {smartCaldaDetalhes.fracionado.ativo && (
-                <div>
-                  <h4 className="font-medium mb-2">Fracionado</h4>
-                  <p className="text-sm">
-                    {smartCaldaDetalhes.fracionado.quantidade} unidades de {smartCaldaDetalhes.fracionado.capacidade}L cada
-                  </p>
-                </div>
-              )}
+              {smartCaldaDetalhes.fracionado.ativo &&
+                smartCaldaDetalhes.fracionado.unidades.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-2">Fracionado</h4>
+                    <div className="text-sm">
+                      {smartCaldaDetalhes.fracionado.unidades.map((frac) => (
+                        <p key={frac.id}>
+                          Unidade {frac.id}: {frac.capacidade}L
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
               {smartCaldaDetalhes.observacoes && (
                 <div>
@@ -1182,7 +1432,7 @@ const GestaoSmartCaldas = () => {
               )}
             </div>
           )}
-          
+
           <div className="flex justify-end">
             <Button variant="outline" onClick={() => setDialogDetalhes(false)}>
               Fechar
