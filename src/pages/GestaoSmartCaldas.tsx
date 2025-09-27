@@ -68,23 +68,42 @@ import { useToast } from "@/hooks/use-toast";
 // Interfaces
 interface IBC {
   id: number;
+  nome: string;
   capacidade: number;
+  vazao: string;
 }
 
 interface Silo {
   id: number;
+  nome: string;
   capacidade: number;
-  balancas: number;
-}
-
-interface Tanque {
-  id: string;
-  capacidade: number;
+  peso: string;
 }
 
 interface Fracionado {
   id: number;
+  nome: string;
   capacidade: number;
+  pesoVazao: string;
+}
+
+interface Balanca {
+  id: number;
+  nome: string;
+  vinculacao: string[];
+}
+
+interface TanqueSaida {
+  nome: string;
+  capacidade: number;
+  sensorVazao: string;
+  sensorNivel: string;
+}
+
+interface TanqueArmazenamento {
+  nome: string;
+  capacidade: number;
+  sensorVazao: string;
 }
 
 interface SmartCalda {
@@ -98,10 +117,11 @@ interface SmartCalda {
   identificacaoEquipamento: string;
   localizacao: string;
   ibcs: IBC[];
-  fracionado: { ativo: boolean; unidades: Fracionado[] };
+  fracionados: Fracionado[];
   silos: Silo[];
-  tanqueCalda: Tanque;
-  tanqueArmazenamento: Tanque;
+  balancas: Balanca[];
+  tanqueSaida: TanqueSaida;
+  tanqueArmazenamento: TanqueArmazenamento;
   observacoes: string;
   url: string;
   token: string;
@@ -128,22 +148,32 @@ const mockSmartCaldas: SmartCalda[] = [
     identificacaoEquipamento: "Caldas automática para defensivos agrícolas",
     localizacao: "Estufa A - Setor 1",
     ibcs: [
-      { id: 1, capacidade: 300 },
-      { id: 2, capacidade: 250 },
+      { id: 1, nome: "IBC-001", capacidade: 300, vazao: "vazao_ibc_1" },
+      { id: 2, nome: "IBC-002", capacidade: 250, vazao: "vazao_ibc_2" },
     ],
-    fracionado: {
-      ativo: true,
-      unidades: [
-        { id: 1, capacidade: 100 },
-        { id: 2, capacidade: 100 },
-      ],
-    },
+    fracionados: [
+      { id: 1, nome: "FRAC-001", capacidade: 100, pesoVazao: "peso_frac_1" },
+      { id: 2, nome: "FRAC-002", capacidade: 100, pesoVazao: "peso_frac_2" },
+    ],
     silos: [
-      { id: 1, capacidade: 500, balancas: 1 },
-      { id: 2, capacidade: 300, balancas: 2 },
+      { id: 1, nome: "SILO-001", capacidade: 500, peso: "peso_silo_1" },
+      { id: 2, nome: "SILO-002", capacidade: 300, peso: "peso_silo_2" },
     ],
-    tanqueCalda: { id: "TC-001", capacidade: 1000 },
-    tanqueArmazenamento: { id: "TA-001", capacidade: 2000 },
+    balancas: [
+      { id: 1, nome: "BAL-001", vinculacao: ["SILO-001"] },
+      { id: 2, nome: "BAL-002", vinculacao: ["SILO-002", "FRAC-001"] },
+    ],
+    tanqueSaida: { 
+      nome: "SAIDA-001", 
+      capacidade: 1000, 
+      sensorVazao: "vazao_saida_1", 
+      sensorNivel: "nivel_saida_1" 
+    },
+    tanqueArmazenamento: { 
+      nome: "ARM-001", 
+      capacidade: 2000, 
+      sensorVazao: "vazao_arm_1" 
+    },
     observacoes: "Equipamento instalado com sucesso",
     url: "https://smartcalda-001.iagro.local:8080",
     token: "sk_abc123...",
@@ -166,11 +196,21 @@ const mockSmartCaldas: SmartCalda[] = [
     longitude: "-43.1729",
     identificacaoEquipamento: "Caldas manual com controle semi-automático",
     localizacao: "Estufa B - Setor 2",
-    ibcs: [{ id: 1, capacidade: 200 }],
-    fracionado: { ativo: false, unidades: [] },
-    silos: [{ id: 1, capacidade: 400, balancas: 1 }],
-    tanqueCalda: { id: "TC-002", capacidade: 800 },
-    tanqueArmazenamento: { id: "TA-002", capacidade: 1500 },
+    ibcs: [{ id: 1, nome: "IBC-001", capacidade: 200, vazao: "vazao_ibc_1" }],
+    fracionados: [],
+    silos: [{ id: 1, nome: "SILO-001", capacidade: 400, peso: "peso_silo_1" }],
+    balancas: [{ id: 1, nome: "BAL-001", vinculacao: ["SILO-001"] }],
+    tanqueSaida: { 
+      nome: "SAIDA-002", 
+      capacidade: 800, 
+      sensorVazao: "vazao_saida_2", 
+      sensorNivel: "nivel_saida_2" 
+    },
+    tanqueArmazenamento: { 
+      nome: "ARM-002", 
+      capacidade: 1500, 
+      sensorVazao: "vazao_arm_2" 
+    },
     observacoes: "Necessita calibração mensal",
     url: "https://smartcalda-002.iagro.local:8080",
     token: "sk_def456...",
@@ -194,25 +234,36 @@ const mockSmartCaldas: SmartCalda[] = [
     identificacaoEquipamento: "Caldas automática de alta capacidade",
     localizacao: "Estufa C - Setor 1",
     ibcs: [
-      { id: 1, capacidade: 400 },
-      { id: 2, capacidade: 350 },
-      { id: 3, capacidade: 300 },
+      { id: 1, nome: "IBC-001", capacidade: 400, vazao: "vazao_ibc_1" },
+      { id: 2, nome: "IBC-002", capacidade: 350, vazao: "vazao_ibc_2" },
+      { id: 3, nome: "IBC-003", capacidade: 300, vazao: "vazao_ibc_3" },
     ],
-    fracionado: {
-      ativo: true,
-      unidades: [
-        { id: 1, capacidade: 50 },
-        { id: 2, capacidade: 50 },
-        { id: 3, capacidade: 50 },
-        { id: 4, capacidade: 50 },
-      ],
-    },
+    fracionados: [
+      { id: 1, nome: "FRAC-001", capacidade: 50, pesoVazao: "peso_frac_1" },
+      { id: 2, nome: "FRAC-002", capacidade: 50, pesoVazao: "peso_frac_2" },
+      { id: 3, nome: "FRAC-003", capacidade: 50, pesoVazao: "peso_frac_3" },
+      { id: 4, nome: "FRAC-004", capacidade: 50, pesoVazao: "peso_frac_4" },
+    ],
     silos: [
-      { id: 1, capacidade: 600, balancas: 2 },
-      { id: 2, capacidade: 500, balancas: 1 },
+      { id: 1, nome: "SILO-001", capacidade: 600, peso: "peso_silo_1" },
+      { id: 2, nome: "SILO-002", capacidade: 500, peso: "peso_silo_2" },
     ],
-    tanqueCalda: { id: "TC-003", capacidade: 1500 },
-    tanqueArmazenamento: { id: "TA-003", capacidade: 3000 },
+    balancas: [
+      { id: 1, nome: "BAL-001", vinculacao: ["SILO-001"] },
+      { id: 2, nome: "BAL-002", vinculacao: ["SILO-002"] },
+      { id: 3, nome: "BAL-003", vinculacao: ["FRAC-001", "FRAC-002"] },
+    ],
+    tanqueSaida: { 
+      nome: "SAIDA-003", 
+      capacidade: 1500, 
+      sensorVazao: "vazao_saida_3", 
+      sensorNivel: "nivel_saida_3" 
+    },
+    tanqueArmazenamento: { 
+      nome: "ARM-003", 
+      capacidade: 3000, 
+      sensorVazao: "vazao_arm_3" 
+    },
     observacoes: "Em manutenção preventiva",
     url: "https://smartcalda-003.iagro.local:8080",
     token: "sk_ghi789...",
@@ -258,10 +309,11 @@ const GestaoSmartCaldas = () => {
     identificacaoEquipamento: "",
     localizacao: "",
     ibcs: [],
-    fracionado: { ativo: false, unidades: [] },
+    fracionados: [],
     silos: [],
-    tanqueCalda: { id: "", capacidade: 0 },
-    tanqueArmazenamento: { id: "", capacidade: 0 },
+    balancas: [],
+    tanqueSaida: { nome: "", capacidade: 0, sensorVazao: "", sensorNivel: "" },
+    tanqueArmazenamento: { nome: "", capacidade: 0, sensorVazao: "" },
     observacoes: "",
     url: "",
     token: "",
@@ -312,28 +364,16 @@ const GestaoSmartCaldas = () => {
     // Verificar se pelo menos um tipo de capacidade foi informado
     const temIBCs = novaSmartCalda.ibcs.length > 0;
     const temSilos = novaSmartCalda.silos.length > 0;
+    const temFracionados = novaSmartCalda.fracionados.length > 0;
     const temTanques =
-      novaSmartCalda.tanqueCalda.capacidade > 0 ||
+      novaSmartCalda.tanqueSaida.capacidade > 0 ||
       novaSmartCalda.tanqueArmazenamento.capacidade > 0;
-    const temFracionados = novaSmartCalda.fracionado.ativo
-      ? novaSmartCalda.fracionado.unidades.length > 0
-      : true;
 
-    if (!temIBCs && !temSilos && !temTanques) {
+    if (!temIBCs && !temSilos && !temFracionados && !temTanques) {
       toast({
         title: "Configurações de capacidade obrigatórias",
         description:
-          "É necessário informar as configurações de capacidade (IBCs, silos ou tanques) desta Smart Calda.",
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    if (!temFracionados) {
-      toast({
-        title: "Configuração de fracionado obrigatória",
-        description:
-          "Quando o fracionado está ativo, é necessário adicionar pelo menos uma unidade.",
+          "É necessário informar as configurações de capacidade (IBCs, silos, fracionados ou tanques) desta Smart Calda.",
         variant: "destructive",
       });
       return false;
@@ -371,9 +411,10 @@ const GestaoSmartCaldas = () => {
       identificacaoEquipamento: smartCalda.identificacaoEquipamento,
       localizacao: smartCalda.localizacao,
       ibcs: [...smartCalda.ibcs],
-      fracionado: { ...smartCalda.fracionado },
+      fracionados: [...smartCalda.fracionados],
       silos: [...smartCalda.silos],
-      tanqueCalda: { ...smartCalda.tanqueCalda },
+      balancas: [...smartCalda.balancas],
+      tanqueSaida: { ...smartCalda.tanqueSaida },
       tanqueArmazenamento: { ...smartCalda.tanqueArmazenamento },
       observacoes: smartCalda.observacoes,
       url: smartCalda.url,
@@ -450,10 +491,11 @@ const GestaoSmartCaldas = () => {
       identificacaoEquipamento: "",
       localizacao: "",
       ibcs: [],
-      fracionado: { ativo: false, unidades: [] },
+      fracionados: [],
       silos: [],
-      tanqueCalda: { id: "", capacidade: 0 },
-      tanqueArmazenamento: { id: "", capacidade: 0 },
+      balancas: [],
+      tanqueSaida: { nome: "", capacidade: 0, sensorVazao: "", sensorNivel: "" },
+      tanqueArmazenamento: { nome: "", capacidade: 0, sensorVazao: "" },
       observacoes: "",
       url: "",
       token: "",
@@ -471,7 +513,7 @@ const GestaoSmartCaldas = () => {
     const novoId = Math.max(0, ...novaSmartCalda.ibcs.map((ibc) => ibc.id)) + 1;
     setNovaSmartCalda({
       ...novaSmartCalda,
-      ibcs: [...novaSmartCalda.ibcs, { id: novoId, capacidade: 0 }],
+      ibcs: [...novaSmartCalda.ibcs, { id: novoId, nome: "", capacidade: 0, vazao: "" }],
     });
   };
 
@@ -482,11 +524,11 @@ const GestaoSmartCaldas = () => {
     });
   };
 
-  const atualizarIBC = (id: number, capacidade: number) => {
+  const atualizarIBC = (id: number, field: keyof IBC, value: string | number) => {
     setNovaSmartCalda({
       ...novaSmartCalda,
       ibcs: novaSmartCalda.ibcs.map((ibc) =>
-        ibc.id === id ? { ...ibc, capacidade } : ibc
+        ibc.id === id ? { ...ibc, [field]: value } : ibc
       ),
     });
   };
@@ -499,7 +541,7 @@ const GestaoSmartCaldas = () => {
       ...novaSmartCalda,
       silos: [
         ...novaSmartCalda.silos,
-        { id: novoId, capacidade: 0, balancas: 1 },
+        { id: novoId, nome: "", capacidade: 0, peso: "" },
       ],
     });
   };
@@ -511,7 +553,7 @@ const GestaoSmartCaldas = () => {
     });
   };
 
-  const atualizarSilo = (id: number, field: keyof Silo, value: number) => {
+  const atualizarSilo = (id: number, field: keyof Silo, value: string | number) => {
     setNovaSmartCalda({
       ...novaSmartCalda,
       silos: novaSmartCalda.silos.map((silo) =>
@@ -523,44 +565,71 @@ const GestaoSmartCaldas = () => {
   // Funções para gerenciar Fracionados
   const adicionarFracionado = () => {
     const novoId =
-      Math.max(
-        0,
-        ...novaSmartCalda.fracionado.unidades.map((frac) => frac.id)
-      ) + 1;
+      Math.max(0, ...novaSmartCalda.fracionados.map((frac) => frac.id)) + 1;
     setNovaSmartCalda({
       ...novaSmartCalda,
-      fracionado: {
-        ...novaSmartCalda.fracionado,
-        unidades: [
-          ...novaSmartCalda.fracionado.unidades,
-          { id: novoId, capacidade: 0 },
-        ],
-      },
+      fracionados: [
+        ...novaSmartCalda.fracionados,
+        { id: novoId, nome: "", capacidade: 0, pesoVazao: "" },
+      ],
     });
   };
 
   const removerFracionado = (id: number) => {
     setNovaSmartCalda({
       ...novaSmartCalda,
-      fracionado: {
-        ...novaSmartCalda.fracionado,
-        unidades: novaSmartCalda.fracionado.unidades.filter(
-          (frac) => frac.id !== id
-        ),
-      },
+      fracionados: novaSmartCalda.fracionados.filter((frac) => frac.id !== id),
     });
   };
 
-  const atualizarFracionado = (id: number, capacidade: number) => {
+  const atualizarFracionado = (id: number, field: keyof Fracionado, value: string | number) => {
     setNovaSmartCalda({
       ...novaSmartCalda,
-      fracionado: {
-        ...novaSmartCalda.fracionado,
-        unidades: novaSmartCalda.fracionado.unidades.map((frac) =>
-          frac.id === id ? { ...frac, capacidade } : frac
-        ),
-      },
+      fracionados: novaSmartCalda.fracionados.map((frac) =>
+        frac.id === id ? { ...frac, [field]: value } : frac
+      ),
     });
+  };
+
+  // Funções para gerenciar Balanças
+  const adicionarBalanca = () => {
+    const novoId =
+      Math.max(0, ...novaSmartCalda.balancas.map((bal) => bal.id)) + 1;
+    setNovaSmartCalda({
+      ...novaSmartCalda,
+      balancas: [
+        ...novaSmartCalda.balancas,
+        { id: novoId, nome: "", vinculacao: [] },
+      ],
+    });
+  };
+
+  const removerBalanca = (id: number) => {
+    setNovaSmartCalda({
+      ...novaSmartCalda,
+      balancas: novaSmartCalda.balancas.filter((bal) => bal.id !== id),
+    });
+  };
+
+  const atualizarBalanca = (id: number, field: keyof Balanca, value: string | string[]) => {
+    setNovaSmartCalda({
+      ...novaSmartCalda,
+      balancas: novaSmartCalda.balancas.map((bal) =>
+        bal.id === id ? { ...bal, [field]: value } : bal
+      ),
+    });
+  };
+
+  // Obter opções disponíveis para vinculação de balanças
+  const getOpcoesVinculacao = () => {
+    const opcoes: string[] = [];
+    novaSmartCalda.silos.forEach(silo => {
+      if (silo.nome) opcoes.push(silo.nome);
+    });
+    novaSmartCalda.fracionados.forEach(frac => {
+      if (frac.nome) opcoes.push(frac.nome);
+    });
+    return opcoes;
   };
 
   return (
@@ -723,87 +792,105 @@ const GestaoSmartCaldas = () => {
                     </Button>
                   </div>
                   {novaSmartCalda.ibcs.map((ibc) => (
-                    <div key={ibc.id} className="flex gap-2 items-center">
-                      <Label>IBC {ibc.id}:</Label>
-                      <Input
-                        type="number"
-                        placeholder="Capacidade (L)"
-                        value={ibc.capacidade || ""}
-                        onChange={(e) =>
-                          atualizarIBC(ibc.id, parseInt(e.target.value) || 0)
-                        }
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        onClick={() => removerIBC(ibc.id)}
-                        size="sm"
-                        variant="outline"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
+                    <div key={ibc.id} className="space-y-2 p-3 border rounded">
+                      <div className="flex gap-2 items-center">
+                        <Label className="min-w-16">Nome:</Label>
+                        <Input
+                          placeholder="Ex: IBC-001"
+                          value={ibc.nome}
+                          onChange={(e) =>
+                            atualizarIBC(ibc.id, "nome", e.target.value)
+                          }
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => removerIBC(ibc.id)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Capacidade (L)"
+                          value={ibc.capacidade || ""}
+                          onChange={(e) =>
+                            atualizarIBC(ibc.id, "capacidade", parseInt(e.target.value) || 0)
+                          }
+                          className="flex-1"
+                        />
+                        <Input
+                          placeholder="Vazão (CLP)"
+                          value={ibc.vazao}
+                          onChange={(e) =>
+                            atualizarIBC(ibc.id, "vazao", e.target.value)
+                          }
+                          className="flex-1"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
 
                 {/* Fracionado */}
                 <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={novaSmartCalda.fracionado.ativo}
-                      onCheckedChange={(checked) =>
-                        setNovaSmartCalda({
-                          ...novaSmartCalda,
-                          fracionado: {
-                            ...novaSmartCalda.fracionado,
-                            ativo: checked,
-                          },
-                        })
-                      }
-                    />
-                    <Label>Fracionado</Label>
+                  <div className="flex justify-between items-center">
+                    <Label>Fracionados (quantidade dinâmica)</Label>
+                    <Button
+                      type="button"
+                      onClick={adicionarFracionado}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Fracionado
+                    </Button>
                   </div>
-                  {novaSmartCalda.fracionado.ativo && (
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <Label>Fracionados</Label>
+                  {novaSmartCalda.fracionados.map((frac) => (
+                    <div key={frac.id} className="space-y-2 p-3 border rounded">
+                      <div className="flex gap-2 items-center">
+                        <Label className="min-w-16">Nome:</Label>
+                        <Input
+                          placeholder="Ex: FRAC-001"
+                          value={frac.nome}
+                          onChange={(e) =>
+                            atualizarFracionado(frac.id, "nome", e.target.value)
+                          }
+                          className="flex-1"
+                        />
                         <Button
                           type="button"
-                          onClick={adicionarFracionado}
+                          onClick={() => removerFracionado(frac.id)}
                           size="sm"
                           variant="outline"
                         >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar Fracionado
+                          <Minus className="h-4 w-4" />
                         </Button>
                       </div>
-                      {novaSmartCalda.fracionado.unidades.map((frac) => (
-                        <div key={frac.id} className="flex gap-2 items-center">
-                          <Label>Fracionado {frac.id}:</Label>
-                          <Input
-                            type="number"
-                            placeholder="Capacidade (L)"
-                            value={frac.capacidade || ""}
-                            onChange={(e) =>
-                              atualizarFracionado(
-                                frac.id,
-                                parseInt(e.target.value) || 0
-                              )
-                            }
-                            className="flex-1"
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => removerFracionado(frac.id)}
-                            size="sm"
-                            variant="outline"
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Capacidade (kg/L)"
+                          value={frac.capacidade || ""}
+                          onChange={(e) =>
+                            atualizarFracionado(frac.id, "capacidade", parseInt(e.target.value) || 0)
+                          }
+                          className="flex-1"
+                        />
+                        <Input
+                          placeholder="Peso/Vazão (CLP)"
+                          value={frac.pesoVazao}
+                          onChange={(e) =>
+                            atualizarFracionado(frac.id, "pesoVazao", e.target.value)
+                          }
+                          className="flex-1"
+                        />
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
 
                 {/* Silos */}
@@ -821,60 +908,128 @@ const GestaoSmartCaldas = () => {
                     </Button>
                   </div>
                   {novaSmartCalda.silos.map((silo) => (
-                    <div key={silo.id} className="flex gap-2 items-center">
-                      <Label>Silo {silo.id}:</Label>
-                      <Input
-                        type="number"
-                        placeholder="Capacidade (kg)"
-                        value={silo.capacidade || ""}
-                        onChange={(e) =>
-                          atualizarSilo(
-                            silo.id,
-                            "capacidade",
-                            parseInt(e.target.value) || 0
-                          )
-                        }
-                        className="flex-1"
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Balanças"
-                        value={silo.balancas || ""}
-                        onChange={(e) =>
-                          atualizarSilo(
-                            silo.id,
-                            "balancas",
-                            parseInt(e.target.value) || 0
-                          )
-                        }
-                        className="w-24"
-                      />
-                      <Button
-                        type="button"
-                        onClick={() => removerSilo(silo.id)}
-                        size="sm"
-                        variant="outline"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
+                    <div key={silo.id} className="space-y-2 p-3 border rounded">
+                      <div className="flex gap-2 items-center">
+                        <Label className="min-w-16">Nome:</Label>
+                        <Input
+                          placeholder="Ex: SILO-001"
+                          value={silo.nome}
+                          onChange={(e) =>
+                            atualizarSilo(silo.id, "nome", e.target.value)
+                          }
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => removerSilo(silo.id)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Capacidade (kg)"
+                          value={silo.capacidade || ""}
+                          onChange={(e) =>
+                            atualizarSilo(silo.id, "capacidade", parseInt(e.target.value) || 0)
+                          }
+                          className="flex-1"
+                        />
+                        <Input
+                          placeholder="Peso (CLP)"
+                          value={silo.peso}
+                          onChange={(e) =>
+                            atualizarSilo(silo.id, "peso", e.target.value)
+                          }
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Balanças */}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <Label>Balanças</Label>
+                    <Button
+                      type="button"
+                      onClick={adicionarBalanca}
+                      size="sm"
+                      variant="outline"
+                      disabled={getOpcoesVinculacao().length === 0}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Balança
+                    </Button>
+                  </div>
+                  {getOpcoesVinculacao().length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Adicione silos ou fracionados primeiro para criar balanças
+                    </p>
+                  )}
+                  {novaSmartCalda.balancas.map((balanca) => (
+                    <div key={balanca.id} className="space-y-2 p-3 border rounded">
+                      <div className="flex gap-2 items-center">
+                        <Label className="min-w-16">Nome:</Label>
+                        <Input
+                          placeholder="Ex: BAL-001"
+                          value={balanca.nome}
+                          onChange={(e) =>
+                            atualizarBalanca(balanca.id, "nome", e.target.value)
+                          }
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => removerBalanca(balanca.id)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Vinculação aos silos/fracionados:</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {getOpcoesVinculacao().map((opcao) => (
+                            <label key={opcao} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={balanca.vinculacao.includes(opcao)}
+                                onChange={(e) => {
+                                  const novasVinculacoes = e.target.checked
+                                    ? [...balanca.vinculacao, opcao]
+                                    : balanca.vinculacao.filter(v => v !== opcao);
+                                  atualizarBalanca(balanca.id, "vinculacao", novasVinculacoes);
+                                }}
+                              />
+                              <span className="text-sm">{opcao}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
 
                 {/* Tanques */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Tanque de Calda Pronta</Label>
-                    <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-3">
+                    <Label>Tanque de Saída</Label>
+                    <div className="space-y-2">
                       <Input
-                        placeholder="ID"
-                        value={novaSmartCalda.tanqueCalda.id}
+                        placeholder="Nome"
+                        value={novaSmartCalda.tanqueSaida.nome}
                         onChange={(e) =>
                           setNovaSmartCalda({
                             ...novaSmartCalda,
-                            tanqueCalda: {
-                              ...novaSmartCalda.tanqueCalda,
-                              id: e.target.value,
+                            tanqueSaida: {
+                              ...novaSmartCalda.tanqueSaida,
+                              nome: e.target.value,
                             },
                           })
                         }
@@ -882,13 +1037,39 @@ const GestaoSmartCaldas = () => {
                       <Input
                         type="number"
                         placeholder="Capacidade (L)"
-                        value={novaSmartCalda.tanqueCalda.capacidade || ""}
+                        value={novaSmartCalda.tanqueSaida.capacidade || ""}
                         onChange={(e) =>
                           setNovaSmartCalda({
                             ...novaSmartCalda,
-                            tanqueCalda: {
-                              ...novaSmartCalda.tanqueCalda,
+                            tanqueSaida: {
+                              ...novaSmartCalda.tanqueSaida,
                               capacidade: parseInt(e.target.value) || 0,
+                            },
+                          })
+                        }
+                      />
+                      <Input
+                        placeholder="Sensor de Vazão (CLP)"
+                        value={novaSmartCalda.tanqueSaida.sensorVazao}
+                        onChange={(e) =>
+                          setNovaSmartCalda({
+                            ...novaSmartCalda,
+                            tanqueSaida: {
+                              ...novaSmartCalda.tanqueSaida,
+                              sensorVazao: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                      <Input
+                        placeholder="Sensor de Nível"
+                        value={novaSmartCalda.tanqueSaida.sensorNivel}
+                        onChange={(e) =>
+                          setNovaSmartCalda({
+                            ...novaSmartCalda,
+                            tanqueSaida: {
+                              ...novaSmartCalda.tanqueSaida,
+                              sensorNivel: e.target.value,
                             },
                           })
                         }
@@ -896,18 +1077,18 @@ const GestaoSmartCaldas = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <Label>Tanque de Armazenamento</Label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
                       <Input
-                        placeholder="ID"
-                        value={novaSmartCalda.tanqueArmazenamento.id}
+                        placeholder="Nome"
+                        value={novaSmartCalda.tanqueArmazenamento.nome}
                         onChange={(e) =>
                           setNovaSmartCalda({
                             ...novaSmartCalda,
                             tanqueArmazenamento: {
                               ...novaSmartCalda.tanqueArmazenamento,
-                              id: e.target.value,
+                              nome: e.target.value,
                             },
                           })
                         }
@@ -915,15 +1096,26 @@ const GestaoSmartCaldas = () => {
                       <Input
                         type="number"
                         placeholder="Capacidade (L)"
-                        value={
-                          novaSmartCalda.tanqueArmazenamento.capacidade || ""
-                        }
+                        value={novaSmartCalda.tanqueArmazenamento.capacidade || ""}
                         onChange={(e) =>
                           setNovaSmartCalda({
                             ...novaSmartCalda,
                             tanqueArmazenamento: {
                               ...novaSmartCalda.tanqueArmazenamento,
                               capacidade: parseInt(e.target.value) || 0,
+                            },
+                          })
+                        }
+                      />
+                      <Input
+                        placeholder="Sensor de Vazão (CLP)"
+                        value={novaSmartCalda.tanqueArmazenamento.sensorVazao}
+                        onChange={(e) =>
+                          setNovaSmartCalda({
+                            ...novaSmartCalda,
+                            tanqueArmazenamento: {
+                              ...novaSmartCalda.tanqueArmazenamento,
+                              sensorVazao: e.target.value,
                             },
                           })
                         }
@@ -1384,8 +1576,29 @@ const GestaoSmartCaldas = () => {
                       <p className="font-medium">Silos:</p>
                       {smartCaldaDetalhes.silos.map((silo) => (
                         <p key={silo.id}>
-                          Silo {silo.id}: {silo.capacidade}kg ({silo.balancas}{" "}
-                          balanças)
+                          {silo.nome}: {silo.capacidade}kg (CLP: {silo.peso})
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {smartCaldaDetalhes.fracionados.length > 0 && (
+                    <div>
+                      <p className="font-medium">Fracionados:</p>
+                      {smartCaldaDetalhes.fracionados.map((frac) => (
+                        <p key={frac.id}>
+                          {frac.nome}: {frac.capacidade}kg/L (CLP: {frac.pesoVazao})
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {smartCaldaDetalhes.balancas.length > 0 && (
+                    <div>
+                      <p className="font-medium">Balanças:</p>
+                      {smartCaldaDetalhes.balancas.map((balanca) => (
+                        <p key={balanca.id}>
+                          {balanca.nome}: vinculada a {balanca.vinculacao.join(", ")}
                         </p>
                       ))}
                     </div>
@@ -1393,36 +1606,21 @@ const GestaoSmartCaldas = () => {
 
                   <div>
                     <p className="font-medium">Tanques:</p>
-                    {smartCaldaDetalhes.tanqueCalda.capacidade > 0 && (
+                    {smartCaldaDetalhes.tanqueSaida.capacidade > 0 && (
                       <p>
-                        Calda {smartCaldaDetalhes.tanqueCalda.id}:{" "}
-                        {smartCaldaDetalhes.tanqueCalda.capacidade}L
+                        Saída {smartCaldaDetalhes.tanqueSaida.nome}:{" "}
+                        {smartCaldaDetalhes.tanqueSaida.capacidade}L
                       </p>
                     )}
                     {smartCaldaDetalhes.tanqueArmazenamento.capacidade > 0 && (
                       <p>
-                        Armazenamento{" "}
-                        {smartCaldaDetalhes.tanqueArmazenamento.id}:{" "}
+                        Armazenamento {smartCaldaDetalhes.tanqueArmazenamento.nome}:{" "}
                         {smartCaldaDetalhes.tanqueArmazenamento.capacidade}L
                       </p>
                     )}
                   </div>
                 </div>
               </div>
-
-              {smartCaldaDetalhes.fracionado.ativo &&
-                smartCaldaDetalhes.fracionado.unidades.length > 0 && (
-                  <div>
-                    <h4 className="font-medium mb-2">Fracionado</h4>
-                    <div className="text-sm">
-                      {smartCaldaDetalhes.fracionado.unidades.map((frac) => (
-                        <p key={frac.id}>
-                          Unidade {frac.id}: {frac.capacidade}L
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
               {smartCaldaDetalhes.observacoes && (
                 <div>
