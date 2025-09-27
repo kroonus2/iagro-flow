@@ -1405,11 +1405,13 @@ const GestaoSmartCaldas = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Identificação</TableHead>
-                  <TableHead>Usina</TableHead>
-                  <TableHead>Número de Série</TableHead>
-                  <TableHead>Localização</TableHead>
+                  <TableHead>N° Série</TableHead>
+                  <TableHead>Data de Instalação</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Última Conexão</TableHead>
+                  <TableHead>Qtd de IBCs</TableHead>
+                  <TableHead>Qtd de Silos</TableHead>
+                  <TableHead>Fracionados</TableHead>
+                  <TableHead>Tanque Calda</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1418,15 +1420,19 @@ const GestaoSmartCaldas = () => {
                   <TableRow key={smartCalda.id}>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{smartCalda.nome}</div>
+                        <div className="font-medium">{smartCalda.identificacaoEquipamento || smartCalda.nome}</div>
                         <div className="text-sm text-muted-foreground">
-                          {smartCalda.versaoFirmware}
+                          {smartCalda.usinaVinculada}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{smartCalda.usinaVinculada}</TableCell>
-                    <TableCell>{smartCalda.numeroSerie}</TableCell>
-                    <TableCell>{smartCalda.localizacao}</TableCell>
+                    <TableCell className="font-mono">{smartCalda.numeroSerie}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        {new Date(smartCalda.dataInstalacao).toLocaleDateString('pt-BR')}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getStatusIcon(smartCalda.status)}
@@ -1435,13 +1441,32 @@ const GestaoSmartCaldas = () => {
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell>{smartCalda.ultimaConexao}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline">{smartCalda.ibcs.length}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline">{smartCalda.silos.length}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline">{smartCalda.fracionados.length}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {smartCalda.tanqueSaida.capacidade > 0 && (
+                          <div>Saída: {smartCalda.tanqueSaida.capacidade}L</div>
+                        )}
+                        {smartCalda.tanqueArmazenamento.capacidade > 0 && (
+                          <div>Arm.: {smartCalda.tanqueArmazenamento.capacidade}L</div>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleVisualizarDetalhes(smartCalda)}
+                          title="Visualizar detalhes"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -1449,6 +1474,7 @@ const GestaoSmartCaldas = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditarSmartCalda(smartCalda)}
+                          title="Editar"
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
@@ -1458,6 +1484,7 @@ const GestaoSmartCaldas = () => {
                               variant="ghost"
                               size="sm"
                               className="text-destructive"
+                              title="Remover"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1555,72 +1582,88 @@ const GestaoSmartCaldas = () => {
                 </div>
               </div>
 
-              <div>
-                <h4 className="font-medium mb-2">
-                  Capacidades dos Equipamentos
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  {smartCaldaDetalhes.ibcs.length > 0 && (
-                    <div>
-                      <p className="font-medium">IBCs:</p>
-                      {smartCaldaDetalhes.ibcs.map((ibc) => (
-                        <p key={ibc.id}>
-                          IBC {ibc.id}: {ibc.capacidade}L
-                        </p>
-                      ))}
-                    </div>
-                  )}
+               <div>
+                 <h4 className="font-medium mb-3">
+                   Capacidades dos Equipamentos
+                 </h4>
+                 <div className="space-y-4">
+                   {smartCaldaDetalhes.ibcs.length > 0 && (
+                     <div className="p-3 border rounded-lg">
+                       <h5 className="font-medium text-primary mb-2">IBCs ({smartCaldaDetalhes.ibcs.length})</h5>
+                       <div className="grid gap-2">
+                         {smartCaldaDetalhes.ibcs.map((ibc) => (
+                           <div key={ibc.id} className="text-sm bg-muted p-2 rounded">
+                             <strong>{ibc.nome}:</strong> {ibc.capacidade}L (Vazão: {ibc.vazao})
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
 
-                  {smartCaldaDetalhes.silos.length > 0 && (
-                    <div>
-                      <p className="font-medium">Silos:</p>
-                      {smartCaldaDetalhes.silos.map((silo) => (
-                        <p key={silo.id}>
-                          {silo.nome}: {silo.capacidade}kg (CLP: {silo.peso})
-                        </p>
-                      ))}
-                    </div>
-                  )}
+                   {smartCaldaDetalhes.silos.length > 0 && (
+                     <div className="p-3 border rounded-lg">
+                       <h5 className="font-medium text-primary mb-2">Silos ({smartCaldaDetalhes.silos.length})</h5>
+                       <div className="grid gap-2">
+                         {smartCaldaDetalhes.silos.map((silo) => (
+                           <div key={silo.id} className="text-sm bg-muted p-2 rounded">
+                             <strong>{silo.nome}:</strong> {silo.capacidade}kg (Peso CLP: {silo.peso})
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
 
-                  {smartCaldaDetalhes.fracionados.length > 0 && (
-                    <div>
-                      <p className="font-medium">Fracionados:</p>
-                      {smartCaldaDetalhes.fracionados.map((frac) => (
-                        <p key={frac.id}>
-                          {frac.nome}: {frac.capacidade}kg/L (CLP: {frac.pesoVazao})
-                        </p>
-                      ))}
-                    </div>
-                  )}
+                   {smartCaldaDetalhes.fracionados.length > 0 && (
+                     <div className="p-3 border rounded-lg">
+                       <h5 className="font-medium text-primary mb-2">Fracionados ({smartCaldaDetalhes.fracionados.length})</h5>
+                       <div className="grid gap-2">
+                         {smartCaldaDetalhes.fracionados.map((frac) => (
+                           <div key={frac.id} className="text-sm bg-muted p-2 rounded">
+                             <strong>{frac.nome}:</strong> {frac.capacidade}kg/L (Peso/Vazão CLP: {frac.pesoVazao})
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
 
-                  {smartCaldaDetalhes.balancas.length > 0 && (
-                    <div>
-                      <p className="font-medium">Balanças:</p>
-                      {smartCaldaDetalhes.balancas.map((balanca) => (
-                        <p key={balanca.id}>
-                          {balanca.nome}: vinculada a {balanca.vinculacao.join(", ")}
-                        </p>
-                      ))}
-                    </div>
-                  )}
+                   {smartCaldaDetalhes.balancas.length > 0 && (
+                     <div className="p-3 border rounded-lg">
+                       <h5 className="font-medium text-primary mb-2">Balanças ({smartCaldaDetalhes.balancas.length})</h5>
+                       <div className="grid gap-2">
+                         {smartCaldaDetalhes.balancas.map((balanca) => (
+                           <div key={balanca.id} className="text-sm bg-muted p-2 rounded">
+                             <strong>{balanca.nome}:</strong> vinculada a {balanca.vinculacao.join(", ")}
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
 
-                  <div>
-                    <p className="font-medium">Tanques:</p>
-                    {smartCaldaDetalhes.tanqueSaida.capacidade > 0 && (
-                      <p>
-                        Saída {smartCaldaDetalhes.tanqueSaida.nome}:{" "}
-                        {smartCaldaDetalhes.tanqueSaida.capacidade}L
-                      </p>
-                    )}
-                    {smartCaldaDetalhes.tanqueArmazenamento.capacidade > 0 && (
-                      <p>
-                        Armazenamento {smartCaldaDetalhes.tanqueArmazenamento.nome}:{" "}
-                        {smartCaldaDetalhes.tanqueArmazenamento.capacidade}L
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
+                   {(smartCaldaDetalhes.tanqueSaida.capacidade > 0 || smartCaldaDetalhes.tanqueArmazenamento.capacidade > 0) && (
+                     <div className="p-3 border rounded-lg">
+                       <h5 className="font-medium text-primary mb-2">Tanques de Calda</h5>
+                       <div className="grid gap-2">
+                         {smartCaldaDetalhes.tanqueSaida.capacidade > 0 && (
+                           <div className="text-sm bg-muted p-2 rounded">
+                             <strong>Saída - {smartCaldaDetalhes.tanqueSaida.nome}:</strong> {smartCaldaDetalhes.tanqueSaida.capacidade}L
+                             <div className="text-xs text-muted-foreground mt-1">
+                               Vazão: {smartCaldaDetalhes.tanqueSaida.sensorVazao} | Nível: {smartCaldaDetalhes.tanqueSaida.sensorNivel}
+                             </div>
+                           </div>
+                         )}
+                         {smartCaldaDetalhes.tanqueArmazenamento.capacidade > 0 && (
+                           <div className="text-sm bg-muted p-2 rounded">
+                             <strong>Armazenamento - {smartCaldaDetalhes.tanqueArmazenamento.nome}:</strong> {smartCaldaDetalhes.tanqueArmazenamento.capacidade}L
+                             <div className="text-xs text-muted-foreground mt-1">
+                               Vazão: {smartCaldaDetalhes.tanqueArmazenamento.sensorVazao}
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               </div>
 
               {smartCaldaDetalhes.observacoes && (
                 <div>
