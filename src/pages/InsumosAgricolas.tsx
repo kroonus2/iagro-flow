@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Table,
   TableBody,
   TableCell,
@@ -52,14 +52,14 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Plus, 
-  Search, 
-  Package, 
-  ChevronDown, 
-  Eye, 
-  Edit, 
-  Trash2, 
+import {
+  Plus,
+  Search,
+  Package,
+  ChevronDown,
+  Eye,
+  Edit,
+  Trash2,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
@@ -67,7 +67,7 @@ import {
   FileType,
   X,
   Upload,
-  Download
+  Download,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
@@ -76,8 +76,14 @@ import * as z from "zod";
 
 // Schema de validação
 const defensivoSchema = z.object({
-  codigo: z.string().min(1, "Código é obrigatório").max(20, "Código deve ter no máximo 20 caracteres"),
-  nomeComercial: z.string().min(1, "Nome comercial é obrigatório").max(200, "Nome deve ter no máximo 200 caracteres"),
+  codigo: z
+    .string()
+    .min(1, "Código é obrigatório")
+    .max(20, "Código deve ter no máximo 20 caracteres"),
+  nomeComercial: z
+    .string()
+    .min(1, "Nome comercial é obrigatório")
+    .max(200, "Nome deve ter no máximo 200 caracteres"),
   unidade: z.string().min(1, "Unidade é obrigatória"),
   principioAtivo: z.string().min(1, "Princípio ativo é obrigatório"),
   fabricante: z.string().min(1, "Fabricante é obrigatório"),
@@ -103,13 +109,15 @@ type Defensivo = {
   ativo: boolean;
 };
 
-const Defensivos = () => {
+const InsumosAgricolas = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<keyof Defensivo | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [selectedDefensivo, setSelectedDefensivo] = useState<Defensivo | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [selectedDefensivo, setSelectedDefensivo] = useState<Defensivo | null>(
+    null
+  );
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -122,7 +130,7 @@ const Defensivos = () => {
     nomeComercial: "",
     fabricante: "",
     embalagem: "",
-    unidade: ""
+    unidade: "",
   });
 
   // Formulário para cadastro/edição
@@ -154,7 +162,7 @@ const Defensivos = () => {
       embalagem: "BULK",
       maximo: 1000,
       minimo: 100,
-      ativo: true
+      ativo: true,
     },
     {
       id: 2,
@@ -167,7 +175,7 @@ const Defensivos = () => {
       embalagem: "BULK",
       maximo: 500,
       minimo: 50,
-      ativo: true
+      ativo: true,
     },
     {
       id: 3,
@@ -180,7 +188,7 @@ const Defensivos = () => {
       embalagem: "Fracionado",
       maximo: 200,
       minimo: 20,
-      ativo: true
+      ativo: true,
     },
     {
       id: 4,
@@ -193,7 +201,7 @@ const Defensivos = () => {
       embalagem: "Fracionado",
       maximo: 300,
       minimo: 30,
-      ativo: true
+      ativo: true,
     },
     {
       id: 5,
@@ -206,7 +214,7 @@ const Defensivos = () => {
       embalagem: "Fracionado",
       maximo: 150,
       minimo: 15,
-      ativo: true
+      ativo: true,
     },
     {
       id: 6,
@@ -219,7 +227,7 @@ const Defensivos = () => {
       embalagem: "BULK",
       maximo: 800,
       minimo: 80,
-      ativo: true
+      ativo: true,
     },
     {
       id: 7,
@@ -232,7 +240,7 @@ const Defensivos = () => {
       embalagem: "Fracionado",
       maximo: 250,
       minimo: 25,
-      ativo: true
+      ativo: true,
     },
     {
       id: 8,
@@ -245,7 +253,7 @@ const Defensivos = () => {
       embalagem: "Fracionado",
       maximo: 180,
       minimo: 18,
-      ativo: true
+      ativo: true,
     },
     {
       id: 9,
@@ -258,12 +266,13 @@ const Defensivos = () => {
       embalagem: "Fracionado",
       maximo: 100,
       minimo: 10,
-      ativo: true
+      ativo: true,
     },
     {
       id: 10,
       codigo: "ED",
-      nomeComercial: "CHARLIE CAUSTIC CONCENTRADO FOL DE CRANTE NATURAL CANTAL CASCO",
+      nomeComercial:
+        "CHARLIE CAUSTIC CONCENTRADO FOL DE CRANTE NATURAL CANTAL CASCO",
       unidade: "KG",
       principioAtivo: "Mancozebe",
       fabricante: "AgriChem",
@@ -271,7 +280,7 @@ const Defensivos = () => {
       embalagem: "Fracionado",
       maximo: 120,
       minimo: 12,
-      ativo: true
+      ativo: true,
     },
     {
       id: 11,
@@ -284,7 +293,7 @@ const Defensivos = () => {
       embalagem: "BULK",
       maximo: 600,
       minimo: 60,
-      ativo: true
+      ativo: true,
     },
     {
       id: 12,
@@ -297,25 +306,36 @@ const Defensivos = () => {
       embalagem: "Fracionado",
       maximo: 90,
       minimo: 9,
-      ativo: true
-    }
+      ativo: true,
+    },
   ]);
 
   const itemsPerPage = 10;
 
   // Filtros e busca
-  const filteredDefensivos = defensivos.filter(defensivo => {
+  const filteredDefensivos = defensivos.filter((defensivo) => {
     if (!defensivo.ativo) return false;
-    
-    const matchesSearch = searchTerm === "" || 
-      defensivo.nomeComercial.toLowerCase().includes(searchTerm.toLowerCase()) ||
+
+    const matchesSearch =
+      searchTerm === "" ||
+      defensivo.nomeComercial
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       defensivo.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      defensivo.principioAtivo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      defensivo.principioAtivo
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       defensivo.fabricante.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesFilters = 
-      (filters.nomeComercial === "" || defensivo.nomeComercial.toLowerCase().includes(filters.nomeComercial.toLowerCase())) &&
-      (filters.fabricante === "" || defensivo.fabricante.toLowerCase().includes(filters.fabricante.toLowerCase())) &&
+    const matchesFilters =
+      (filters.nomeComercial === "" ||
+        defensivo.nomeComercial
+          .toLowerCase()
+          .includes(filters.nomeComercial.toLowerCase())) &&
+      (filters.fabricante === "" ||
+        defensivo.fabricante
+          .toLowerCase()
+          .includes(filters.fabricante.toLowerCase())) &&
       (filters.embalagem === "" || defensivo.embalagem === filters.embalagem) &&
       (filters.unidade === "" || defensivo.unidade === filters.unidade);
 
@@ -325,20 +345,20 @@ const Defensivos = () => {
   // Ordenação
   const sortedDefensivos = [...filteredDefensivos].sort((a, b) => {
     if (!sortField) return 0;
-    
+
     const aValue = a[sortField];
     const bValue = b[sortField];
-    
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortDirection === 'asc' 
+
+    if (typeof aValue === "string" && typeof bValue === "string") {
+      return sortDirection === "asc"
         ? aValue.localeCompare(bValue)
         : bValue.localeCompare(aValue);
     }
-    
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+
+    if (typeof aValue === "number" && typeof bValue === "number") {
+      return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
     }
-    
+
     return 0;
   });
 
@@ -351,10 +371,10 @@ const Defensivos = () => {
   // Handlers
   const handleSort = (field: keyof Defensivo) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
@@ -375,11 +395,9 @@ const Defensivos = () => {
 
   const confirmDelete = () => {
     if (selectedDefensivo) {
-      setDefensivos(prev => 
-        prev.map(d => 
-          d.id === selectedDefensivo.id 
-            ? { ...d, ativo: false }
-            : d
+      setDefensivos((prev) =>
+        prev.map((d) =>
+          d.id === selectedDefensivo.id ? { ...d, ativo: false } : d
         )
       );
       toast({
@@ -414,14 +432,14 @@ const Defensivos = () => {
       nomeComercial: "",
       fabricante: "",
       embalagem: "",
-      unidade: ""
+      unidade: "",
     });
     setCurrentPage(1);
   };
 
   const getSortIcon = (field: keyof Defensivo) => {
     if (sortField !== field) return <ArrowUpDown className="h-4 w-4" />;
-    return sortDirection === 'asc' ? '↑' : '↓';
+    return sortDirection === "asc" ? "↑" : "↓";
   };
 
   // Funções do formulário
@@ -429,22 +447,20 @@ const Defensivos = () => {
     try {
       if (selectedDefensivo) {
         // Editar defensivo existente
-        setDefensivos(prev => 
-          prev.map(d => 
-            d.id === selectedDefensivo.id 
-              ? { ...d, ...values }
-              : d
+        setDefensivos((prev) =>
+          prev.map((d) =>
+            d.id === selectedDefensivo.id ? { ...d, ...values } : d
           )
         );
         toast({
-          title: "Sucesso", 
+          title: "Sucesso",
           description: "Defensivo editado com sucesso!",
         });
         setShowEditDialog(false);
       } else {
         // Adicionar novo defensivo
         const newDefensivo: Defensivo = {
-          id: Math.max(...defensivos.map(d => d.id)) + 1,
+          id: Math.max(...defensivos.map((d) => d.id)) + 1,
           codigo: values.codigo,
           nomeComercial: values.nomeComercial,
           unidade: values.unidade,
@@ -454,9 +470,9 @@ const Defensivos = () => {
           embalagem: values.embalagem,
           maximo: values.maximo,
           minimo: values.minimo,
-          ativo: true
+          ativo: true,
         };
-        setDefensivos(prev => [...prev, newDefensivo]);
+        setDefensivos((prev) => [...prev, newDefensivo]);
         toast({
           title: "Sucesso",
           description: "Defensivo cadastrado com sucesso!",
@@ -477,7 +493,7 @@ const Defensivos = () => {
   // Funções de importação CSV
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type === 'text/csv') {
+    if (file && file.type === "text/csv") {
       setCsvFile(file);
       previewCSV(file);
     } else {
@@ -493,28 +509,42 @@ const Defensivos = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      const lines = text.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.trim());
-      
+      const lines = text.split("\n").filter((line) => line.trim());
+      const headers = lines[0].split(",").map((h) => h.trim());
+
       // Verificar se as colunas obrigatórias estão presentes
-      const requiredColumns = ['codigo', 'nomeComercial', 'unidade', 'principioAtivo', 'fabricante', 'indice', 'embalagem', 'maximo', 'minimo'];
-      const missingColumns = requiredColumns.filter(col => !headers.includes(col));
-      
+      const requiredColumns = [
+        "codigo",
+        "nomeComercial",
+        "unidade",
+        "principioAtivo",
+        "fabricante",
+        "indice",
+        "embalagem",
+        "maximo",
+        "minimo",
+      ];
+      const missingColumns = requiredColumns.filter(
+        (col) => !headers.includes(col)
+      );
+
       if (missingColumns.length > 0) {
         toast({
           title: "Erro",
-          description: `Colunas obrigatórias ausentes: ${missingColumns.join(', ')}`,
+          description: `Colunas obrigatórias ausentes: ${missingColumns.join(
+            ", "
+          )}`,
           variant: "destructive",
         });
         return;
       }
 
       // Processar primeiras 5 linhas para preview
-      const preview = lines.slice(1, 6).map(line => {
-        const values = line.split(',').map(v => v.trim());
+      const preview = lines.slice(1, 6).map((line) => {
+        const values = line.split(",").map((v) => v.trim());
         const row: any = {};
         headers.forEach((header, index) => {
-          row[header] = values[index] || '';
+          row[header] = values[index] || "";
         });
         return row;
       });
@@ -532,23 +562,26 @@ const Defensivos = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
-        const lines = text.split('\n').filter(line => line.trim());
-        const headers = lines[0].split(',').map(h => h.trim());
-        
+        const lines = text.split("\n").filter((line) => line.trim());
+        const headers = lines[0].split(",").map((h) => h.trim());
+
         const newDefensivos: Defensivo[] = [];
         let errors = 0;
 
         lines.slice(1).forEach((line, index) => {
           try {
-            const values = line.split(',').map(v => v.trim());
+            const values = line.split(",").map((v) => v.trim());
             const row: any = {};
             headers.forEach((header, idx) => {
-              row[header] = values[idx] || '';
+              row[header] = values[idx] || "";
             });
 
             // Validar e converter dados
             const newDefensivo: Defensivo = {
-              id: Math.max(...defensivos.map(d => d.id), 0) + newDefensivos.length + 1,
+              id:
+                Math.max(...defensivos.map((d) => d.id), 0) +
+                newDefensivos.length +
+                1,
               codigo: row.codigo,
               nomeComercial: row.nomeComercial,
               unidade: row.unidade,
@@ -558,7 +591,7 @@ const Defensivos = () => {
               embalagem: row.embalagem,
               maximo: parseFloat(row.maximo) || 0,
               minimo: parseFloat(row.minimo) || 0,
-              ativo: true
+              ativo: true,
             };
 
             // Validação básica
@@ -573,10 +606,14 @@ const Defensivos = () => {
           }
         });
 
-        setDefensivos(prev => [...prev, ...newDefensivos]);
+        setDefensivos((prev) => [...prev, ...newDefensivos]);
         toast({
           title: "Sucesso",
-          description: `${newDefensivos.length} defensivos importados com sucesso!${errors > 0 ? ` ${errors} linhas com erro foram ignoradas.` : ''}`,
+          description: `${
+            newDefensivos.length
+          } defensivos importados com sucesso!${
+            errors > 0 ? ` ${errors} linhas com erro foram ignoradas.` : ""
+          }`,
         });
         setShowImportCSVDialog(false);
         setCsvFile(null);
@@ -595,16 +632,28 @@ const Defensivos = () => {
   };
 
   const downloadCSVTemplate = () => {
-    const headers = ['codigo', 'nomeComercial', 'unidade', 'principioAtivo', 'fabricante', 'indice', 'embalagem', 'maximo', 'minimo'];
-    const csvContent = headers.join(',') + '\n' + 
-      'EXEMPLO1,Produto Exemplo 1,L,Glifosato,FabricanteA,1.2,BULK,1000,100\n' +
-      'EXEMPLO2,Produto Exemplo 2,KG,Atrazina,FabricanteB,0.8,Fracionado,500,50';
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const headers = [
+      "codigo",
+      "nomeComercial",
+      "unidade",
+      "principioAtivo",
+      "fabricante",
+      "indice",
+      "embalagem",
+      "maximo",
+      "minimo",
+    ];
+    const csvContent =
+      headers.join(",") +
+      "\n" +
+      "EXEMPLO1,Produto Exemplo 1,L,Glifosato,FabricanteA,1.2,BULK,1000,100\n" +
+      "EXEMPLO2,Produto Exemplo 2,KG,Atrazina,FabricanteB,0.8,Fracionado,500,50";
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = 'template_defensivos.csv';
+    link.download = "template_defensivos.csv";
     link.click();
     window.URL.revokeObjectURL(url);
   };
@@ -674,7 +723,7 @@ const Defensivos = () => {
                 />
               </div>
             </div>
-            
+
             {/* Filtros por Coluna */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
@@ -683,7 +732,12 @@ const Defensivos = () => {
                   id="filter-nome"
                   placeholder="Filtrar por nome..."
                   value={filters.nomeComercial}
-                  onChange={(e) => setFilters(prev => ({ ...prev, nomeComercial: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      nomeComercial: e.target.value,
+                    }))
+                  }
                 />
               </div>
               <div>
@@ -692,7 +746,12 @@ const Defensivos = () => {
                   id="filter-fabricante"
                   placeholder="Filtrar por fabricante..."
                   value={filters.fabricante}
-                  onChange={(e) => setFilters(prev => ({ ...prev, fabricante: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      fabricante: e.target.value,
+                    }))
+                  }
                 />
               </div>
               <div>
@@ -701,7 +760,12 @@ const Defensivos = () => {
                   id="filter-embalagem"
                   placeholder="Ex: BULK, Fracionado"
                   value={filters.embalagem}
-                  onChange={(e) => setFilters(prev => ({ ...prev, embalagem: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      embalagem: e.target.value,
+                    }))
+                  }
                 />
               </div>
               <div>
@@ -710,7 +774,9 @@ const Defensivos = () => {
                   id="filter-unidade"
                   placeholder="Ex: L, KG"
                   value={filters.unidade}
-                  onChange={(e) => setFilters(prev => ({ ...prev, unidade: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, unidade: e.target.value }))
+                  }
                 />
               </div>
             </div>
@@ -733,49 +799,76 @@ const Defensivos = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('id')}>
+                  <TableHead
+                    className="cursor-pointer"
+                    onClick={() => handleSort("id")}
+                  >
                     <div className="flex items-center gap-2">
-                      ID {getSortIcon('id')}
+                      ID {getSortIcon("id")}
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('nomeComercial')}>
+                  <TableHead
+                    className="cursor-pointer"
+                    onClick={() => handleSort("nomeComercial")}
+                  >
                     <div className="flex items-center gap-2">
-                      Nome Comercial {getSortIcon('nomeComercial')}
+                      Nome Comercial {getSortIcon("nomeComercial")}
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('unidade')}>
+                  <TableHead
+                    className="cursor-pointer"
+                    onClick={() => handleSort("unidade")}
+                  >
                     <div className="flex items-center gap-2">
-                      Unidade {getSortIcon('unidade')}
+                      Unidade {getSortIcon("unidade")}
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('principioAtivo')}>
+                  <TableHead
+                    className="cursor-pointer"
+                    onClick={() => handleSort("principioAtivo")}
+                  >
                     <div className="flex items-center gap-2">
-                      Princípio Ativo {getSortIcon('principioAtivo')}
+                      Princípio Ativo {getSortIcon("principioAtivo")}
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('fabricante')}>
+                  <TableHead
+                    className="cursor-pointer"
+                    onClick={() => handleSort("fabricante")}
+                  >
                     <div className="flex items-center gap-2">
-                      Fabricante {getSortIcon('fabricante')}
+                      Fabricante {getSortIcon("fabricante")}
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('indice')}>
+                  <TableHead
+                    className="cursor-pointer"
+                    onClick={() => handleSort("indice")}
+                  >
                     <div className="flex items-center gap-2">
-                      Índice {getSortIcon('indice')}
+                      Índice {getSortIcon("indice")}
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('embalagem')}>
+                  <TableHead
+                    className="cursor-pointer"
+                    onClick={() => handleSort("embalagem")}
+                  >
                     <div className="flex items-center gap-2">
-                      Embalagem {getSortIcon('embalagem')}
+                      Embalagem {getSortIcon("embalagem")}
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('maximo')}>
+                  <TableHead
+                    className="cursor-pointer"
+                    onClick={() => handleSort("maximo")}
+                  >
                     <div className="flex items-center gap-2">
-                      Máximo {getSortIcon('maximo')}
+                      Máximo {getSortIcon("maximo")}
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('minimo')}>
+                  <TableHead
+                    className="cursor-pointer"
+                    onClick={() => handleSort("minimo")}
+                  >
                     <div className="flex items-center gap-2">
-                      Mínimo {getSortIcon('minimo')}
+                      Mínimo {getSortIcon("minimo")}
                     </div>
                   </TableHead>
                   <TableHead>Ações</TableHead>
@@ -802,8 +895,12 @@ const Defensivos = () => {
                     <TableCell>{defensivo.fabricante}</TableCell>
                     <TableCell>{defensivo.indice}</TableCell>
                     <TableCell>
-                      <Badge 
-                        variant={defensivo.embalagem === "BULK" ? "default" : "secondary"}
+                      <Badge
+                        variant={
+                          defensivo.embalagem === "BULK"
+                            ? "default"
+                            : "secondary"
+                        }
                         className="text-xs"
                       >
                         {defensivo.embalagem}
@@ -813,24 +910,24 @@ const Defensivos = () => {
                     <TableCell>{defensivo.minimo}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="sm"
                           onClick={() => handleView(defensivo)}
                           title="Consultar"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(defensivo)}
                           title="Editar"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(defensivo)}
                           title="Desativar"
@@ -844,7 +941,7 @@ const Defensivos = () => {
               </TableBody>
             </Table>
           </div>
-          
+
           {currentItems.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               Nenhum defensivo encontrado com os filtros aplicados.
@@ -855,13 +952,17 @@ const Defensivos = () => {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-muted-foreground">
-                Mostrando {startIndex + 1} a {Math.min(endIndex, sortedDefensivos.length)} de {sortedDefensivos.length} registros
+                Mostrando {startIndex + 1} a{" "}
+                {Math.min(endIndex, sortedDefensivos.length)} de{" "}
+                {sortedDefensivos.length} registros
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
                   disabled={currentPage === 1}
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -873,7 +974,9 @@ const Defensivos = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
                   disabled={currentPage === totalPages}
                 >
                   Próximo
@@ -890,38 +993,53 @@ const Defensivos = () => {
         <Card>
           <CardContent className="p-6 text-center">
             <Package className="h-8 w-8 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold">{defensivos.filter(d => d.ativo).length}</p>
+            <p className="text-2xl font-bold">
+              {defensivos.filter((d) => d.ativo).length}
+            </p>
             <p className="text-sm text-muted-foreground">Defensivos Ativos</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6 text-center">
             <div className="h-8 w-8 bg-primary rounded-full mx-auto mb-2 flex items-center justify-center">
-              <span className="text-xs font-bold text-primary-foreground">B</span>
+              <span className="text-xs font-bold text-primary-foreground">
+                B
+              </span>
             </div>
             <p className="text-2xl font-bold">
-              {defensivos.filter(d => d.embalagem === "BULK" && d.ativo).length}
+              {
+                defensivos.filter((d) => d.embalagem === "BULK" && d.ativo)
+                  .length
+              }
             </p>
             <p className="text-sm text-muted-foreground">Produtos BULK</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6 text-center">
             <div className="h-8 w-8 bg-secondary rounded-full mx-auto mb-2 flex items-center justify-center">
-              <span className="text-xs font-bold text-secondary-foreground">F</span>
+              <span className="text-xs font-bold text-secondary-foreground">
+                F
+              </span>
             </div>
             <p className="text-2xl font-bold">
-              {defensivos.filter(d => d.embalagem === "Fracionado" && d.ativo).length}
+              {
+                defensivos.filter(
+                  (d) => d.embalagem === "Fracionado" && d.ativo
+                ).length
+              }
             </p>
-            <p className="text-sm text-muted-foreground">Produtos Fracionados</p>
+            <p className="text-sm text-muted-foreground">
+              Produtos Fracionados
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Modais */}
-      
+
       {/* Modal de Visualização */}
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
         <DialogContent className="max-w-2xl">
@@ -939,43 +1057,63 @@ const Defensivos = () => {
               </div>
               <div>
                 <Label>Código</Label>
-                <p className="text-sm font-medium">{selectedDefensivo.codigo}</p>
+                <p className="text-sm font-medium">
+                  {selectedDefensivo.codigo}
+                </p>
               </div>
               <div className="col-span-2">
                 <Label>Nome Comercial</Label>
-                <p className="text-sm font-medium">{selectedDefensivo.nomeComercial}</p>
+                <p className="text-sm font-medium">
+                  {selectedDefensivo.nomeComercial}
+                </p>
               </div>
               <div>
                 <Label>Unidade</Label>
-                <p className="text-sm font-medium">{selectedDefensivo.unidade}</p>
+                <p className="text-sm font-medium">
+                  {selectedDefensivo.unidade}
+                </p>
               </div>
               <div>
                 <Label>Princípio Ativo</Label>
-                <p className="text-sm font-medium">{selectedDefensivo.principioAtivo}</p>
+                <p className="text-sm font-medium">
+                  {selectedDefensivo.principioAtivo}
+                </p>
               </div>
               <div>
                 <Label>Fabricante</Label>
-                <p className="text-sm font-medium">{selectedDefensivo.fabricante}</p>
+                <p className="text-sm font-medium">
+                  {selectedDefensivo.fabricante}
+                </p>
               </div>
               <div>
                 <Label>Índice</Label>
-                <p className="text-sm font-medium">{selectedDefensivo.indice}</p>
+                <p className="text-sm font-medium">
+                  {selectedDefensivo.indice}
+                </p>
               </div>
               <div>
                 <Label>Embalagem</Label>
-                <p className="text-sm font-medium">{selectedDefensivo.embalagem}</p>
+                <p className="text-sm font-medium">
+                  {selectedDefensivo.embalagem}
+                </p>
               </div>
               <div>
                 <Label>Máximo</Label>
-                <p className="text-sm font-medium">{selectedDefensivo.maximo}</p>
+                <p className="text-sm font-medium">
+                  {selectedDefensivo.maximo}
+                </p>
               </div>
               <div>
                 <Label>Mínimo</Label>
-                <p className="text-sm font-medium">{selectedDefensivo.minimo}</p>
+                <p className="text-sm font-medium">
+                  {selectedDefensivo.minimo}
+                </p>
               </div>
               <div>
                 <Label>Status</Label>
-                <Badge variant={selectedDefensivo.ativo ? "default" : "destructive"}>
+                <Badge
+                  variant={selectedDefensivo.ativo ? "default" : "destructive"}
+                >
                   {selectedDefensivo.ativo ? "Ativo" : "Inativo"}
                 </Badge>
               </div>
@@ -1001,13 +1139,15 @@ const Defensivos = () => {
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={() => {
-              toast({
-                title: "Sucesso",
-                description: "Defensivo editado com sucesso!",
-              });
-              setShowEditDialog(false);
-            }}>
+            <Button
+              onClick={() => {
+                toast({
+                  title: "Sucesso",
+                  description: "Defensivo editado com sucesso!",
+                });
+                setShowEditDialog(false);
+              }}
+            >
               Salvar Alterações
             </Button>
           </DialogFooter>
@@ -1023,7 +1163,7 @@ const Defensivos = () => {
               Preencha todas as informações obrigatórias do novo defensivo
             </DialogDescription>
           </DialogHeader>
-          
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1047,7 +1187,10 @@ const Defensivos = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Unidade *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione a unidade" />
@@ -1072,7 +1215,10 @@ const Defensivos = () => {
                     <FormItem className="md:col-span-2">
                       <FormLabel>Nome Comercial *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: ACETRPILUNAS - BULK" {...field} />
+                        <Input
+                          placeholder="Ex: ACETRPILUNAS - BULK"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1113,7 +1259,10 @@ const Defensivos = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Embalagem *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione a embalagem" />
@@ -1136,12 +1285,14 @@ const Defensivos = () => {
                     <FormItem>
                       <FormLabel>Índice *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.1" 
-                          placeholder="Ex: 1.2" 
+                        <Input
+                          type="number"
+                          step="0.1"
+                          placeholder="Ex: 1.2"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -1156,11 +1307,13 @@ const Defensivos = () => {
                     <FormItem>
                       <FormLabel>Valor Máximo *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="Ex: 1000" 
+                        <Input
+                          type="number"
+                          placeholder="Ex: 1000"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -1175,11 +1328,13 @@ const Defensivos = () => {
                     <FormItem>
                       <FormLabel>Valor Mínimo *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="Ex: 100" 
+                        <Input
+                          type="number"
+                          placeholder="Ex: 100"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -1189,12 +1344,14 @@ const Defensivos = () => {
               </div>
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAddDialog(false)}
+                >
                   Cancelar
                 </Button>
-                <Button type="submit">
-                  Cadastrar Defensivo
-                </Button>
+                <Button type="submit">Cadastrar Defensivo</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -1210,7 +1367,7 @@ const Defensivos = () => {
               Faça upload de um arquivo CSV com os dados dos defensivos
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {/* Template Download */}
             <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
@@ -1238,10 +1395,13 @@ const Defensivos = () => {
                   className="flex-1"
                 />
                 {csvFile && (
-                  <Button variant="outline" onClick={() => {
-                    setCsvFile(null);
-                    setCsvPreview([]);
-                  }}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setCsvFile(null);
+                      setCsvPreview([]);
+                    }}
+                  >
                     <X className="h-4 w-4" />
                   </Button>
                 )}
@@ -1290,9 +1450,15 @@ const Defensivos = () => {
 
             {/* Instructions */}
             <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-900/20">
-              <h4 className="font-medium mb-2">Instruções para o arquivo CSV:</h4>
+              <h4 className="font-medium mb-2">
+                Instruções para o arquivo CSV:
+              </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• O arquivo deve conter as colunas: codigo, nomeComercial, unidade, principioAtivo, fabricante, indice, embalagem, maximo, minimo</li>
+                <li>
+                  • O arquivo deve conter as colunas: codigo, nomeComercial,
+                  unidade, principioAtivo, fabricante, indice, embalagem,
+                  maximo, minimo
+                </li>
                 <li>• A primeira linha deve conter os cabeçalhos</li>
                 <li>• Use vírgula (,) como separador</li>
                 <li>• Valores numéricos para indice, maximo e minimo</li>
@@ -1302,10 +1468,13 @@ const Defensivos = () => {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowImportCSVDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowImportCSVDialog(false)}
+            >
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={processCSVImport}
               disabled={!csvFile || isProcessingCSV}
             >
@@ -1329,8 +1498,9 @@ const Defensivos = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Desativação</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja desativar o defensivo "{selectedDefensivo?.nomeComercial}"?
-              Esta ação não pode ser desfeita e o produto não aparecerá mais nas consultas ativas.
+              Tem certeza que deseja desativar o defensivo "
+              {selectedDefensivo?.nomeComercial}"? Esta ação não pode ser
+              desfeita e o produto não aparecerá mais nas consultas ativas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1345,4 +1515,4 @@ const Defensivos = () => {
   );
 };
 
-export default Defensivos;
+export default InsumosAgricolas;

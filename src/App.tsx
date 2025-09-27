@@ -9,8 +9,6 @@ import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import DashboardGerencial from "./pages/DashboardGerencial";
 import DashboardOperacional from "./pages/DashboardOperacional";
-import Defensivos from "./pages/Defensivos";
-import CargaSmartCalda from "./pages/CargaSmartCalda";
 import ReceitasSmartCalda from "./pages/ReceitasSmartCalda";
 import Cargas from "./pages/Cargas";
 import OrdensProducao from "./pages/OrdensProducao";
@@ -25,6 +23,7 @@ import GestaoSmartCaldas from "./pages/GestaoSmartCaldas";
 import ImportacaoReceitas from "./pages/ImportacaoReceitas";
 import GerenciamentoUnidades from "./pages/GerenciamentoUnidades";
 import Sobre from "./pages/Sobre";
+import InsumosAgricolas from "./pages/InsumosAgricolas";
 
 const queryClient = new QueryClient();
 
@@ -49,7 +48,7 @@ const App = () => (
                 path="/dashboard-operacional"
                 element={<DashboardOperacional />}
               />
-              <Route path="/defensivos" element={<Defensivos />} />
+              <Route path="/insumos-agricolas" element={<InsumosAgricolas />} />
               <Route path="/receitas" element={<ReceitasSmartCalda />} />
               {/* Páginas completas */}
               <Route
