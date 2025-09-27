@@ -73,7 +73,7 @@ const menuItems: MenuItem[] = [
         path: "/gerenciamento-smart-caldas",
       },
       { title: "Fornecedores", icon: Store, path: "/fornecedores" },
-      { title: "Defensivos", icon: Package, path: "/defensivos" },
+      { title: "Insumos Agrícolas", icon: Package, path: "/insumos-agricolas" },
     ],
   },
   {
