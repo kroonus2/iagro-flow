@@ -75,7 +75,7 @@ const menuItems: MenuItem[] = [
       { title: "Fornecedores", icon: Store, path: "/fornecedores" },
       { title: "Insumos Agrícolas", icon: Package, path: "/insumos-agricolas" },
       {
-        title: "Gerenciar de Fazendas",
+        title: "Gerenciar Fazendas",
         icon: Wheat,
         path: "/gerenciamento-fazendas",
       },
