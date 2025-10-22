@@ -74,6 +74,7 @@ const menuItems: MenuItem[] = [
       },
       { title: "Fornecedores", icon: Store, path: "/fornecedores" },
       { title: "Insumos Agrícolas", icon: Package, path: "/insumos-agricolas" },
+      { title: "Cadastros Auxiliares", icon: Database, path: "/cadastros-auxiliares" },
     ],
   },
   {

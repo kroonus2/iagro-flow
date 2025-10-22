@@ -1,0 +1,1339 @@
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Upload, Download, Edit, Trash2, MoreVertical } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+
+// Interfaces
+interface Localizacao {
+  id: string;
+  codigo: string;
+  descricao: string;
+  tipo_estoque: string;
+  capacidade: string;
+}
+
+interface Caminhao {
+  id: string;
+  placa: string;
+  patrimonio: string;
+  volume: string;
+  modelo: string;
+  marca: string;
+  ano: string;
+}
+
+interface Motorista {
+  id: string;
+  codigo: string;
+  matricula: string;
+  nome: string;
+  contato: string;
+}
+
+interface Operacao {
+  id: string;
+  codigo: string;
+  descricao: string;
+}
+
+interface CentroCusto {
+  id: string;
+  codigo: string;
+  descricao: string;
+}
+
+interface Responsavel {
+  id: string;
+  codigo: string;
+  nome: string;
+}
+
+const CadastrosAuxiliares = () => {
+  const [activeTab, setActiveTab] = useState("localizacao");
+
+  // Estados para Localização
+  const [localizacoes, setLocalizacoes] = useState<Localizacao[]>([]);
+  const [showLocalizacaoDialog, setShowLocalizacaoDialog] = useState(false);
+  const [editingLocalizacao, setEditingLocalizacao] = useState<Localizacao | null>(null);
+  const [localizacaoForm, setLocalizacaoForm] = useState({
+    codigo: "",
+    descricao: "",
+    tipo_estoque: "",
+    capacidade: "",
+  });
+
+  // Estados para Caminhão
+  const [caminhoes, setCaminhoes] = useState<Caminhao[]>([]);
+  const [showCaminhaoDialog, setShowCaminhaoDialog] = useState(false);
+  const [editingCaminhao, setEditingCaminhao] = useState<Caminhao | null>(null);
+  const [caminhaoForm, setCaminhaoForm] = useState({
+    placa: "",
+    patrimonio: "",
+    volume: "",
+    modelo: "",
+    marca: "",
+    ano: "",
+  });
+
+  // Estados para Motorista
+  const [motoristas, setMotoristas] = useState<Motorista[]>([]);
+  const [showMotoristaDialog, setShowMotoristaDialog] = useState(false);
+  const [editingMotorista, setEditingMotorista] = useState<Motorista | null>(null);
+  const [motoristaForm, setMotoristaForm] = useState({
+    codigo: "",
+    matricula: "",
+    nome: "",
+    contato: "",
+  });
+
+  // Estados para Operação
+  const [operacoes, setOperacoes] = useState<Operacao[]>([]);
+  const [showOperacaoDialog, setShowOperacaoDialog] = useState(false);
+  const [editingOperacao, setEditingOperacao] = useState<Operacao | null>(null);
+  const [operacaoForm, setOperacaoForm] = useState({
+    codigo: "",
+    descricao: "",
+  });
+
+  // Estados para Centro de Custo
+  const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([]);
+  const [showCentroCustoDialog, setShowCentroCustoDialog] = useState(false);
+  const [editingCentroCusto, setEditingCentroCusto] = useState<CentroCusto | null>(null);
+  const [centroCustoForm, setCentroCustoForm] = useState({
+    codigo: "",
+    descricao: "",
+  });
+
+  // Estados para Responsável
+  const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
+  const [showResponsavelDialog, setShowResponsavelDialog] = useState(false);
+  const [editingResponsavel, setEditingResponsavel] = useState<Responsavel | null>(null);
+  const [responsavelForm, setResponsavelForm] = useState({
+    codigo: "",
+    nome: "",
+  });
+
+  // Funções de Localização
+  const handleSaveLocalizacao = () => {
+    if (editingLocalizacao) {
+      setLocalizacoes(
+        localizacoes.map((loc) =>
+          loc.id === editingLocalizacao.id
+            ? { ...editingLocalizacao, ...localizacaoForm }
+            : loc
+        )
+      );
+      toast({ title: "Localização atualizada com sucesso!" });
+    } else {
+      const newLocalizacao: Localizacao = {
+        id: Date.now().toString(),
+        ...localizacaoForm,
+      };
+      setLocalizacoes([...localizacoes, newLocalizacao]);
+      toast({ title: "Localização cadastrada com sucesso!" });
+    }
+    handleCloseLocalizacaoDialog();
+  };
+
+  const handleEditLocalizacao = (localizacao: Localizacao) => {
+    setEditingLocalizacao(localizacao);
+    setLocalizacaoForm({
+      codigo: localizacao.codigo,
+      descricao: localizacao.descricao,
+      tipo_estoque: localizacao.tipo_estoque,
+      capacidade: localizacao.capacidade,
+    });
+    setShowLocalizacaoDialog(true);
+  };
+
+  const handleDeleteLocalizacao = (id: string) => {
+    setLocalizacoes(localizacoes.filter((loc) => loc.id !== id));
+    toast({ title: "Localização removida com sucesso!" });
+  };
+
+  const handleCloseLocalizacaoDialog = () => {
+    setShowLocalizacaoDialog(false);
+    setEditingLocalizacao(null);
+    setLocalizacaoForm({
+      codigo: "",
+      descricao: "",
+      tipo_estoque: "",
+      capacidade: "",
+    });
+  };
+
+  // Funções de Caminhão
+  const handleSaveCaminhao = () => {
+    if (editingCaminhao) {
+      setCaminhoes(
+        caminhoes.map((cam) =>
+          cam.id === editingCaminhao.id
+            ? { ...editingCaminhao, ...caminhaoForm }
+            : cam
+        )
+      );
+      toast({ title: "Caminhão atualizado com sucesso!" });
+    } else {
+      const newCaminhao: Caminhao = {
+        id: Date.now().toString(),
+        ...caminhaoForm,
+      };
+      setCaminhoes([...caminhoes, newCaminhao]);
+      toast({ title: "Caminhão cadastrado com sucesso!" });
+    }
+    handleCloseCaminhaoDialog();
+  };
+
+  const handleEditCaminhao = (caminhao: Caminhao) => {
+    setEditingCaminhao(caminhao);
+    setCaminhaoForm({
+      placa: caminhao.placa,
+      patrimonio: caminhao.patrimonio,
+      volume: caminhao.volume,
+      modelo: caminhao.modelo,
+      marca: caminhao.marca,
+      ano: caminhao.ano,
+    });
+    setShowCaminhaoDialog(true);
+  };
+
+  const handleDeleteCaminhao = (id: string) => {
+    setCaminhoes(caminhoes.filter((cam) => cam.id !== id));
+    toast({ title: "Caminhão removido com sucesso!" });
+  };
+
+  const handleCloseCaminhaoDialog = () => {
+    setShowCaminhaoDialog(false);
+    setEditingCaminhao(null);
+    setCaminhaoForm({
+      placa: "",
+      patrimonio: "",
+      volume: "",
+      modelo: "",
+      marca: "",
+      ano: "",
+    });
+  };
+
+  // Funções de Motorista
+  const handleSaveMotorista = () => {
+    if (editingMotorista) {
+      setMotoristas(
+        motoristas.map((mot) =>
+          mot.id === editingMotorista.id
+            ? { ...editingMotorista, ...motoristaForm }
+            : mot
+        )
+      );
+      toast({ title: "Motorista atualizado com sucesso!" });
+    } else {
+      const newMotorista: Motorista = {
+        id: Date.now().toString(),
+        ...motoristaForm,
+      };
+      setMotoristas([...motoristas, newMotorista]);
+      toast({ title: "Motorista cadastrado com sucesso!" });
+    }
+    handleCloseMotoristaDialog();
+  };
+
+  const handleEditMotorista = (motorista: Motorista) => {
+    setEditingMotorista(motorista);
+    setMotoristaForm({
+      codigo: motorista.codigo,
+      matricula: motorista.matricula,
+      nome: motorista.nome,
+      contato: motorista.contato,
+    });
+    setShowMotoristaDialog(true);
+  };
+
+  const handleDeleteMotorista = (id: string) => {
+    setMotoristas(motoristas.filter((mot) => mot.id !== id));
+    toast({ title: "Motorista removido com sucesso!" });
+  };
+
+  const handleCloseMotoristaDialog = () => {
+    setShowMotoristaDialog(false);
+    setEditingMotorista(null);
+    setMotoristaForm({
+      codigo: "",
+      matricula: "",
+      nome: "",
+      contato: "",
+    });
+  };
+
+  // Funções de Operação
+  const handleSaveOperacao = () => {
+    if (editingOperacao) {
+      setOperacoes(
+        operacoes.map((op) =>
+          op.id === editingOperacao.id
+            ? { ...editingOperacao, ...operacaoForm }
+            : op
+        )
+      );
+      toast({ title: "Operação atualizada com sucesso!" });
+    } else {
+      const newOperacao: Operacao = {
+        id: Date.now().toString(),
+        ...operacaoForm,
+      };
+      setOperacoes([...operacoes, newOperacao]);
+      toast({ title: "Operação cadastrada com sucesso!" });
+    }
+    handleCloseOperacaoDialog();
+  };
+
+  const handleEditOperacao = (operacao: Operacao) => {
+    setEditingOperacao(operacao);
+    setOperacaoForm({
+      codigo: operacao.codigo,
+      descricao: operacao.descricao,
+    });
+    setShowOperacaoDialog(true);
+  };
+
+  const handleDeleteOperacao = (id: string) => {
+    setOperacoes(operacoes.filter((op) => op.id !== id));
+    toast({ title: "Operação removida com sucesso!" });
+  };
+
+  const handleCloseOperacaoDialog = () => {
+    setShowOperacaoDialog(false);
+    setEditingOperacao(null);
+    setOperacaoForm({
+      codigo: "",
+      descricao: "",
+    });
+  };
+
+  // Funções de Centro de Custo
+  const handleSaveCentroCusto = () => {
+    if (editingCentroCusto) {
+      setCentrosCusto(
+        centrosCusto.map((cc) =>
+          cc.id === editingCentroCusto.id
+            ? { ...editingCentroCusto, ...centroCustoForm }
+            : cc
+        )
+      );
+      toast({ title: "Centro de Custo atualizado com sucesso!" });
+    } else {
+      const newCentroCusto: CentroCusto = {
+        id: Date.now().toString(),
+        ...centroCustoForm,
+      };
+      setCentrosCusto([...centrosCusto, newCentroCusto]);
+      toast({ title: "Centro de Custo cadastrado com sucesso!" });
+    }
+    handleCloseCentroCustoDialog();
+  };
+
+  const handleEditCentroCusto = (centroCusto: CentroCusto) => {
+    setEditingCentroCusto(centroCusto);
+    setCentroCustoForm({
+      codigo: centroCusto.codigo,
+      descricao: centroCusto.descricao,
+    });
+    setShowCentroCustoDialog(true);
+  };
+
+  const handleDeleteCentroCusto = (id: string) => {
+    setCentrosCusto(centrosCusto.filter((cc) => cc.id !== id));
+    toast({ title: "Centro de Custo removido com sucesso!" });
+  };
+
+  const handleCloseCentroCustoDialog = () => {
+    setShowCentroCustoDialog(false);
+    setEditingCentroCusto(null);
+    setCentroCustoForm({
+      codigo: "",
+      descricao: "",
+    });
+  };
+
+  // Funções de Responsável
+  const handleSaveResponsavel = () => {
+    if (editingResponsavel) {
+      setResponsaveis(
+        responsaveis.map((resp) =>
+          resp.id === editingResponsavel.id
+            ? { ...editingResponsavel, ...responsavelForm }
+            : resp
+        )
+      );
+      toast({ title: "Responsável atualizado com sucesso!" });
+    } else {
+      const newResponsavel: Responsavel = {
+        id: Date.now().toString(),
+        ...responsavelForm,
+      };
+      setResponsaveis([...responsaveis, newResponsavel]);
+      toast({ title: "Responsável cadastrado com sucesso!" });
+    }
+    handleCloseResponsavelDialog();
+  };
+
+  const handleEditResponsavel = (responsavel: Responsavel) => {
+    setEditingResponsavel(responsavel);
+    setResponsavelForm({
+      codigo: responsavel.codigo,
+      nome: responsavel.nome,
+    });
+    setShowResponsavelDialog(true);
+  };
+
+  const handleDeleteResponsavel = (id: string) => {
+    setResponsaveis(responsaveis.filter((resp) => resp.id !== id));
+    toast({ title: "Responsável removido com sucesso!" });
+  };
+
+  const handleCloseResponsavelDialog = () => {
+    setShowResponsavelDialog(false);
+    setEditingResponsavel(null);
+    setResponsavelForm({
+      codigo: "",
+      nome: "",
+    });
+  };
+
+  // Funções de Importação
+  const handleImportCSV = (tipo: string) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv";
+    input.onchange = (e: any) => {
+      const file = e.target.files[0];
+      if (file) {
+        toast({ title: `Importando ${tipo} do arquivo ${file.name}...` });
+      }
+    };
+    input.click();
+  };
+
+  // Funções de Exportação
+  const handleExport = (tipo: string, formato: "csv" | "pdf") => {
+    toast({ title: `Exportando ${tipo} em formato ${formato.toUpperCase()}...` });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Cadastros Auxiliares</h1>
+        <p className="text-muted-foreground mt-2">
+          Gerencie os cadastros auxiliares do sistema
+        </p>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="localizacao">Localização</TabsTrigger>
+          <TabsTrigger value="caminhao">Caminhão</TabsTrigger>
+          <TabsTrigger value="motorista">Motorista</TabsTrigger>
+          <TabsTrigger value="operacoes">Operações</TabsTrigger>
+          <TabsTrigger value="centro-custo">Centro de Custo</TabsTrigger>
+          <TabsTrigger value="responsavel">Responsável</TabsTrigger>
+        </TabsList>
+
+        {/* Aba Localização */}
+        <TabsContent value="localizacao" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Localizações</h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleImportCSV("Localização")}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar CSV
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => handleExport("Localização", "csv")}>
+                      Exportar CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport("Localização", "pdf")}>
+                      Exportar PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button onClick={() => setShowLocalizacaoDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Localização
+                </Button>
+              </div>
+            </div>
+
+            {localizacoes.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Nenhuma localização cadastrada.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Tipo de Estoque</TableHead>
+                    <TableHead>Capacidade</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {localizacoes.map((loc) => (
+                    <TableRow key={loc.id}>
+                      <TableCell>{loc.codigo}</TableCell>
+                      <TableCell>{loc.descricao}</TableCell>
+                      <TableCell>{loc.tipo_estoque}</TableCell>
+                      <TableCell>{loc.capacidade}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditLocalizacao(loc)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteLocalizacao(loc.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* Aba Caminhão */}
+        <TabsContent value="caminhao" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Caminhões</h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleImportCSV("Caminhão")}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar CSV
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => handleExport("Caminhão", "csv")}>
+                      Exportar CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport("Caminhão", "pdf")}>
+                      Exportar PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button onClick={() => setShowCaminhaoDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Caminhão
+                </Button>
+              </div>
+            </div>
+
+            {caminhoes.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Nenhum caminhão cadastrado.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Placa</TableHead>
+                    <TableHead>Patrimônio</TableHead>
+                    <TableHead>Volume (L)</TableHead>
+                    <TableHead>Modelo</TableHead>
+                    <TableHead>Marca</TableHead>
+                    <TableHead>Ano</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {caminhoes.map((cam) => (
+                    <TableRow key={cam.id}>
+                      <TableCell>{cam.placa}</TableCell>
+                      <TableCell>{cam.patrimonio}</TableCell>
+                      <TableCell>{cam.volume}</TableCell>
+                      <TableCell>{cam.modelo}</TableCell>
+                      <TableCell>{cam.marca}</TableCell>
+                      <TableCell>{cam.ano}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditCaminhao(cam)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteCaminhao(cam.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* Aba Motorista */}
+        <TabsContent value="motorista" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Motoristas</h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleImportCSV("Motorista")}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar CSV
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => handleExport("Motorista", "csv")}>
+                      Exportar CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport("Motorista", "pdf")}>
+                      Exportar PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button onClick={() => setShowMotoristaDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Motorista
+                </Button>
+              </div>
+            </div>
+
+            {motoristas.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Nenhum motorista cadastrado.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Matrícula</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {motoristas.map((mot) => (
+                    <TableRow key={mot.id}>
+                      <TableCell>{mot.codigo}</TableCell>
+                      <TableCell>{mot.matricula}</TableCell>
+                      <TableCell>{mot.nome}</TableCell>
+                      <TableCell>{mot.contato}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditMotorista(mot)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteMotorista(mot.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* Aba Operações */}
+        <TabsContent value="operacoes" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Operações</h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleImportCSV("Operação")}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar CSV
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => handleExport("Operação", "csv")}>
+                      Exportar CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport("Operação", "pdf")}>
+                      Exportar PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button onClick={() => setShowOperacaoDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Operação
+                </Button>
+              </div>
+            </div>
+
+            {operacoes.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Nenhuma operação cadastrada.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {operacoes.map((op) => (
+                    <TableRow key={op.id}>
+                      <TableCell>{op.codigo}</TableCell>
+                      <TableCell>{op.descricao}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditOperacao(op)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteOperacao(op.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* Aba Centro de Custo */}
+        <TabsContent value="centro-custo" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Centros de Custo</h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleImportCSV("Centro de Custo")}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar CSV
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => handleExport("Centro de Custo", "csv")}>
+                      Exportar CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport("Centro de Custo", "pdf")}>
+                      Exportar PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button onClick={() => setShowCentroCustoDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Centro de Custo
+                </Button>
+              </div>
+            </div>
+
+            {centrosCusto.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Nenhum centro de custo cadastrado.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {centrosCusto.map((cc) => (
+                    <TableRow key={cc.id}>
+                      <TableCell>{cc.codigo}</TableCell>
+                      <TableCell>{cc.descricao}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditCentroCusto(cc)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteCentroCusto(cc.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* Aba Responsável */}
+        <TabsContent value="responsavel" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Responsáveis</h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleImportCSV("Responsável")}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar CSV
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => handleExport("Responsável", "csv")}>
+                      Exportar CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport("Responsável", "pdf")}>
+                      Exportar PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button onClick={() => setShowResponsavelDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Responsável
+                </Button>
+              </div>
+            </div>
+
+            {responsaveis.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Nenhum responsável cadastrado.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {responsaveis.map((resp) => (
+                    <TableRow key={resp.id}>
+                      <TableCell>{resp.codigo}</TableCell>
+                      <TableCell>{resp.nome}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditResponsavel(resp)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteResponsavel(resp.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialog Localização */}
+      <Dialog open={showLocalizacaoDialog} onOpenChange={setShowLocalizacaoDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingLocalizacao ? "Editar Localização" : "Nova Localização"}
+            </DialogTitle>
+            <DialogDescription>
+              Preencha os dados da localização
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="loc-codigo">Código</Label>
+              <Input
+                id="loc-codigo"
+                value={localizacaoForm.codigo}
+                onChange={(e) =>
+                  setLocalizacaoForm({ ...localizacaoForm, codigo: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="loc-descricao">Descrição</Label>
+              <Input
+                id="loc-descricao"
+                value={localizacaoForm.descricao}
+                onChange={(e) =>
+                  setLocalizacaoForm({ ...localizacaoForm, descricao: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="loc-tipo">Tipo de Estoque</Label>
+              <Select
+                value={localizacaoForm.tipo_estoque}
+                onValueChange={(value) =>
+                  setLocalizacaoForm({ ...localizacaoForm, tipo_estoque: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Armazenamento">Armazenamento</SelectItem>
+                  <SelectItem value="Produção">Produção</SelectItem>
+                  <SelectItem value="Expedição">Expedição</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="loc-capacidade">Capacidade</Label>
+              <Input
+                id="loc-capacidade"
+                value={localizacaoForm.capacidade}
+                onChange={(e) =>
+                  setLocalizacaoForm({ ...localizacaoForm, capacidade: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseLocalizacaoDialog}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveLocalizacao}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Caminhão */}
+      <Dialog open={showCaminhaoDialog} onOpenChange={setShowCaminhaoDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingCaminhao ? "Editar Caminhão" : "Novo Caminhão"}
+            </DialogTitle>
+            <DialogDescription>
+              Preencha os dados do caminhão
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="cam-placa">Placa</Label>
+              <Input
+                id="cam-placa"
+                value={caminhaoForm.placa}
+                onChange={(e) =>
+                  setCaminhaoForm({ ...caminhaoForm, placa: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="cam-patrimonio">Patrimônio</Label>
+              <Input
+                id="cam-patrimonio"
+                value={caminhaoForm.patrimonio}
+                onChange={(e) =>
+                  setCaminhaoForm({ ...caminhaoForm, patrimonio: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="cam-volume">Volume (L)</Label>
+              <Input
+                id="cam-volume"
+                type="number"
+                value={caminhaoForm.volume}
+                onChange={(e) =>
+                  setCaminhaoForm({ ...caminhaoForm, volume: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="cam-modelo">Modelo</Label>
+              <Input
+                id="cam-modelo"
+                value={caminhaoForm.modelo}
+                onChange={(e) =>
+                  setCaminhaoForm({ ...caminhaoForm, modelo: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="cam-marca">Marca</Label>
+              <Input
+                id="cam-marca"
+                value={caminhaoForm.marca}
+                onChange={(e) =>
+                  setCaminhaoForm({ ...caminhaoForm, marca: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="cam-ano">Ano</Label>
+              <Input
+                id="cam-ano"
+                type="number"
+                value={caminhaoForm.ano}
+                onChange={(e) =>
+                  setCaminhaoForm({ ...caminhaoForm, ano: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseCaminhaoDialog}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveCaminhao}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Motorista */}
+      <Dialog open={showMotoristaDialog} onOpenChange={setShowMotoristaDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingMotorista ? "Editar Motorista" : "Novo Motorista"}
+            </DialogTitle>
+            <DialogDescription>
+              Preencha os dados do motorista
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="mot-codigo">Código</Label>
+              <Input
+                id="mot-codigo"
+                value={motoristaForm.codigo}
+                onChange={(e) =>
+                  setMotoristaForm({ ...motoristaForm, codigo: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="mot-matricula">Matrícula</Label>
+              <Input
+                id="mot-matricula"
+                value={motoristaForm.matricula}
+                onChange={(e) =>
+                  setMotoristaForm({ ...motoristaForm, matricula: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="mot-nome">Nome</Label>
+              <Input
+                id="mot-nome"
+                value={motoristaForm.nome}
+                onChange={(e) =>
+                  setMotoristaForm({ ...motoristaForm, nome: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="mot-contato">Contato</Label>
+              <Input
+                id="mot-contato"
+                value={motoristaForm.contato}
+                onChange={(e) =>
+                  setMotoristaForm({ ...motoristaForm, contato: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseMotoristaDialog}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveMotorista}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Operação */}
+      <Dialog open={showOperacaoDialog} onOpenChange={setShowOperacaoDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingOperacao ? "Editar Operação" : "Nova Operação"}
+            </DialogTitle>
+            <DialogDescription>
+              Preencha os dados da operação
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="op-codigo">Código</Label>
+              <Input
+                id="op-codigo"
+                value={operacaoForm.codigo}
+                onChange={(e) =>
+                  setOperacaoForm({ ...operacaoForm, codigo: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="op-descricao">Descrição</Label>
+              <Input
+                id="op-descricao"
+                value={operacaoForm.descricao}
+                onChange={(e) =>
+                  setOperacaoForm({ ...operacaoForm, descricao: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseOperacaoDialog}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveOperacao}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Centro de Custo */}
+      <Dialog open={showCentroCustoDialog} onOpenChange={setShowCentroCustoDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingCentroCusto ? "Editar Centro de Custo" : "Novo Centro de Custo"}
+            </DialogTitle>
+            <DialogDescription>
+              Preencha os dados do centro de custo
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="cc-codigo">Código</Label>
+              <Input
+                id="cc-codigo"
+                value={centroCustoForm.codigo}
+                onChange={(e) =>
+                  setCentroCustoForm({ ...centroCustoForm, codigo: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="cc-descricao">Descrição</Label>
+              <Input
+                id="cc-descricao"
+                value={centroCustoForm.descricao}
+                onChange={(e) =>
+                  setCentroCustoForm({ ...centroCustoForm, descricao: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseCentroCustoDialog}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveCentroCusto}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Responsável */}
+      <Dialog open={showResponsavelDialog} onOpenChange={setShowResponsavelDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingResponsavel ? "Editar Responsável" : "Novo Responsável"}
+            </DialogTitle>
+            <DialogDescription>
+              Preencha os dados do responsável
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="resp-codigo">Código</Label>
+              <Input
+                id="resp-codigo"
+                value={responsavelForm.codigo}
+                onChange={(e) =>
+                  setResponsavelForm({ ...responsavelForm, codigo: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="resp-nome">Nome</Label>
+              <Input
+                id="resp-nome"
+                value={responsavelForm.nome}
+                onChange={(e) =>
+                  setResponsavelForm({ ...responsavelForm, nome: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseResponsavelDialog}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveResponsavel}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default CadastrosAuxiliares;

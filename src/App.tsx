@@ -24,6 +24,7 @@ import ImportacaoReceitas from "./pages/ImportacaoReceitas";
 import GerenciamentoUnidades from "./pages/GerenciamentoUnidades";
 import Sobre from "./pages/Sobre";
 import InsumosAgricolas from "./pages/InsumosAgricolas";
+import CadastrosAuxiliares from "./pages/CadastrosAuxiliares";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,10 @@ const App = () => (
                 element={<GestaoSmartCaldas />}
               />
               <Route path="/fornecedores" element={<Fornecedores />} />
+              <Route
+                path="/cadastros-auxiliares"
+                element={<CadastrosAuxiliares />}
+              />
               <Route path="/cargas" element={<Cargas />} />
               <Route
                 path="/importacao-receitas"
