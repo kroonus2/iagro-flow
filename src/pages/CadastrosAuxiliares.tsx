@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -33,7 +39,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Upload, Download, Edit, Trash2, MoreVertical } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Plus,
+  Upload,
+  Download,
+  Edit,
+  Trash2,
+  MoreVertical,
+  Search,
+  Filter,
+  Building2,
+  Truck,
+  User,
+  Settings,
+  DollarSign,
+  Users,
+  Activity,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 // Interfaces
@@ -84,16 +107,84 @@ interface Responsavel {
 const CadastrosAuxiliares = () => {
   const [activeTab, setActiveTab] = useState("localizacao");
 
+  // Estados de filtros por aba
+  const [searchTerms, setSearchTerms] = useState({
+    localizacao: "",
+    caminhao: "",
+    motorista: "",
+    operacao: "",
+    centroCusto: "",
+    responsavel: "",
+  });
+  const [filteredData, setFilteredData] = useState({
+    localizacoes: [] as Localizacao[],
+    caminhoes: [] as Caminhao[],
+    motoristas: [] as Motorista[],
+    operacoes: [] as Operacao[],
+    centrosCusto: [] as CentroCusto[],
+    responsaveis: [] as Responsavel[],
+  });
+
+  // Função para filtrar dados
+  const filterData = (
+    data: any[],
+    searchTerm: string,
+    searchFields: string[]
+  ) => {
+    if (!searchTerm) return data;
+
+    return data.filter((item) =>
+      searchFields.some((field) => {
+        const value = item[field];
+        return (
+          value &&
+          value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      })
+    );
+  };
+
   // Estados para Localização
   const [localizacoes, setLocalizacoes] = useState<Localizacao[]>([
-    { id: "1", codigo: "ARM-001", descricao: "Armazém Principal - Área A", tipo_estoque: "PRIMÁRIO", capacidade: "50 IBCs" },
-    { id: "2", codigo: "ARM-002", descricao: "Armazém Principal - Área B", tipo_estoque: "SECUNDÁRIO", capacidade: "30 IBCs" },
-    { id: "3", codigo: "EST-001", descricao: "Estoque Externo - Pátio 1", tipo_estoque: "PRIMÁRIO", capacidade: "100 IBCs" },
-    { id: "4", codigo: "SIL-001", descricao: "Silos - Área Norte", tipo_estoque: "TERCIÁRIO", capacidade: "25 Silos" },
-    { id: "5", codigo: "DEP-001", descricao: "Depósito Central", tipo_estoque: "PRIMÁRIO", capacidade: "75 IBCs" },
+    {
+      id: "1",
+      codigo: "ARM-001",
+      descricao: "Armazém Principal - Área A",
+      tipo_estoque: "PRIMÁRIO",
+      capacidade: "50 IBCs",
+    },
+    {
+      id: "2",
+      codigo: "ARM-002",
+      descricao: "Armazém Principal - Área B",
+      tipo_estoque: "SECUNDÁRIO",
+      capacidade: "30 IBCs",
+    },
+    {
+      id: "3",
+      codigo: "EST-001",
+      descricao: "Estoque Externo - Pátio 1",
+      tipo_estoque: "PRIMÁRIO",
+      capacidade: "100 IBCs",
+    },
+    {
+      id: "4",
+      codigo: "SIL-001",
+      descricao: "Silos - Área Norte",
+      tipo_estoque: "TERCIÁRIO",
+      capacidade: "25 Silos",
+    },
+    {
+      id: "5",
+      codigo: "DEP-001",
+      descricao: "Depósito Central",
+      tipo_estoque: "PRIMÁRIO",
+      capacidade: "75 IBCs",
+    },
   ]);
   const [showLocalizacaoDialog, setShowLocalizacaoDialog] = useState(false);
-  const [editingLocalizacao, setEditingLocalizacao] = useState<Localizacao | null>(null);
+  const [editingLocalizacao, setEditingLocalizacao] =
+    useState<Localizacao | null>(null);
   const [localizacaoForm, setLocalizacaoForm] = useState({
     codigo: "",
     descricao: "",
@@ -103,11 +194,51 @@ const CadastrosAuxiliares = () => {
 
   // Estados para Caminhão
   const [caminhoes, setCaminhoes] = useState<Caminhao[]>([
-    { id: "1", placa: "GNN-1010", patrimonio: "999999", volume: "13000", modelo: "F32", marca: "Volvo", ano: "2023" },
-    { id: "2", placa: "ABC-1234", patrimonio: "888888", volume: "15000", modelo: "FH16", marca: "Volvo", ano: "2022" },
-    { id: "3", placa: "DEF-5678", patrimonio: "777777", volume: "12000", modelo: "Actros", marca: "Mercedes-Benz", ano: "2024" },
-    { id: "4", placa: "GHI-9012", patrimonio: "666666", volume: "14000", modelo: "Scania R", marca: "Scania", ano: "2023" },
-    { id: "5", placa: "JKL-3456", patrimonio: "555555", volume: "11000", modelo: "Constellation", marca: "Volkswagen", ano: "2021" },
+    {
+      id: "1",
+      placa: "GNN-1010",
+      patrimonio: "999999",
+      volume: "13000",
+      modelo: "F32",
+      marca: "Volvo",
+      ano: "2023",
+    },
+    {
+      id: "2",
+      placa: "ABC-1234",
+      patrimonio: "888888",
+      volume: "15000",
+      modelo: "FH16",
+      marca: "Volvo",
+      ano: "2022",
+    },
+    {
+      id: "3",
+      placa: "DEF-5678",
+      patrimonio: "777777",
+      volume: "12000",
+      modelo: "Actros",
+      marca: "Mercedes-Benz",
+      ano: "2024",
+    },
+    {
+      id: "4",
+      placa: "GHI-9012",
+      patrimonio: "666666",
+      volume: "14000",
+      modelo: "Scania R",
+      marca: "Scania",
+      ano: "2023",
+    },
+    {
+      id: "5",
+      placa: "JKL-3456",
+      patrimonio: "555555",
+      volume: "11000",
+      modelo: "Constellation",
+      marca: "Volkswagen",
+      ano: "2021",
+    },
   ]);
   const [showCaminhaoDialog, setShowCaminhaoDialog] = useState(false);
   const [editingCaminhao, setEditingCaminhao] = useState<Caminhao | null>(null);
@@ -122,14 +253,46 @@ const CadastrosAuxiliares = () => {
 
   // Estados para Motorista
   const [motoristas, setMotoristas] = useState<Motorista[]>([
-    { id: "1", codigo: "1", matricula: "9999999", nome: "Ze", contato: "3499999999" },
-    { id: "2", codigo: "2", matricula: "8888888", nome: "João Silva", contato: "3498888888" },
-    { id: "3", codigo: "3", matricula: "7777777", nome: "Maria Santos", contato: "3497777777" },
-    { id: "4", codigo: "4", matricula: "6666666", nome: "Carlos Oliveira", contato: "3496666666" },
-    { id: "5", codigo: "5", matricula: "5555555", nome: "Ana Costa", contato: "3495555555" },
+    {
+      id: "1",
+      codigo: "1",
+      matricula: "9999999",
+      nome: "Ze",
+      contato: "3499999999",
+    },
+    {
+      id: "2",
+      codigo: "2",
+      matricula: "8888888",
+      nome: "João Silva",
+      contato: "3498888888",
+    },
+    {
+      id: "3",
+      codigo: "3",
+      matricula: "7777777",
+      nome: "Maria Santos",
+      contato: "3497777777",
+    },
+    {
+      id: "4",
+      codigo: "4",
+      matricula: "6666666",
+      nome: "Carlos Oliveira",
+      contato: "3496666666",
+    },
+    {
+      id: "5",
+      codigo: "5",
+      matricula: "5555555",
+      nome: "Ana Costa",
+      contato: "3495555555",
+    },
   ]);
   const [showMotoristaDialog, setShowMotoristaDialog] = useState(false);
-  const [editingMotorista, setEditingMotorista] = useState<Motorista | null>(null);
+  const [editingMotorista, setEditingMotorista] = useState<Motorista | null>(
+    null
+  );
   const [motoristaForm, setMotoristaForm] = useState({
     codigo: "",
     matricula: "",
@@ -155,13 +318,22 @@ const CadastrosAuxiliares = () => {
   // Estados para Centro de Custo
   const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([
     { id: "1", codigo: "3101020605", descricao: "Combate Prag Doe C Soca" },
-    { id: "2", codigo: "3101020606", descricao: "Aplicação Defensivos Área Norte" },
-    { id: "3", codigo: "3101020607", descricao: "Manutenção Preventiva Equipamentos" },
+    {
+      id: "2",
+      codigo: "3101020606",
+      descricao: "Aplicação Defensivos Área Norte",
+    },
+    {
+      id: "3",
+      codigo: "3101020607",
+      descricao: "Manutenção Preventiva Equipamentos",
+    },
     { id: "4", codigo: "3101020608", descricao: "Pulverização Área Sul" },
     { id: "5", codigo: "3101020609", descricao: "Controle Fitossanitário" },
   ]);
   const [showCentroCustoDialog, setShowCentroCustoDialog] = useState(false);
-  const [editingCentroCusto, setEditingCentroCusto] = useState<CentroCusto | null>(null);
+  const [editingCentroCusto, setEditingCentroCusto] =
+    useState<CentroCusto | null>(null);
   const [centroCustoForm, setCentroCustoForm] = useState({
     codigo: "",
     descricao: "",
@@ -176,11 +348,55 @@ const CadastrosAuxiliares = () => {
     { id: "5", codigo: "3103594", nome: "ANDERSON LUIZ COSTA" },
   ]);
   const [showResponsavelDialog, setShowResponsavelDialog] = useState(false);
-  const [editingResponsavel, setEditingResponsavel] = useState<Responsavel | null>(null);
+  const [editingResponsavel, setEditingResponsavel] =
+    useState<Responsavel | null>(null);
   const [responsavelForm, setResponsavelForm] = useState({
     codigo: "",
     nome: "",
   });
+
+  // Efeito para aplicar filtros
+  useEffect(() => {
+    setFilteredData({
+      localizacoes: filterData(localizacoes, searchTerms.localizacao, [
+        "codigo",
+        "descricao",
+        "tipo_estoque",
+      ]),
+      caminhoes: filterData(caminhoes, searchTerms.caminhao, [
+        "placa",
+        "patrimonio",
+        "modelo",
+        "marca",
+      ]),
+      motoristas: filterData(motoristas, searchTerms.motorista, [
+        "codigo",
+        "matricula",
+        "nome",
+        "contato",
+      ]),
+      operacoes: filterData(operacoes, searchTerms.operacao, [
+        "codigo",
+        "descricao",
+      ]),
+      centrosCusto: filterData(centrosCusto, searchTerms.centroCusto, [
+        "codigo",
+        "descricao",
+      ]),
+      responsaveis: filterData(responsaveis, searchTerms.responsavel, [
+        "codigo",
+        "nome",
+      ]),
+    });
+  }, [
+    searchTerms,
+    localizacoes,
+    caminhoes,
+    motoristas,
+    operacoes,
+    centrosCusto,
+    responsaveis,
+  ]);
 
   // Funções de Localização
   const handleSaveLocalizacao = () => {
@@ -484,16 +700,130 @@ const CadastrosAuxiliares = () => {
 
   // Funções de Exportação
   const handleExport = (tipo: string, formato: "csv" | "pdf") => {
-    toast({ title: `Exportando ${tipo} em formato ${formato.toUpperCase()}...` });
+    toast({
+      title: `Exportando ${tipo} em formato ${formato.toUpperCase()}...`,
+    });
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Cadastros Auxiliares</h1>
-        <p className="text-muted-foreground mt-2">
-          Gerencie os cadastros auxiliares do sistema
-        </p>
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Cadastros Auxiliares
+          </h1>
+          <p className="text-muted-foreground">
+            Gerencie os cadastros auxiliares do sistema
+          </p>
+        </div>
+      </div>
+
+      {/* Cards de Estatísticas */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Localizações</CardTitle>
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Building2 className="h-5 w-5 text-blue-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-600">
+              {localizacoes.length}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {filteredData.localizacoes.length} filtradas
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Caminhões</CardTitle>
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Truck className="h-5 w-5 text-green-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600">
+              {caminhoes.length}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {filteredData.caminhoes.length} filtrados
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Motoristas</CardTitle>
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <User className="h-5 w-5 text-purple-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-purple-600">
+              {motoristas.length}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {filteredData.motoristas.length} filtrados
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Operações</CardTitle>
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <Settings className="h-5 w-5 text-orange-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-orange-600">
+              {operacoes.length}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {filteredData.operacoes.length} filtradas
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Centros de Custo
+            </CardTitle>
+            <div className="p-2 bg-emerald-100 rounded-lg">
+              <DollarSign className="h-5 w-5 text-emerald-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-emerald-600">
+              {centrosCusto.length}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {filteredData.centrosCusto.length} filtrados
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Responsáveis</CardTitle>
+            <div className="p-2 bg-rose-100 rounded-lg">
+              <Users className="h-5 w-5 text-rose-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-rose-600">
+              {responsaveis.length}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {filteredData.responsaveis.length} filtrados
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -508,527 +838,760 @@ const CadastrosAuxiliares = () => {
 
         {/* Aba Localização */}
         <TabsContent value="localizacao" className="space-y-4">
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Localizações</h2>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleImportCSV("Localização")}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importar CSV
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => handleExport("Localização", "csv")}>
-                      Exportar CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport("Localização", "pdf")}>
-                      Exportar PDF
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          <Card>
+            <CardHeader>
+              <CardTitle>Localizações</CardTitle>
+              <CardDescription>
+                {filteredData.localizacoes.length} localização(ões)
+                encontrada(s)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Filtro específico para Localização */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por código, descrição ou tipo de estoque..."
+                    value={searchTerms.localizacao}
+                    onChange={(e) =>
+                      setSearchTerms({
+                        ...searchTerms,
+                        localizacao: e.target.value,
+                      })
+                    }
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleImportCSV("Localização")}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importar CSV
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={() => handleExport("Localização", "csv")}
+                      >
+                        Exportar CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleExport("Localização", "pdf")}
+                      >
+                        Exportar PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 <Button onClick={() => setShowLocalizacaoDialog(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Nova Localização
                 </Button>
               </div>
-            </div>
 
-            {localizacoes.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                Nenhuma localização cadastrada.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Tipo de Estoque</TableHead>
-                    <TableHead>Capacidade</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {localizacoes.map((loc) => (
-                    <TableRow key={loc.id}>
-                      <TableCell>{loc.codigo}</TableCell>
-                      <TableCell>{loc.descricao}</TableCell>
-                      <TableCell>{loc.tipo_estoque}</TableCell>
-                      <TableCell>{loc.capacidade}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditLocalizacao(loc)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteLocalizacao(loc.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Remover
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+              {filteredData.localizacoes.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  {searchTerms.localizacao
+                    ? "Nenhuma localização encontrada com os filtros aplicados."
+                    : "Nenhuma localização cadastrada."}
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead>Tipo de Estoque</TableHead>
+                        <TableHead>Capacidade</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.localizacoes.map((loc) => (
+                        <TableRow key={loc.id}>
+                          <TableCell className="font-medium">
+                            {loc.codigo}
+                          </TableCell>
+                          <TableCell>{loc.descricao}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{loc.tipo_estoque}</Badge>
+                          </TableCell>
+                          <TableCell>{loc.capacidade}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleEditLocalizacao(loc)}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleDeleteLocalizacao(loc.id)
+                                  }
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Remover
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
 
         {/* Aba Caminhão */}
         <TabsContent value="caminhao" className="space-y-4">
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Caminhões</h2>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleImportCSV("Caminhão")}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importar CSV
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => handleExport("Caminhão", "csv")}>
-                      Exportar CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport("Caminhão", "pdf")}>
-                      Exportar PDF
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          <Card>
+            <CardHeader>
+              <CardTitle>Caminhões</CardTitle>
+              <CardDescription>
+                {filteredData.caminhoes.length} caminhão(ões) encontrado(s)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Filtro específico para Caminhão */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por placa, patrimônio, modelo ou marca..."
+                    value={searchTerms.caminhao}
+                    onChange={(e) =>
+                      setSearchTerms({
+                        ...searchTerms,
+                        caminhao: e.target.value,
+                      })
+                    }
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleImportCSV("Caminhão")}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importar CSV
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={() => handleExport("Caminhão", "csv")}
+                      >
+                        Exportar CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleExport("Caminhão", "pdf")}
+                      >
+                        Exportar PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 <Button onClick={() => setShowCaminhaoDialog(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Caminhão
                 </Button>
               </div>
-            </div>
 
-            {caminhoes.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                Nenhum caminhão cadastrado.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Placa</TableHead>
-                    <TableHead>Patrimônio</TableHead>
-                    <TableHead>Volume (L)</TableHead>
-                    <TableHead>Modelo</TableHead>
-                    <TableHead>Marca</TableHead>
-                    <TableHead>Ano</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {caminhoes.map((cam) => (
-                    <TableRow key={cam.id}>
-                      <TableCell>{cam.placa}</TableCell>
-                      <TableCell>{cam.patrimonio}</TableCell>
-                      <TableCell>{cam.volume}</TableCell>
-                      <TableCell>{cam.modelo}</TableCell>
-                      <TableCell>{cam.marca}</TableCell>
-                      <TableCell>{cam.ano}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditCaminhao(cam)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteCaminhao(cam.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Remover
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+              {filteredData.caminhoes.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  {searchTerms.caminhao
+                    ? "Nenhum caminhão encontrado com os filtros aplicados."
+                    : "Nenhum caminhão cadastrado."}
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Placa</TableHead>
+                        <TableHead>Patrimônio</TableHead>
+                        <TableHead>Volume (L)</TableHead>
+                        <TableHead>Modelo</TableHead>
+                        <TableHead>Marca</TableHead>
+                        <TableHead>Ano</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.caminhoes.map((cam) => (
+                        <TableRow key={cam.id}>
+                          <TableCell className="font-medium">
+                            {cam.placa}
+                          </TableCell>
+                          <TableCell>{cam.patrimonio}</TableCell>
+                          <TableCell>{cam.volume}</TableCell>
+                          <TableCell>{cam.modelo}</TableCell>
+                          <TableCell>{cam.marca}</TableCell>
+                          <TableCell>{cam.ano}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleEditCaminhao(cam)}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteCaminhao(cam.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Remover
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
 
         {/* Aba Motorista */}
         <TabsContent value="motorista" className="space-y-4">
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Motoristas</h2>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleImportCSV("Motorista")}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importar CSV
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => handleExport("Motorista", "csv")}>
-                      Exportar CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport("Motorista", "pdf")}>
-                      Exportar PDF
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          <Card>
+            <CardHeader>
+              <CardTitle>Motoristas</CardTitle>
+              <CardDescription>
+                {filteredData.motoristas.length} motorista(s) encontrado(s)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Filtro específico para Motorista */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por código, matrícula, nome ou contato..."
+                    value={searchTerms.motorista}
+                    onChange={(e) =>
+                      setSearchTerms({
+                        ...searchTerms,
+                        motorista: e.target.value,
+                      })
+                    }
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleImportCSV("Motorista")}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importar CSV
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={() => handleExport("Motorista", "csv")}
+                      >
+                        Exportar CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleExport("Motorista", "pdf")}
+                      >
+                        Exportar PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 <Button onClick={() => setShowMotoristaDialog(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Motorista
                 </Button>
               </div>
-            </div>
 
-            {motoristas.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                Nenhum motorista cadastrado.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Matrícula</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Contato</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {motoristas.map((mot) => (
-                    <TableRow key={mot.id}>
-                      <TableCell>{mot.codigo}</TableCell>
-                      <TableCell>{mot.matricula}</TableCell>
-                      <TableCell>{mot.nome}</TableCell>
-                      <TableCell>{mot.contato}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditMotorista(mot)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteMotorista(mot.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Remover
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+              {filteredData.motoristas.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  {searchTerms.motorista
+                    ? "Nenhum motorista encontrado com os filtros aplicados."
+                    : "Nenhum motorista cadastrado."}
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Matrícula</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Contato</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.motoristas.map((mot) => (
+                        <TableRow key={mot.id}>
+                          <TableCell className="font-medium">
+                            {mot.codigo}
+                          </TableCell>
+                          <TableCell>{mot.matricula}</TableCell>
+                          <TableCell>{mot.nome}</TableCell>
+                          <TableCell>{mot.contato}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleEditMotorista(mot)}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteMotorista(mot.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Remover
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
 
         {/* Aba Operações */}
         <TabsContent value="operacoes" className="space-y-4">
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Operações</h2>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleImportCSV("Operação")}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importar CSV
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => handleExport("Operação", "csv")}>
-                      Exportar CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport("Operação", "pdf")}>
-                      Exportar PDF
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          <Card>
+            <CardHeader>
+              <CardTitle>Operações</CardTitle>
+              <CardDescription>
+                {filteredData.operacoes.length} operação(ões) encontrada(s)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Filtro específico para Operações */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por código ou descrição..."
+                    value={searchTerms.operacao}
+                    onChange={(e) =>
+                      setSearchTerms({
+                        ...searchTerms,
+                        operacao: e.target.value,
+                      })
+                    }
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleImportCSV("Operação")}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importar CSV
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={() => handleExport("Operação", "csv")}
+                      >
+                        Exportar CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleExport("Operação", "pdf")}
+                      >
+                        Exportar PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 <Button onClick={() => setShowOperacaoDialog(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Nova Operação
                 </Button>
               </div>
-            </div>
 
-            {operacoes.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                Nenhuma operação cadastrada.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {operacoes.map((op) => (
-                    <TableRow key={op.id}>
-                      <TableCell>{op.codigo}</TableCell>
-                      <TableCell>{op.descricao}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditOperacao(op)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteOperacao(op.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Remover
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+              {filteredData.operacoes.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  {searchTerms.operacao
+                    ? "Nenhuma operação encontrada com os filtros aplicados."
+                    : "Nenhuma operação cadastrada."}
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.operacoes.map((op) => (
+                        <TableRow key={op.id}>
+                          <TableCell className="font-medium">
+                            {op.codigo}
+                          </TableCell>
+                          <TableCell>{op.descricao}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleEditOperacao(op)}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteOperacao(op.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Remover
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
 
         {/* Aba Centro de Custo */}
         <TabsContent value="centro-custo" className="space-y-4">
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Centros de Custo</h2>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleImportCSV("Centro de Custo")}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importar CSV
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => handleExport("Centro de Custo", "csv")}>
-                      Exportar CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport("Centro de Custo", "pdf")}>
-                      Exportar PDF
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          <Card>
+            <CardHeader>
+              <CardTitle>Centros de Custo</CardTitle>
+              <CardDescription>
+                {filteredData.centrosCusto.length} centro(s) de custo
+                encontrado(s)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Filtro específico para Centro de Custo */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por código ou descrição..."
+                    value={searchTerms.centroCusto}
+                    onChange={(e) =>
+                      setSearchTerms({
+                        ...searchTerms,
+                        centroCusto: e.target.value,
+                      })
+                    }
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleImportCSV("Centro de Custo")}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importar CSV
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={() => handleExport("Centro de Custo", "csv")}
+                      >
+                        Exportar CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleExport("Centro de Custo", "pdf")}
+                      >
+                        Exportar PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 <Button onClick={() => setShowCentroCustoDialog(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Centro de Custo
                 </Button>
               </div>
-            </div>
 
-            {centrosCusto.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                Nenhum centro de custo cadastrado.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {centrosCusto.map((cc) => (
-                    <TableRow key={cc.id}>
-                      <TableCell>{cc.codigo}</TableCell>
-                      <TableCell>{cc.descricao}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditCentroCusto(cc)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteCentroCusto(cc.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Remover
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+              {filteredData.centrosCusto.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  {searchTerms.centroCusto
+                    ? "Nenhum centro de custo encontrado com os filtros aplicados."
+                    : "Nenhum centro de custo cadastrado."}
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.centrosCusto.map((cc) => (
+                        <TableRow key={cc.id}>
+                          <TableCell className="font-medium">
+                            {cc.codigo}
+                          </TableCell>
+                          <TableCell>{cc.descricao}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleEditCentroCusto(cc)}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteCentroCusto(cc.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Remover
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
 
         {/* Aba Responsável */}
         <TabsContent value="responsavel" className="space-y-4">
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Responsáveis</h2>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleImportCSV("Responsável")}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importar CSV
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => handleExport("Responsável", "csv")}>
-                      Exportar CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport("Responsável", "pdf")}>
-                      Exportar PDF
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          <Card>
+            <CardHeader>
+              <CardTitle>Responsáveis</CardTitle>
+              <CardDescription>
+                {filteredData.responsaveis.length} responsável(is) encontrado(s)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Filtro específico para Responsável */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por código ou nome..."
+                    value={searchTerms.responsavel}
+                    onChange={(e) =>
+                      setSearchTerms({
+                        ...searchTerms,
+                        responsavel: e.target.value,
+                      })
+                    }
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleImportCSV("Responsável")}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importar CSV
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={() => handleExport("Responsável", "csv")}
+                      >
+                        Exportar CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleExport("Responsável", "pdf")}
+                      >
+                        Exportar PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 <Button onClick={() => setShowResponsavelDialog(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Responsável
                 </Button>
               </div>
-            </div>
 
-            {responsaveis.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                Nenhum responsável cadastrado.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {responsaveis.map((resp) => (
-                    <TableRow key={resp.id}>
-                      <TableCell>{resp.codigo}</TableCell>
-                      <TableCell>{resp.nome}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditResponsavel(resp)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteResponsavel(resp.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Remover
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+              {filteredData.responsaveis.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  {searchTerms.responsavel
+                    ? "Nenhum responsável encontrado com os filtros aplicados."
+                    : "Nenhum responsável cadastrado."}
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.responsaveis.map((resp) => (
+                        <TableRow key={resp.id}>
+                          <TableCell className="font-medium">
+                            {resp.codigo}
+                          </TableCell>
+                          <TableCell>{resp.nome}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleEditResponsavel(resp)}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleDeleteResponsavel(resp.id)
+                                  }
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Remover
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
       {/* Dialog Localização */}
-      <Dialog open={showLocalizacaoDialog} onOpenChange={setShowLocalizacaoDialog}>
+      <Dialog
+        open={showLocalizacaoDialog}
+        onOpenChange={setShowLocalizacaoDialog}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -1045,7 +1608,10 @@ const CadastrosAuxiliares = () => {
                 id="loc-codigo"
                 value={localizacaoForm.codigo}
                 onChange={(e) =>
-                  setLocalizacaoForm({ ...localizacaoForm, codigo: e.target.value })
+                  setLocalizacaoForm({
+                    ...localizacaoForm,
+                    codigo: e.target.value,
+                  })
                 }
               />
             </div>
@@ -1055,7 +1621,10 @@ const CadastrosAuxiliares = () => {
                 id="loc-descricao"
                 value={localizacaoForm.descricao}
                 onChange={(e) =>
-                  setLocalizacaoForm({ ...localizacaoForm, descricao: e.target.value })
+                  setLocalizacaoForm({
+                    ...localizacaoForm,
+                    descricao: e.target.value,
+                  })
                 }
               />
             </div>
@@ -1064,16 +1633,19 @@ const CadastrosAuxiliares = () => {
               <Select
                 value={localizacaoForm.tipo_estoque}
                 onValueChange={(value) =>
-                  setLocalizacaoForm({ ...localizacaoForm, tipo_estoque: value })
+                  setLocalizacaoForm({
+                    ...localizacaoForm,
+                    tipo_estoque: value,
+                  })
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Armazenamento">Armazenamento</SelectItem>
-                  <SelectItem value="Produção">Produção</SelectItem>
-                  <SelectItem value="Expedição">Expedição</SelectItem>
+                  <SelectItem value="PRIMÁRIO">PRIMÁRIO</SelectItem>
+                  <SelectItem value="SECUNDÁRIO">SECUNDÁRIO</SelectItem>
+                  <SelectItem value="TERCIÁRIO">TERCIÁRIO</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1083,7 +1655,10 @@ const CadastrosAuxiliares = () => {
                 id="loc-capacidade"
                 value={localizacaoForm.capacidade}
                 onChange={(e) =>
-                  setLocalizacaoForm({ ...localizacaoForm, capacidade: e.target.value })
+                  setLocalizacaoForm({
+                    ...localizacaoForm,
+                    capacidade: e.target.value,
+                  })
                 }
               />
             </div>
@@ -1104,9 +1679,7 @@ const CadastrosAuxiliares = () => {
             <DialogTitle>
               {editingCaminhao ? "Editar Caminhão" : "Novo Caminhão"}
             </DialogTitle>
-            <DialogDescription>
-              Preencha os dados do caminhão
-            </DialogDescription>
+            <DialogDescription>Preencha os dados do caminhão</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -1125,7 +1698,10 @@ const CadastrosAuxiliares = () => {
                 id="cam-patrimonio"
                 value={caminhaoForm.patrimonio}
                 onChange={(e) =>
-                  setCaminhaoForm({ ...caminhaoForm, patrimonio: e.target.value })
+                  setCaminhaoForm({
+                    ...caminhaoForm,
+                    patrimonio: e.target.value,
+                  })
                 }
               />
             </div>
@@ -1209,7 +1785,10 @@ const CadastrosAuxiliares = () => {
                 id="mot-matricula"
                 value={motoristaForm.matricula}
                 onChange={(e) =>
-                  setMotoristaForm({ ...motoristaForm, matricula: e.target.value })
+                  setMotoristaForm({
+                    ...motoristaForm,
+                    matricula: e.target.value,
+                  })
                 }
               />
             </div>
@@ -1229,7 +1808,10 @@ const CadastrosAuxiliares = () => {
                 id="mot-contato"
                 value={motoristaForm.contato}
                 onChange={(e) =>
-                  setMotoristaForm({ ...motoristaForm, contato: e.target.value })
+                  setMotoristaForm({
+                    ...motoristaForm,
+                    contato: e.target.value,
+                  })
                 }
               />
             </div>
@@ -1250,9 +1832,7 @@ const CadastrosAuxiliares = () => {
             <DialogTitle>
               {editingOperacao ? "Editar Operação" : "Nova Operação"}
             </DialogTitle>
-            <DialogDescription>
-              Preencha os dados da operação
-            </DialogDescription>
+            <DialogDescription>Preencha os dados da operação</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -1271,7 +1851,10 @@ const CadastrosAuxiliares = () => {
                 id="op-descricao"
                 value={operacaoForm.descricao}
                 onChange={(e) =>
-                  setOperacaoForm({ ...operacaoForm, descricao: e.target.value })
+                  setOperacaoForm({
+                    ...operacaoForm,
+                    descricao: e.target.value,
+                  })
                 }
               />
             </div>
@@ -1286,11 +1869,16 @@ const CadastrosAuxiliares = () => {
       </Dialog>
 
       {/* Dialog Centro de Custo */}
-      <Dialog open={showCentroCustoDialog} onOpenChange={setShowCentroCustoDialog}>
+      <Dialog
+        open={showCentroCustoDialog}
+        onOpenChange={setShowCentroCustoDialog}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editingCentroCusto ? "Editar Centro de Custo" : "Novo Centro de Custo"}
+              {editingCentroCusto
+                ? "Editar Centro de Custo"
+                : "Novo Centro de Custo"}
             </DialogTitle>
             <DialogDescription>
               Preencha os dados do centro de custo
@@ -1303,7 +1891,10 @@ const CadastrosAuxiliares = () => {
                 id="cc-codigo"
                 value={centroCustoForm.codigo}
                 onChange={(e) =>
-                  setCentroCustoForm({ ...centroCustoForm, codigo: e.target.value })
+                  setCentroCustoForm({
+                    ...centroCustoForm,
+                    codigo: e.target.value,
+                  })
                 }
               />
             </div>
@@ -1313,7 +1904,10 @@ const CadastrosAuxiliares = () => {
                 id="cc-descricao"
                 value={centroCustoForm.descricao}
                 onChange={(e) =>
-                  setCentroCustoForm({ ...centroCustoForm, descricao: e.target.value })
+                  setCentroCustoForm({
+                    ...centroCustoForm,
+                    descricao: e.target.value,
+                  })
                 }
               />
             </div>
@@ -1328,7 +1922,10 @@ const CadastrosAuxiliares = () => {
       </Dialog>
 
       {/* Dialog Responsável */}
-      <Dialog open={showResponsavelDialog} onOpenChange={setShowResponsavelDialog}>
+      <Dialog
+        open={showResponsavelDialog}
+        onOpenChange={setShowResponsavelDialog}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -1345,7 +1942,10 @@ const CadastrosAuxiliares = () => {
                 id="resp-codigo"
                 value={responsavelForm.codigo}
                 onChange={(e) =>
-                  setResponsavelForm({ ...responsavelForm, codigo: e.target.value })
+                  setResponsavelForm({
+                    ...responsavelForm,
+                    codigo: e.target.value,
+                  })
                 }
               />
             </div>
@@ -1355,7 +1955,10 @@ const CadastrosAuxiliares = () => {
                 id="resp-nome"
                 value={responsavelForm.nome}
                 onChange={(e) =>
-                  setResponsavelForm({ ...responsavelForm, nome: e.target.value })
+                  setResponsavelForm({
+                    ...responsavelForm,
+                    nome: e.target.value,
+                  })
                 }
               />
             </div>
