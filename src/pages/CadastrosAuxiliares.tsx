@@ -59,6 +59,68 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
+// Componente genérico para filtros
+interface FilterCardProps {
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: string;
+  onStatusChange: (value: string) => void;
+  searchPlaceholder: string;
+  searchId: string;
+  statusId: string;
+}
+
+const FilterCard: React.FC<FilterCardProps> = ({
+  searchTerm,
+  onSearchChange,
+  statusFilter,
+  onStatusChange,
+  searchPlaceholder,
+  searchId,
+  statusId,
+}) => {
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Filter className="h-4 w-4" />
+          Filtros de Pesquisa
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="grid gap-4 md:grid-cols-4">
+          <div className="space-y-2 col-span-3">
+            <Label htmlFor={searchId}>Buscar</Label>
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                id={searchId}
+                placeholder={searchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
+          <div className="space-y-2 col-span-1">
+            <Label htmlFor={statusId}>Status</Label>
+            <Select value={statusFilter} onValueChange={onStatusChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="Ativo">Ativo</SelectItem>
+                <SelectItem value="Inativo">Inativo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 // Interfaces
 interface Localizacao {
   id: string;
@@ -66,6 +128,7 @@ interface Localizacao {
   descricao: string;
   tipo_estoque: string;
   capacidade: string;
+  status: "Ativo" | "Inativo";
 }
 
 interface Caminhao {
@@ -76,6 +139,7 @@ interface Caminhao {
   modelo: string;
   marca: string;
   ano: string;
+  status: "Ativo" | "Inativo";
 }
 
 interface Motorista {
@@ -84,24 +148,28 @@ interface Motorista {
   matricula: string;
   nome: string;
   contato: string;
+  status: "Ativo" | "Inativo";
 }
 
 interface Operacao {
   id: string;
   codigo: string;
   descricao: string;
+  status: "Ativo" | "Inativo";
 }
 
 interface CentroCusto {
   id: string;
   codigo: string;
   descricao: string;
+  status: "Ativo" | "Inativo";
 }
 
 interface Responsavel {
   id: string;
   codigo: string;
   nome: string;
+  status: "Ativo" | "Inativo";
 }
 
 const CadastrosAuxiliares = () => {
@@ -116,6 +184,14 @@ const CadastrosAuxiliares = () => {
     centroCusto: "",
     responsavel: "",
   });
+  const [statusFilters, setStatusFilters] = useState({
+    localizacao: "todos",
+    caminhao: "todos",
+    motorista: "todos",
+    operacao: "todos",
+    centroCusto: "todos",
+    responsavel: "todos",
+  });
   const [filteredData, setFilteredData] = useState({
     localizacoes: [] as Localizacao[],
     caminhoes: [] as Caminhao[],
@@ -129,19 +205,30 @@ const CadastrosAuxiliares = () => {
   const filterData = (
     data: any[],
     searchTerm: string,
-    searchFields: string[]
+    searchFields: string[],
+    statusFilter: string = "todos"
   ) => {
-    if (!searchTerm) return data;
+    let filtered = data;
 
-    return data.filter((item) =>
-      searchFields.some((field) => {
-        const value = item[field];
-        return (
-          value &&
-          value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      })
-    );
+    // Filtro por status
+    if (statusFilter !== "todos") {
+      filtered = filtered.filter((item) => item.status === statusFilter);
+    }
+
+    // Filtro por termo de busca
+    if (searchTerm) {
+      filtered = filtered.filter((item) =>
+        searchFields.some((field) => {
+          const value = item[field];
+          return (
+            value &&
+            value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        })
+      );
+    }
+
+    return filtered;
   };
 
   // Estados para Localização
@@ -152,6 +239,7 @@ const CadastrosAuxiliares = () => {
       descricao: "Armazém Principal - Área A",
       tipo_estoque: "PRIMÁRIO",
       capacidade: "50 IBCs",
+      status: "Ativo",
     },
     {
       id: "2",
@@ -159,6 +247,7 @@ const CadastrosAuxiliares = () => {
       descricao: "Armazém Principal - Área B",
       tipo_estoque: "SECUNDÁRIO",
       capacidade: "30 IBCs",
+      status: "Ativo",
     },
     {
       id: "3",
@@ -166,6 +255,7 @@ const CadastrosAuxiliares = () => {
       descricao: "Estoque Externo - Pátio 1",
       tipo_estoque: "PRIMÁRIO",
       capacidade: "100 IBCs",
+      status: "Inativo",
     },
     {
       id: "4",
@@ -173,6 +263,7 @@ const CadastrosAuxiliares = () => {
       descricao: "Silos - Área Norte",
       tipo_estoque: "TERCIÁRIO",
       capacidade: "25 Silos",
+      status: "Ativo",
     },
     {
       id: "5",
@@ -180,6 +271,7 @@ const CadastrosAuxiliares = () => {
       descricao: "Depósito Central",
       tipo_estoque: "PRIMÁRIO",
       capacidade: "75 IBCs",
+      status: "Ativo",
     },
   ]);
   const [showLocalizacaoDialog, setShowLocalizacaoDialog] = useState(false);
@@ -202,6 +294,7 @@ const CadastrosAuxiliares = () => {
       modelo: "F32",
       marca: "Volvo",
       ano: "2023",
+      status: "Ativo",
     },
     {
       id: "2",
@@ -211,6 +304,7 @@ const CadastrosAuxiliares = () => {
       modelo: "FH16",
       marca: "Volvo",
       ano: "2022",
+      status: "Ativo",
     },
     {
       id: "3",
@@ -220,6 +314,7 @@ const CadastrosAuxiliares = () => {
       modelo: "Actros",
       marca: "Mercedes-Benz",
       ano: "2024",
+      status: "Inativo",
     },
     {
       id: "4",
@@ -229,6 +324,7 @@ const CadastrosAuxiliares = () => {
       modelo: "Scania R",
       marca: "Scania",
       ano: "2023",
+      status: "Ativo",
     },
     {
       id: "5",
@@ -238,6 +334,7 @@ const CadastrosAuxiliares = () => {
       modelo: "Constellation",
       marca: "Volkswagen",
       ano: "2021",
+      status: "Ativo",
     },
   ]);
   const [showCaminhaoDialog, setShowCaminhaoDialog] = useState(false);
@@ -259,6 +356,7 @@ const CadastrosAuxiliares = () => {
       matricula: "9999999",
       nome: "Ze",
       contato: "3499999999",
+      status: "Ativo",
     },
     {
       id: "2",
@@ -266,6 +364,7 @@ const CadastrosAuxiliares = () => {
       matricula: "8888888",
       nome: "João Silva",
       contato: "3498888888",
+      status: "Ativo",
     },
     {
       id: "3",
@@ -273,6 +372,7 @@ const CadastrosAuxiliares = () => {
       matricula: "7777777",
       nome: "Maria Santos",
       contato: "3497777777",
+      status: "Inativo",
     },
     {
       id: "4",
@@ -280,6 +380,7 @@ const CadastrosAuxiliares = () => {
       matricula: "6666666",
       nome: "Carlos Oliveira",
       contato: "3496666666",
+      status: "Ativo",
     },
     {
       id: "5",
@@ -287,6 +388,7 @@ const CadastrosAuxiliares = () => {
       matricula: "5555555",
       nome: "Ana Costa",
       contato: "3495555555",
+      status: "Ativo",
     },
   ]);
   const [showMotoristaDialog, setShowMotoristaDialog] = useState(false);
@@ -302,11 +404,36 @@ const CadastrosAuxiliares = () => {
 
   // Estados para Operação
   const [operacoes, setOperacoes] = useState<Operacao[]>([
-    { id: "1", codigo: "225", descricao: "COMBATE A BROCA AVIÃO" },
-    { id: "2", codigo: "226", descricao: "APLICAÇÃO HERBICIDA ÁREA A" },
-    { id: "3", codigo: "227", descricao: "PULVERIZAÇÃO FUNGICIDA" },
-    { id: "4", codigo: "228", descricao: "CONTROLE DE PRAGAS SOLO" },
-    { id: "5", codigo: "229", descricao: "APLICAÇÃO FERTILIZANTE FOLIAR" },
+    {
+      id: "1",
+      codigo: "225",
+      descricao: "COMBATE A BROCA AVIÃO",
+      status: "Ativo",
+    },
+    {
+      id: "2",
+      codigo: "226",
+      descricao: "APLICAÇÃO HERBICIDA ÁREA A",
+      status: "Ativo",
+    },
+    {
+      id: "3",
+      codigo: "227",
+      descricao: "PULVERIZAÇÃO FUNGICIDA",
+      status: "Inativo",
+    },
+    {
+      id: "4",
+      codigo: "228",
+      descricao: "CONTROLE DE PRAGAS SOLO",
+      status: "Ativo",
+    },
+    {
+      id: "5",
+      codigo: "229",
+      descricao: "APLICAÇÃO FERTILIZANTE FOLIAR",
+      status: "Ativo",
+    },
   ]);
   const [showOperacaoDialog, setShowOperacaoDialog] = useState(false);
   const [editingOperacao, setEditingOperacao] = useState<Operacao | null>(null);
@@ -317,19 +444,36 @@ const CadastrosAuxiliares = () => {
 
   // Estados para Centro de Custo
   const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([
-    { id: "1", codigo: "3101020605", descricao: "Combate Prag Doe C Soca" },
+    {
+      id: "1",
+      codigo: "3101020605",
+      descricao: "Combate Prag Doe C Soca",
+      status: "Ativo",
+    },
     {
       id: "2",
       codigo: "3101020606",
       descricao: "Aplicação Defensivos Área Norte",
+      status: "Ativo",
     },
     {
       id: "3",
       codigo: "3101020607",
       descricao: "Manutenção Preventiva Equipamentos",
+      status: "Inativo",
     },
-    { id: "4", codigo: "3101020608", descricao: "Pulverização Área Sul" },
-    { id: "5", codigo: "3101020609", descricao: "Controle Fitossanitário" },
+    {
+      id: "4",
+      codigo: "3101020608",
+      descricao: "Pulverização Área Sul",
+      status: "Ativo",
+    },
+    {
+      id: "5",
+      codigo: "3101020609",
+      descricao: "Controle Fitossanitário",
+      status: "Ativo",
+    },
   ]);
   const [showCentroCustoDialog, setShowCentroCustoDialog] = useState(false);
   const [editingCentroCusto, setEditingCentroCusto] =
@@ -341,11 +485,36 @@ const CadastrosAuxiliares = () => {
 
   // Estados para Responsável
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([
-    { id: "1", codigo: "3103590", nome: "LUCIANO APARECIDO GRAÇAS" },
-    { id: "2", codigo: "3103591", nome: "FERNANDO HENRIQUE SILVA" },
-    { id: "3", codigo: "3103592", nome: "ROBERTO CARLOS SANTOS" },
-    { id: "4", codigo: "3103593", nome: "PATRICIA MARIA OLIVEIRA" },
-    { id: "5", codigo: "3103594", nome: "ANDERSON LUIZ COSTA" },
+    {
+      id: "1",
+      codigo: "3103590",
+      nome: "LUCIANO APARECIDO GRAÇAS",
+      status: "Ativo",
+    },
+    {
+      id: "2",
+      codigo: "3103591",
+      nome: "FERNANDO HENRIQUE SILVA",
+      status: "Ativo",
+    },
+    {
+      id: "3",
+      codigo: "3103592",
+      nome: "ROBERTO CARLOS SANTOS",
+      status: "Inativo",
+    },
+    {
+      id: "4",
+      codigo: "3103593",
+      nome: "PATRICIA MARIA OLIVEIRA",
+      status: "Ativo",
+    },
+    {
+      id: "5",
+      codigo: "3103594",
+      nome: "ANDERSON LUIZ COSTA",
+      status: "Ativo",
+    },
   ]);
   const [showResponsavelDialog, setShowResponsavelDialog] = useState(false);
   const [editingResponsavel, setEditingResponsavel] =
@@ -358,38 +527,46 @@ const CadastrosAuxiliares = () => {
   // Efeito para aplicar filtros
   useEffect(() => {
     setFilteredData({
-      localizacoes: filterData(localizacoes, searchTerms.localizacao, [
-        "codigo",
-        "descricao",
-        "tipo_estoque",
-      ]),
-      caminhoes: filterData(caminhoes, searchTerms.caminhao, [
-        "placa",
-        "patrimonio",
-        "modelo",
-        "marca",
-      ]),
-      motoristas: filterData(motoristas, searchTerms.motorista, [
-        "codigo",
-        "matricula",
-        "nome",
-        "contato",
-      ]),
-      operacoes: filterData(operacoes, searchTerms.operacao, [
-        "codigo",
-        "descricao",
-      ]),
-      centrosCusto: filterData(centrosCusto, searchTerms.centroCusto, [
-        "codigo",
-        "descricao",
-      ]),
-      responsaveis: filterData(responsaveis, searchTerms.responsavel, [
-        "codigo",
-        "nome",
-      ]),
+      localizacoes: filterData(
+        localizacoes,
+        searchTerms.localizacao,
+        ["codigo", "descricao", "tipo_estoque"],
+        statusFilters.localizacao
+      ),
+      caminhoes: filterData(
+        caminhoes,
+        searchTerms.caminhao,
+        ["placa", "patrimonio", "modelo", "marca"],
+        statusFilters.caminhao
+      ),
+      motoristas: filterData(
+        motoristas,
+        searchTerms.motorista,
+        ["codigo", "matricula", "nome", "contato"],
+        statusFilters.motorista
+      ),
+      operacoes: filterData(
+        operacoes,
+        searchTerms.operacao,
+        ["codigo", "descricao"],
+        statusFilters.operacao
+      ),
+      centrosCusto: filterData(
+        centrosCusto,
+        searchTerms.centroCusto,
+        ["codigo", "descricao"],
+        statusFilters.centroCusto
+      ),
+      responsaveis: filterData(
+        responsaveis,
+        searchTerms.responsavel,
+        ["codigo", "nome"],
+        statusFilters.responsavel
+      ),
     });
   }, [
     searchTerms,
+    statusFilters,
     localizacoes,
     caminhoes,
     motoristas,
@@ -413,6 +590,7 @@ const CadastrosAuxiliares = () => {
       const newLocalizacao: Localizacao = {
         id: Date.now().toString(),
         ...localizacaoForm,
+        status: "Ativo",
       };
       setLocalizacoes([...localizacoes, newLocalizacao]);
       toast({ title: "Localização cadastrada com sucesso!" });
@@ -462,6 +640,7 @@ const CadastrosAuxiliares = () => {
       const newCaminhao: Caminhao = {
         id: Date.now().toString(),
         ...caminhaoForm,
+        status: "Ativo",
       };
       setCaminhoes([...caminhoes, newCaminhao]);
       toast({ title: "Caminhão cadastrado com sucesso!" });
@@ -515,6 +694,7 @@ const CadastrosAuxiliares = () => {
       const newMotorista: Motorista = {
         id: Date.now().toString(),
         ...motoristaForm,
+        status: "Ativo",
       };
       setMotoristas([...motoristas, newMotorista]);
       toast({ title: "Motorista cadastrado com sucesso!" });
@@ -564,6 +744,7 @@ const CadastrosAuxiliares = () => {
       const newOperacao: Operacao = {
         id: Date.now().toString(),
         ...operacaoForm,
+        status: "Ativo",
       };
       setOperacoes([...operacoes, newOperacao]);
       toast({ title: "Operação cadastrada com sucesso!" });
@@ -609,6 +790,7 @@ const CadastrosAuxiliares = () => {
       const newCentroCusto: CentroCusto = {
         id: Date.now().toString(),
         ...centroCustoForm,
+        status: "Ativo",
       };
       setCentrosCusto([...centrosCusto, newCentroCusto]);
       toast({ title: "Centro de Custo cadastrado com sucesso!" });
@@ -654,6 +836,7 @@ const CadastrosAuxiliares = () => {
       const newResponsavel: Responsavel = {
         id: Date.now().toString(),
         ...responsavelForm,
+        status: "Ativo",
       };
       setResponsaveis([...responsaveis, newResponsavel]);
       toast({ title: "Responsável cadastrado com sucesso!" });
@@ -847,23 +1030,19 @@ const CadastrosAuxiliares = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Filtro específico para Localização */}
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por código, descrição ou tipo de estoque..."
-                    value={searchTerms.localizacao}
-                    onChange={(e) =>
-                      setSearchTerms({
-                        ...searchTerms,
-                        localizacao: e.target.value,
-                      })
-                    }
-                    className="pl-8"
-                  />
-                </div>
-              </div>
+              <FilterCard
+                searchTerm={searchTerms.localizacao}
+                onSearchChange={(value) =>
+                  setSearchTerms({ ...searchTerms, localizacao: value })
+                }
+                statusFilter={statusFilters.localizacao}
+                onStatusChange={(value) =>
+                  setStatusFilters({ ...statusFilters, localizacao: value })
+                }
+                searchPlaceholder="Código, descrição ou tipo de estoque..."
+                searchId="search-localizacao"
+                statusId="status-localizacao"
+              />
 
               <div className="flex justify-between items-center mb-6">
                 <div className="flex gap-2">
@@ -916,6 +1095,7 @@ const CadastrosAuxiliares = () => {
                         <TableHead>Descrição</TableHead>
                         <TableHead>Tipo de Estoque</TableHead>
                         <TableHead>Capacidade</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -930,6 +1110,15 @@ const CadastrosAuxiliares = () => {
                             <Badge variant="outline">{loc.tipo_estoque}</Badge>
                           </TableCell>
                           <TableCell>{loc.capacidade}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                loc.status === "Ativo" ? "default" : "secondary"
+                              }
+                            >
+                              {loc.status}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -976,23 +1165,19 @@ const CadastrosAuxiliares = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Filtro específico para Caminhão */}
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por placa, patrimônio, modelo ou marca..."
-                    value={searchTerms.caminhao}
-                    onChange={(e) =>
-                      setSearchTerms({
-                        ...searchTerms,
-                        caminhao: e.target.value,
-                      })
-                    }
-                    className="pl-8"
-                  />
-                </div>
-              </div>
+              <FilterCard
+                searchTerm={searchTerms.caminhao}
+                onSearchChange={(value) =>
+                  setSearchTerms({ ...searchTerms, caminhao: value })
+                }
+                statusFilter={statusFilters.caminhao}
+                onStatusChange={(value) =>
+                  setStatusFilters({ ...statusFilters, caminhao: value })
+                }
+                searchPlaceholder="Placa, patrimônio, modelo ou marca..."
+                searchId="search-caminhao"
+                statusId="status-caminhao"
+              />
 
               <div className="flex justify-between items-center mb-6">
                 <div className="flex gap-2">
@@ -1047,6 +1232,7 @@ const CadastrosAuxiliares = () => {
                         <TableHead>Modelo</TableHead>
                         <TableHead>Marca</TableHead>
                         <TableHead>Ano</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1061,6 +1247,15 @@ const CadastrosAuxiliares = () => {
                           <TableCell>{cam.modelo}</TableCell>
                           <TableCell>{cam.marca}</TableCell>
                           <TableCell>{cam.ano}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                cam.status === "Ativo" ? "default" : "secondary"
+                              }
+                            >
+                              {cam.status}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -1105,23 +1300,19 @@ const CadastrosAuxiliares = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Filtro específico para Motorista */}
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por código, matrícula, nome ou contato..."
-                    value={searchTerms.motorista}
-                    onChange={(e) =>
-                      setSearchTerms({
-                        ...searchTerms,
-                        motorista: e.target.value,
-                      })
-                    }
-                    className="pl-8"
-                  />
-                </div>
-              </div>
+              <FilterCard
+                searchTerm={searchTerms.motorista}
+                onSearchChange={(value) =>
+                  setSearchTerms({ ...searchTerms, motorista: value })
+                }
+                statusFilter={statusFilters.motorista}
+                onStatusChange={(value) =>
+                  setStatusFilters({ ...statusFilters, motorista: value })
+                }
+                searchPlaceholder="Código, matrícula, nome ou contato..."
+                searchId="search-motorista"
+                statusId="status-motorista"
+              />
 
               <div className="flex justify-between items-center mb-6">
                 <div className="flex gap-2">
@@ -1174,6 +1365,7 @@ const CadastrosAuxiliares = () => {
                         <TableHead>Matrícula</TableHead>
                         <TableHead>Nome</TableHead>
                         <TableHead>Contato</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1186,6 +1378,15 @@ const CadastrosAuxiliares = () => {
                           <TableCell>{mot.matricula}</TableCell>
                           <TableCell>{mot.nome}</TableCell>
                           <TableCell>{mot.contato}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                mot.status === "Ativo" ? "default" : "secondary"
+                              }
+                            >
+                              {mot.status}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -1230,23 +1431,19 @@ const CadastrosAuxiliares = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Filtro específico para Operações */}
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por código ou descrição..."
-                    value={searchTerms.operacao}
-                    onChange={(e) =>
-                      setSearchTerms({
-                        ...searchTerms,
-                        operacao: e.target.value,
-                      })
-                    }
-                    className="pl-8"
-                  />
-                </div>
-              </div>
+              <FilterCard
+                searchTerm={searchTerms.operacao}
+                onSearchChange={(value) =>
+                  setSearchTerms({ ...searchTerms, operacao: value })
+                }
+                statusFilter={statusFilters.operacao}
+                onStatusChange={(value) =>
+                  setStatusFilters({ ...statusFilters, operacao: value })
+                }
+                searchPlaceholder="Código ou descrição..."
+                searchId="search-operacao"
+                statusId="status-operacao"
+              />
 
               <div className="flex justify-between items-center mb-6">
                 <div className="flex gap-2">
@@ -1297,6 +1494,7 @@ const CadastrosAuxiliares = () => {
                       <TableRow>
                         <TableHead>Código</TableHead>
                         <TableHead>Descrição</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1307,6 +1505,15 @@ const CadastrosAuxiliares = () => {
                             {op.codigo}
                           </TableCell>
                           <TableCell>{op.descricao}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                op.status === "Ativo" ? "default" : "secondary"
+                              }
+                            >
+                              {op.status}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -1352,23 +1559,19 @@ const CadastrosAuxiliares = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Filtro específico para Centro de Custo */}
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por código ou descrição..."
-                    value={searchTerms.centroCusto}
-                    onChange={(e) =>
-                      setSearchTerms({
-                        ...searchTerms,
-                        centroCusto: e.target.value,
-                      })
-                    }
-                    className="pl-8"
-                  />
-                </div>
-              </div>
+              <FilterCard
+                searchTerm={searchTerms.centroCusto}
+                onSearchChange={(value) =>
+                  setSearchTerms({ ...searchTerms, centroCusto: value })
+                }
+                statusFilter={statusFilters.centroCusto}
+                onStatusChange={(value) =>
+                  setStatusFilters({ ...statusFilters, centroCusto: value })
+                }
+                searchPlaceholder="Código ou descrição..."
+                searchId="search-centro-custo"
+                statusId="status-centro-custo"
+              />
 
               <div className="flex justify-between items-center mb-6">
                 <div className="flex gap-2">
@@ -1419,6 +1622,7 @@ const CadastrosAuxiliares = () => {
                       <TableRow>
                         <TableHead>Código</TableHead>
                         <TableHead>Descrição</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1429,6 +1633,15 @@ const CadastrosAuxiliares = () => {
                             {cc.codigo}
                           </TableCell>
                           <TableCell>{cc.descricao}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                cc.status === "Ativo" ? "default" : "secondary"
+                              }
+                            >
+                              {cc.status}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -1473,23 +1686,19 @@ const CadastrosAuxiliares = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Filtro específico para Responsável */}
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por código ou nome..."
-                    value={searchTerms.responsavel}
-                    onChange={(e) =>
-                      setSearchTerms({
-                        ...searchTerms,
-                        responsavel: e.target.value,
-                      })
-                    }
-                    className="pl-8"
-                  />
-                </div>
-              </div>
+              <FilterCard
+                searchTerm={searchTerms.responsavel}
+                onSearchChange={(value) =>
+                  setSearchTerms({ ...searchTerms, responsavel: value })
+                }
+                statusFilter={statusFilters.responsavel}
+                onStatusChange={(value) =>
+                  setStatusFilters({ ...statusFilters, responsavel: value })
+                }
+                searchPlaceholder="Código ou nome..."
+                searchId="search-responsavel"
+                statusId="status-responsavel"
+              />
 
               <div className="flex justify-between items-center mb-6">
                 <div className="flex gap-2">
@@ -1540,6 +1749,7 @@ const CadastrosAuxiliares = () => {
                       <TableRow>
                         <TableHead>Código</TableHead>
                         <TableHead>Nome</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1550,6 +1760,17 @@ const CadastrosAuxiliares = () => {
                             {resp.codigo}
                           </TableCell>
                           <TableCell>{resp.nome}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                resp.status === "Ativo"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                            >
+                              {resp.status}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
