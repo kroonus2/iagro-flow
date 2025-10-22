@@ -51,6 +51,7 @@ import {
   MapPin,
   TreePine,
   AlertTriangle,
+  Wheat,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -541,7 +542,7 @@ const GerenciamentoFazendas = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Fazendas</CardTitle>
             <div className="p-2 bg-green-100 rounded-lg">
-              <TreePine className="h-5 w-5 text-green-600" />
+              <Wheat className="h-5 w-5 text-green-600" />
             </div>
           </CardHeader>
           <CardContent>
