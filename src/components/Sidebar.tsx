@@ -72,8 +72,6 @@ const menuItems: MenuItem[] = [
         icon: FlaskConical,
         path: "/gerenciamento-smart-caldas",
       },
-      { title: "Fornecedores", icon: Store, path: "/fornecedores" },
-      { title: "Insumos Agrícolas", icon: Package, path: "/insumos-agricolas" },
       {
         title: "Gerenciar Fazendas",
         icon: Wheat,
@@ -84,6 +82,8 @@ const menuItems: MenuItem[] = [
         icon: Database,
         path: "/cadastros-auxiliares",
       },
+      { title: "Fornecedores", icon: Store, path: "/fornecedores" },
+      { title: "Insumos Agrícolas", icon: Package, path: "/insumos-agricolas" },
     ],
   },
   {
