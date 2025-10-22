@@ -85,7 +85,13 @@ const CadastrosAuxiliares = () => {
   const [activeTab, setActiveTab] = useState("localizacao");
 
   // Estados para Localização
-  const [localizacoes, setLocalizacoes] = useState<Localizacao[]>([]);
+  const [localizacoes, setLocalizacoes] = useState<Localizacao[]>([
+    { id: "1", codigo: "ARM-001", descricao: "Armazém Principal - Área A", tipo_estoque: "PRIMÁRIO", capacidade: "50 IBCs" },
+    { id: "2", codigo: "ARM-002", descricao: "Armazém Principal - Área B", tipo_estoque: "SECUNDÁRIO", capacidade: "30 IBCs" },
+    { id: "3", codigo: "EST-001", descricao: "Estoque Externo - Pátio 1", tipo_estoque: "PRIMÁRIO", capacidade: "100 IBCs" },
+    { id: "4", codigo: "SIL-001", descricao: "Silos - Área Norte", tipo_estoque: "TERCIÁRIO", capacidade: "25 Silos" },
+    { id: "5", codigo: "DEP-001", descricao: "Depósito Central", tipo_estoque: "PRIMÁRIO", capacidade: "75 IBCs" },
+  ]);
   const [showLocalizacaoDialog, setShowLocalizacaoDialog] = useState(false);
   const [editingLocalizacao, setEditingLocalizacao] = useState<Localizacao | null>(null);
   const [localizacaoForm, setLocalizacaoForm] = useState({
@@ -96,7 +102,13 @@ const CadastrosAuxiliares = () => {
   });
 
   // Estados para Caminhão
-  const [caminhoes, setCaminhoes] = useState<Caminhao[]>([]);
+  const [caminhoes, setCaminhoes] = useState<Caminhao[]>([
+    { id: "1", placa: "GNN-1010", patrimonio: "999999", volume: "13000", modelo: "F32", marca: "Volvo", ano: "2023" },
+    { id: "2", placa: "ABC-1234", patrimonio: "888888", volume: "15000", modelo: "FH16", marca: "Volvo", ano: "2022" },
+    { id: "3", placa: "DEF-5678", patrimonio: "777777", volume: "12000", modelo: "Actros", marca: "Mercedes-Benz", ano: "2024" },
+    { id: "4", placa: "GHI-9012", patrimonio: "666666", volume: "14000", modelo: "Scania R", marca: "Scania", ano: "2023" },
+    { id: "5", placa: "JKL-3456", patrimonio: "555555", volume: "11000", modelo: "Constellation", marca: "Volkswagen", ano: "2021" },
+  ]);
   const [showCaminhaoDialog, setShowCaminhaoDialog] = useState(false);
   const [editingCaminhao, setEditingCaminhao] = useState<Caminhao | null>(null);
   const [caminhaoForm, setCaminhaoForm] = useState({
@@ -109,7 +121,13 @@ const CadastrosAuxiliares = () => {
   });
 
   // Estados para Motorista
-  const [motoristas, setMotoristas] = useState<Motorista[]>([]);
+  const [motoristas, setMotoristas] = useState<Motorista[]>([
+    { id: "1", codigo: "1", matricula: "9999999", nome: "Ze", contato: "3499999999" },
+    { id: "2", codigo: "2", matricula: "8888888", nome: "João Silva", contato: "3498888888" },
+    { id: "3", codigo: "3", matricula: "7777777", nome: "Maria Santos", contato: "3497777777" },
+    { id: "4", codigo: "4", matricula: "6666666", nome: "Carlos Oliveira", contato: "3496666666" },
+    { id: "5", codigo: "5", matricula: "5555555", nome: "Ana Costa", contato: "3495555555" },
+  ]);
   const [showMotoristaDialog, setShowMotoristaDialog] = useState(false);
   const [editingMotorista, setEditingMotorista] = useState<Motorista | null>(null);
   const [motoristaForm, setMotoristaForm] = useState({
@@ -120,7 +138,13 @@ const CadastrosAuxiliares = () => {
   });
 
   // Estados para Operação
-  const [operacoes, setOperacoes] = useState<Operacao[]>([]);
+  const [operacoes, setOperacoes] = useState<Operacao[]>([
+    { id: "1", codigo: "225", descricao: "COMBATE A BROCA AVIÃO" },
+    { id: "2", codigo: "226", descricao: "APLICAÇÃO HERBICIDA ÁREA A" },
+    { id: "3", codigo: "227", descricao: "PULVERIZAÇÃO FUNGICIDA" },
+    { id: "4", codigo: "228", descricao: "CONTROLE DE PRAGAS SOLO" },
+    { id: "5", codigo: "229", descricao: "APLICAÇÃO FERTILIZANTE FOLIAR" },
+  ]);
   const [showOperacaoDialog, setShowOperacaoDialog] = useState(false);
   const [editingOperacao, setEditingOperacao] = useState<Operacao | null>(null);
   const [operacaoForm, setOperacaoForm] = useState({
@@ -129,7 +153,13 @@ const CadastrosAuxiliares = () => {
   });
 
   // Estados para Centro de Custo
-  const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([]);
+  const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([
+    { id: "1", codigo: "3101020605", descricao: "Combate Prag Doe C Soca" },
+    { id: "2", codigo: "3101020606", descricao: "Aplicação Defensivos Área Norte" },
+    { id: "3", codigo: "3101020607", descricao: "Manutenção Preventiva Equipamentos" },
+    { id: "4", codigo: "3101020608", descricao: "Pulverização Área Sul" },
+    { id: "5", codigo: "3101020609", descricao: "Controle Fitossanitário" },
+  ]);
   const [showCentroCustoDialog, setShowCentroCustoDialog] = useState(false);
   const [editingCentroCusto, setEditingCentroCusto] = useState<CentroCusto | null>(null);
   const [centroCustoForm, setCentroCustoForm] = useState({
@@ -138,7 +168,13 @@ const CadastrosAuxiliares = () => {
   });
 
   // Estados para Responsável
-  const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
+  const [responsaveis, setResponsaveis] = useState<Responsavel[]>([
+    { id: "1", codigo: "3103590", nome: "LUCIANO APARECIDO GRAÇAS" },
+    { id: "2", codigo: "3103591", nome: "FERNANDO HENRIQUE SILVA" },
+    { id: "3", codigo: "3103592", nome: "ROBERTO CARLOS SANTOS" },
+    { id: "4", codigo: "3103593", nome: "PATRICIA MARIA OLIVEIRA" },
+    { id: "5", codigo: "3103594", nome: "ANDERSON LUIZ COSTA" },
+  ]);
   const [showResponsavelDialog, setShowResponsavelDialog] = useState(false);
   const [editingResponsavel, setEditingResponsavel] = useState<Responsavel | null>(null);
   const [responsavelForm, setResponsavelForm] = useState({
