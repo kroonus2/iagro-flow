@@ -536,7 +536,7 @@ const GerenciamentoFazendas = () => {
       </div>
 
       {/* Cards de Estatísticas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Fazendas</CardTitle>
@@ -567,29 +567,6 @@ const GerenciamentoFazendas = () => {
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {filteredData.talhoes.length} filtrados
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Validações</CardTitle>
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-600">
-              {
-                fazendas.filter((f) => {
-                  const areaTotal = parseFloat(f.tamanho_total);
-                  const areaTalhoes = calcularAreaTotalTalhoes(f.id);
-                  return Math.abs(areaTotal - areaTalhoes) > 0.01;
-                }).length
-              }
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Fazendas com divergência de área
             </p>
           </CardContent>
         </Card>
