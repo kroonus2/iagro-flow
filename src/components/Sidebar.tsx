@@ -3,7 +3,6 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home,
   BarChart3,
-  Users,
   Package,
   Settings,
   FlaskConical,
@@ -19,6 +18,7 @@ import {
   Database,
   Download,
   HelpCircle,
+  Wheat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -74,7 +74,16 @@ const menuItems: MenuItem[] = [
       },
       { title: "Fornecedores", icon: Store, path: "/fornecedores" },
       { title: "Insumos Agrícolas", icon: Package, path: "/insumos-agricolas" },
-      { title: "Cadastros Auxiliares", icon: Database, path: "/cadastros-auxiliares" },
+      {
+        title: "Gerenciar de Fazendas",
+        icon: Wheat,
+        path: "/gerenciamento-fazendas",
+      },
+      {
+        title: "Cadastros Auxiliares",
+        icon: Database,
+        path: "/cadastros-auxiliares",
+      },
     ],
   },
   {

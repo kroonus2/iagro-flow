@@ -46,7 +46,6 @@ import {
   Download,
   Edit,
   Trash2,
-  MoreVertical,
   Search,
   Filter,
   Building2,
@@ -282,6 +281,7 @@ const CadastrosAuxiliares = () => {
     descricao: "",
     tipo_estoque: "",
     capacidade: "",
+    status: "Ativo",
   });
 
   // Estados para Caminhão
@@ -346,6 +346,7 @@ const CadastrosAuxiliares = () => {
     modelo: "",
     marca: "",
     ano: "",
+    status: "Ativo",
   });
 
   // Estados para Motorista
@@ -400,6 +401,7 @@ const CadastrosAuxiliares = () => {
     matricula: "",
     nome: "",
     contato: "",
+    status: "Ativo",
   });
 
   // Estados para Operação
@@ -440,6 +442,7 @@ const CadastrosAuxiliares = () => {
   const [operacaoForm, setOperacaoForm] = useState({
     codigo: "",
     descricao: "",
+    status: "Ativo",
   });
 
   // Estados para Centro de Custo
@@ -481,6 +484,7 @@ const CadastrosAuxiliares = () => {
   const [centroCustoForm, setCentroCustoForm] = useState({
     codigo: "",
     descricao: "",
+    status: "Ativo",
   });
 
   // Estados para Responsável
@@ -522,6 +526,7 @@ const CadastrosAuxiliares = () => {
   const [responsavelForm, setResponsavelForm] = useState({
     codigo: "",
     nome: "",
+    status: "Ativo",
   });
 
   // Efeito para aplicar filtros
@@ -581,7 +586,11 @@ const CadastrosAuxiliares = () => {
       setLocalizacoes(
         localizacoes.map((loc) =>
           loc.id === editingLocalizacao.id
-            ? { ...editingLocalizacao, ...localizacaoForm }
+            ? {
+                ...editingLocalizacao,
+                ...localizacaoForm,
+                status: localizacaoForm.status as "Ativo" | "Inativo",
+              }
             : loc
         )
       );
@@ -590,7 +599,7 @@ const CadastrosAuxiliares = () => {
       const newLocalizacao: Localizacao = {
         id: Date.now().toString(),
         ...localizacaoForm,
-        status: "Ativo",
+        status: localizacaoForm.status as "Ativo" | "Inativo",
       };
       setLocalizacoes([...localizacoes, newLocalizacao]);
       toast({ title: "Localização cadastrada com sucesso!" });
@@ -605,6 +614,7 @@ const CadastrosAuxiliares = () => {
       descricao: localizacao.descricao,
       tipo_estoque: localizacao.tipo_estoque,
       capacidade: localizacao.capacidade,
+      status: localizacao.status,
     });
     setShowLocalizacaoDialog(true);
   };
@@ -622,6 +632,7 @@ const CadastrosAuxiliares = () => {
       descricao: "",
       tipo_estoque: "",
       capacidade: "",
+      status: "Ativo",
     });
   };
 
@@ -631,7 +642,11 @@ const CadastrosAuxiliares = () => {
       setCaminhoes(
         caminhoes.map((cam) =>
           cam.id === editingCaminhao.id
-            ? { ...editingCaminhao, ...caminhaoForm }
+            ? {
+                ...editingCaminhao,
+                ...caminhaoForm,
+                status: caminhaoForm.status as "Ativo" | "Inativo",
+              }
             : cam
         )
       );
@@ -640,7 +655,7 @@ const CadastrosAuxiliares = () => {
       const newCaminhao: Caminhao = {
         id: Date.now().toString(),
         ...caminhaoForm,
-        status: "Ativo",
+        status: caminhaoForm.status as "Ativo" | "Inativo",
       };
       setCaminhoes([...caminhoes, newCaminhao]);
       toast({ title: "Caminhão cadastrado com sucesso!" });
@@ -657,6 +672,7 @@ const CadastrosAuxiliares = () => {
       modelo: caminhao.modelo,
       marca: caminhao.marca,
       ano: caminhao.ano,
+      status: caminhao.status,
     });
     setShowCaminhaoDialog(true);
   };
@@ -676,6 +692,7 @@ const CadastrosAuxiliares = () => {
       modelo: "",
       marca: "",
       ano: "",
+      status: "Ativo",
     });
   };
 
@@ -685,7 +702,11 @@ const CadastrosAuxiliares = () => {
       setMotoristas(
         motoristas.map((mot) =>
           mot.id === editingMotorista.id
-            ? { ...editingMotorista, ...motoristaForm }
+            ? {
+                ...editingMotorista,
+                ...motoristaForm,
+                status: motoristaForm.status as "Ativo" | "Inativo",
+              }
             : mot
         )
       );
@@ -694,7 +715,7 @@ const CadastrosAuxiliares = () => {
       const newMotorista: Motorista = {
         id: Date.now().toString(),
         ...motoristaForm,
-        status: "Ativo",
+        status: motoristaForm.status as "Ativo" | "Inativo",
       };
       setMotoristas([...motoristas, newMotorista]);
       toast({ title: "Motorista cadastrado com sucesso!" });
@@ -709,6 +730,7 @@ const CadastrosAuxiliares = () => {
       matricula: motorista.matricula,
       nome: motorista.nome,
       contato: motorista.contato,
+      status: motorista.status,
     });
     setShowMotoristaDialog(true);
   };
@@ -726,6 +748,7 @@ const CadastrosAuxiliares = () => {
       matricula: "",
       nome: "",
       contato: "",
+      status: "Ativo",
     });
   };
 
@@ -735,7 +758,11 @@ const CadastrosAuxiliares = () => {
       setOperacoes(
         operacoes.map((op) =>
           op.id === editingOperacao.id
-            ? { ...editingOperacao, ...operacaoForm }
+            ? {
+                ...editingOperacao,
+                ...operacaoForm,
+                status: operacaoForm.status as "Ativo" | "Inativo",
+              }
             : op
         )
       );
@@ -744,7 +771,7 @@ const CadastrosAuxiliares = () => {
       const newOperacao: Operacao = {
         id: Date.now().toString(),
         ...operacaoForm,
-        status: "Ativo",
+        status: operacaoForm.status as "Ativo" | "Inativo",
       };
       setOperacoes([...operacoes, newOperacao]);
       toast({ title: "Operação cadastrada com sucesso!" });
@@ -757,6 +784,7 @@ const CadastrosAuxiliares = () => {
     setOperacaoForm({
       codigo: operacao.codigo,
       descricao: operacao.descricao,
+      status: operacao.status,
     });
     setShowOperacaoDialog(true);
   };
@@ -772,6 +800,7 @@ const CadastrosAuxiliares = () => {
     setOperacaoForm({
       codigo: "",
       descricao: "",
+      status: "Ativo",
     });
   };
 
@@ -781,7 +810,11 @@ const CadastrosAuxiliares = () => {
       setCentrosCusto(
         centrosCusto.map((cc) =>
           cc.id === editingCentroCusto.id
-            ? { ...editingCentroCusto, ...centroCustoForm }
+            ? {
+                ...editingCentroCusto,
+                ...centroCustoForm,
+                status: centroCustoForm.status as "Ativo" | "Inativo",
+              }
             : cc
         )
       );
@@ -790,7 +823,7 @@ const CadastrosAuxiliares = () => {
       const newCentroCusto: CentroCusto = {
         id: Date.now().toString(),
         ...centroCustoForm,
-        status: "Ativo",
+        status: centroCustoForm.status as "Ativo" | "Inativo",
       };
       setCentrosCusto([...centrosCusto, newCentroCusto]);
       toast({ title: "Centro de Custo cadastrado com sucesso!" });
@@ -803,6 +836,7 @@ const CadastrosAuxiliares = () => {
     setCentroCustoForm({
       codigo: centroCusto.codigo,
       descricao: centroCusto.descricao,
+      status: centroCusto.status,
     });
     setShowCentroCustoDialog(true);
   };
@@ -818,6 +852,7 @@ const CadastrosAuxiliares = () => {
     setCentroCustoForm({
       codigo: "",
       descricao: "",
+      status: "Ativo",
     });
   };
 
@@ -827,7 +862,11 @@ const CadastrosAuxiliares = () => {
       setResponsaveis(
         responsaveis.map((resp) =>
           resp.id === editingResponsavel.id
-            ? { ...editingResponsavel, ...responsavelForm }
+            ? {
+                ...editingResponsavel,
+                ...responsavelForm,
+                status: responsavelForm.status as "Ativo" | "Inativo",
+              }
             : resp
         )
       );
@@ -836,7 +875,7 @@ const CadastrosAuxiliares = () => {
       const newResponsavel: Responsavel = {
         id: Date.now().toString(),
         ...responsavelForm,
-        status: "Ativo",
+        status: responsavelForm.status as "Ativo" | "Inativo",
       };
       setResponsaveis([...responsaveis, newResponsavel]);
       toast({ title: "Responsável cadastrado com sucesso!" });
@@ -849,6 +888,7 @@ const CadastrosAuxiliares = () => {
     setResponsavelForm({
       codigo: responsavel.codigo,
       nome: responsavel.nome,
+      status: responsavel.status,
     });
     setShowResponsavelDialog(true);
   };
@@ -864,6 +904,7 @@ const CadastrosAuxiliares = () => {
     setResponsavelForm({
       codigo: "",
       nome: "",
+      status: "Ativo",
     });
   };
 
@@ -1120,30 +1161,23 @@ const CadastrosAuxiliares = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleEditLocalizacao(loc)}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleDeleteLocalizacao(loc.id)
-                                  }
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Remover
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditLocalizacao(loc)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteLocalizacao(loc.id)}
+                                className="hover:bg-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1257,28 +1291,23 @@ const CadastrosAuxiliares = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleEditCaminhao(cam)}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteCaminhao(cam.id)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Remover
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditCaminhao(cam)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteCaminhao(cam.id)}
+                                className="hover:bg-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1388,28 +1417,23 @@ const CadastrosAuxiliares = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleEditMotorista(mot)}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteMotorista(mot.id)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Remover
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditMotorista(mot)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteMotorista(mot.id)}
+                                className="hover:bg-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1515,28 +1539,23 @@ const CadastrosAuxiliares = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleEditOperacao(op)}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteOperacao(op.id)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Remover
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditOperacao(op)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteOperacao(op.id)}
+                                className="hover:bg-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1643,28 +1662,23 @@ const CadastrosAuxiliares = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleEditCentroCusto(cc)}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteCentroCusto(cc.id)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Remover
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditCentroCusto(cc)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteCentroCusto(cc.id)}
+                                className="hover:bg-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1772,30 +1786,23 @@ const CadastrosAuxiliares = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleEditResponsavel(resp)}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleDeleteResponsavel(resp.id)
-                                  }
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Remover
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditResponsavel(resp)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteResponsavel(resp.id)}
+                                className="hover:bg-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1883,6 +1890,26 @@ const CadastrosAuxiliares = () => {
                 }
               />
             </div>
+            <div>
+              <Label htmlFor="loc-status">Status</Label>
+              <Select
+                value={localizacaoForm.status}
+                onValueChange={(value) =>
+                  setLocalizacaoForm({
+                    ...localizacaoForm,
+                    status: value as "Ativo" | "Inativo",
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseLocalizacaoDialog}>
@@ -1968,6 +1995,26 @@ const CadastrosAuxiliares = () => {
                 }
               />
             </div>
+            <div>
+              <Label htmlFor="cam-status">Status</Label>
+              <Select
+                value={caminhaoForm.status}
+                onValueChange={(value) =>
+                  setCaminhaoForm({
+                    ...caminhaoForm,
+                    status: value as "Ativo" | "Inativo",
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseCaminhaoDialog}>
@@ -2036,6 +2083,26 @@ const CadastrosAuxiliares = () => {
                 }
               />
             </div>
+            <div>
+              <Label htmlFor="mot-status">Status</Label>
+              <Select
+                value={motoristaForm.status}
+                onValueChange={(value) =>
+                  setMotoristaForm({
+                    ...motoristaForm,
+                    status: value as "Ativo" | "Inativo",
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseMotoristaDialog}>
@@ -2078,6 +2145,26 @@ const CadastrosAuxiliares = () => {
                   })
                 }
               />
+            </div>
+            <div>
+              <Label htmlFor="op-status">Status</Label>
+              <Select
+                value={operacaoForm.status}
+                onValueChange={(value) =>
+                  setOperacaoForm({
+                    ...operacaoForm,
+                    status: value as "Ativo" | "Inativo",
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
@@ -2132,6 +2219,26 @@ const CadastrosAuxiliares = () => {
                 }
               />
             </div>
+            <div>
+              <Label htmlFor="cc-status">Status</Label>
+              <Select
+                value={centroCustoForm.status}
+                onValueChange={(value) =>
+                  setCentroCustoForm({
+                    ...centroCustoForm,
+                    status: value as "Ativo" | "Inativo",
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseCentroCustoDialog}>
@@ -2182,6 +2289,26 @@ const CadastrosAuxiliares = () => {
                   })
                 }
               />
+            </div>
+            <div>
+              <Label htmlFor="resp-status">Status</Label>
+              <Select
+                value={responsavelForm.status}
+                onValueChange={(value) =>
+                  setResponsavelForm({
+                    ...responsavelForm,
+                    status: value as "Ativo" | "Inativo",
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

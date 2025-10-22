@@ -25,6 +25,7 @@ import GerenciamentoUnidades from "./pages/GerenciamentoUnidades";
 import Sobre from "./pages/Sobre";
 import InsumosAgricolas from "./pages/InsumosAgricolas";
 import CadastrosAuxiliares from "./pages/CadastrosAuxiliares";
+import GerenciamentoFazendas from "./pages/GerenciamentoFazendas";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,10 @@ const App = () => (
               />
               <Route path="/insumos-agricolas" element={<InsumosAgricolas />} />
               <Route path="/receitas" element={<ReceitasSmartCalda />} />
+              <Route
+                path="/gerenciamento-fazendas"
+                element={<GerenciamentoFazendas />}
+              />
               {/* Páginas completas */}
               <Route
                 path="/gerenciamento-usuarios"
