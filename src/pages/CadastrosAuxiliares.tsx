@@ -487,6 +487,13 @@ const CadastrosAuxiliares = () => {
     status: "Ativo",
   });
 
+  // Estados para importação CSV
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvData, setCsvData] = useState<any[]>([]);
+  const [csvPreview, setCsvPreview] = useState(false);
+  const [dialogImportAberto, setDialogImportAberto] = useState(false);
+  const [tipoImportacao, setTipoImportacao] = useState("");
+
   // Estados para Responsável
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([
     {
@@ -908,18 +915,188 @@ const CadastrosAuxiliares = () => {
     });
   };
 
-  // Funções de Importação
+  // Funções de Importação CSV
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === "text/csv") {
+      setCsvFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const csv = e.target?.result as string;
+        const lines = csv.split("\n");
+        const headers = lines[0].split(",").map((h) => h.trim());
+        const data = lines
+          .slice(1)
+          .map((line) => {
+            const values = line.split(",").map((v) => v.trim());
+            const obj: any = {};
+            headers.forEach((header, index) => {
+              obj[header] = values[index] || "";
+            });
+            return obj;
+          })
+          .filter((row) => Object.values(row).some((val) => val)); // Remove linhas vazias
+
+        setCsvData(data);
+        setCsvPreview(true);
+      };
+      reader.readAsText(file);
+    } else {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um arquivo CSV válido.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const importarCSV = () => {
+    if (tipoImportacao === "localizacao") {
+      const novosIds = csvData.map(
+        (_, index) =>
+          Math.max(...localizacoes.map((l) => parseInt(l.id))) + index + 1
+      );
+      const novosItens: Localizacao[] = csvData.map((item, index) => ({
+        id: novosIds[index].toString(),
+        codigo: item.codigo || "",
+        descricao: item.descricao || "",
+        tipo_estoque: item.tipo_estoque || "",
+        capacidade: item.capacidade || "",
+        status: "Ativo" as "Ativo" | "Inativo",
+      }));
+      setLocalizacoes((prev) => [...prev, ...novosItens]);
+    } else if (tipoImportacao === "caminhao") {
+      const novosIds = csvData.map(
+        (_, index) =>
+          Math.max(...caminhoes.map((c) => parseInt(c.id))) + index + 1
+      );
+      const novosItens: Caminhao[] = csvData.map((item, index) => ({
+        id: novosIds[index].toString(),
+        placa: item.placa || "",
+        patrimonio: item.patrimonio || "",
+        volume: item.volume || "",
+        modelo: item.modelo || "",
+        marca: item.marca || "",
+        ano: item.ano || "",
+        status: "Ativo" as "Ativo" | "Inativo",
+      }));
+      setCaminhoes((prev) => [...prev, ...novosItens]);
+    } else if (tipoImportacao === "motorista") {
+      const novosIds = csvData.map(
+        (_, index) =>
+          Math.max(...motoristas.map((m) => parseInt(m.id))) + index + 1
+      );
+      const novosItens: Motorista[] = csvData.map((item, index) => ({
+        id: novosIds[index].toString(),
+        codigo: item.codigo || "",
+        matricula: item.matricula || "",
+        nome: item.nome || "",
+        contato: item.contato || "",
+        status: "Ativo" as "Ativo" | "Inativo",
+      }));
+      setMotoristas((prev) => [...prev, ...novosItens]);
+    } else if (tipoImportacao === "operacao") {
+      const novosIds = csvData.map(
+        (_, index) =>
+          Math.max(...operacoes.map((o) => parseInt(o.id))) + index + 1
+      );
+      const novosItens: Operacao[] = csvData.map((item, index) => ({
+        id: novosIds[index].toString(),
+        codigo: item.codigo || "",
+        descricao: item.descricao || "",
+        status: "Ativo" as "Ativo" | "Inativo",
+      }));
+      setOperacoes((prev) => [...prev, ...novosItens]);
+    } else if (tipoImportacao === "centroCusto") {
+      const novosIds = csvData.map(
+        (_, index) =>
+          Math.max(...centrosCusto.map((cc) => parseInt(cc.id))) + index + 1
+      );
+      const novosItens: CentroCusto[] = csvData.map((item, index) => ({
+        id: novosIds[index].toString(),
+        codigo: item.codigo || "",
+        descricao: item.descricao || "",
+        status: "Ativo" as "Ativo" | "Inativo",
+      }));
+      setCentrosCusto((prev) => [...prev, ...novosItens]);
+    } else if (tipoImportacao === "responsavel") {
+      const novosIds = csvData.map(
+        (_, index) =>
+          Math.max(...responsaveis.map((r) => parseInt(r.id))) + index + 1
+      );
+      const novosItens: Responsavel[] = csvData.map((item, index) => ({
+        id: novosIds[index].toString(),
+        codigo: item.codigo || "",
+        nome: item.nome || "",
+        status: "Ativo" as "Ativo" | "Inativo",
+      }));
+      setResponsaveis((prev) => [...prev, ...novosItens]);
+    }
+
+    toast({
+      title: "Importação concluída!",
+      description: `${csvData.length} ${tipoImportacao}(s) importado(s) com sucesso.`,
+      variant: "default",
+    });
+
+    setCsvFile(null);
+    setCsvData([]);
+    setCsvPreview(false);
+    setDialogImportAberto(false);
+    setTipoImportacao("");
+  };
+
+  const downloadTemplate = (tipo: string) => {
+    let csvContent = "";
+    let filename = "";
+
+    switch (tipo) {
+      case "localizacao":
+        csvContent =
+          "codigo,descricao,tipo_estoque,capacidade\n" +
+          "ARM-001,Armazém Principal - Área A,PRIMÁRIO,50 IBCs";
+        filename = "template_localizacoes.csv";
+        break;
+      case "caminhao":
+        csvContent =
+          "placa,patrimonio,volume,modelo,marca,ano\n" +
+          "ABC-1234,999999,13000,F32,Volvo,2023";
+        filename = "template_caminhoes.csv";
+        break;
+      case "motorista":
+        csvContent =
+          "codigo,matricula,nome,contato\n" + "1,9999999,João Silva,3499999999";
+        filename = "template_motoristas.csv";
+        break;
+      case "operacao":
+        csvContent = "codigo,descricao\n" + "225,COMBATE A BROCA AVIÃO";
+        filename = "template_operacoes.csv";
+        break;
+      case "centroCusto":
+        csvContent =
+          "codigo,descricao\n" + "3101020605,Combate Prag Doe C Soca";
+        filename = "template_centros_custo.csv";
+        break;
+      case "responsavel":
+        csvContent = "codigo,nome\n" + "3103590,LUCIANO APARECIDO GRAÇAS";
+        filename = "template_responsaveis.csv";
+        break;
+    }
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.setAttribute("hidden", "");
+    a.setAttribute("href", url);
+    a.setAttribute("download", filename);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const handleImportCSV = (tipo: string) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".csv";
-    input.onchange = (e: any) => {
-      const file = e.target.files[0];
-      if (file) {
-        toast({ title: `Importando ${tipo} do arquivo ${file.name}...` });
-      }
-    };
-    input.click();
+    setTipoImportacao(tipo);
+    setDialogImportAberto(true);
   };
 
   // Funções de Exportação
@@ -1062,6 +1239,56 @@ const CadastrosAuxiliares = () => {
 
         {/* Aba Localização */}
         <TabsContent value="localizacao" className="space-y-4">
+          <FilterCard
+            searchTerm={searchTerms.localizacao}
+            onSearchChange={(value) =>
+              setSearchTerms({ ...searchTerms, localizacao: value })
+            }
+            statusFilter={statusFilters.localizacao}
+            onStatusChange={(value) =>
+              setStatusFilters({ ...statusFilters, localizacao: value })
+            }
+            searchPlaceholder="Código, descrição ou tipo de estoque..."
+            searchId="search-localizacao"
+            statusId="status-localizacao"
+          />
+
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleImportCSV("localizacao")}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar CSV
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    onClick={() => handleExport("Localização", "csv")}
+                  >
+                    Exportar CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleExport("Localização", "pdf")}
+                  >
+                    Exportar PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <Button onClick={() => setShowLocalizacaoDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Localização
+            </Button>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Localizações</CardTitle>
@@ -1071,56 +1298,6 @@ const CadastrosAuxiliares = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <FilterCard
-                searchTerm={searchTerms.localizacao}
-                onSearchChange={(value) =>
-                  setSearchTerms({ ...searchTerms, localizacao: value })
-                }
-                statusFilter={statusFilters.localizacao}
-                onStatusChange={(value) =>
-                  setStatusFilters({ ...statusFilters, localizacao: value })
-                }
-                searchPlaceholder="Código, descrição ou tipo de estoque..."
-                searchId="search-localizacao"
-                statusId="status-localizacao"
-              />
-
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleImportCSV("Localização")}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar CSV
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        Exportar
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Localização", "csv")}
-                      >
-                        Exportar CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Localização", "pdf")}
-                      >
-                        Exportar PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <Button onClick={() => setShowLocalizacaoDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Localização
-                </Button>
-              </div>
-
               {filteredData.localizacoes.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   {searchTerms.localizacao
@@ -1191,6 +1368,56 @@ const CadastrosAuxiliares = () => {
 
         {/* Aba Caminhão */}
         <TabsContent value="caminhao" className="space-y-4">
+          <FilterCard
+            searchTerm={searchTerms.caminhao}
+            onSearchChange={(value) =>
+              setSearchTerms({ ...searchTerms, caminhao: value })
+            }
+            statusFilter={statusFilters.caminhao}
+            onStatusChange={(value) =>
+              setStatusFilters({ ...statusFilters, caminhao: value })
+            }
+            searchPlaceholder="Placa, patrimônio, modelo ou marca..."
+            searchId="search-caminhao"
+            statusId="status-caminhao"
+          />
+
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleImportCSV("caminhao")}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar CSV
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    onClick={() => handleExport("Caminhão", "csv")}
+                  >
+                    Exportar CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleExport("Caminhão", "pdf")}
+                  >
+                    Exportar PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <Button onClick={() => setShowCaminhaoDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Caminhão
+            </Button>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Caminhões</CardTitle>
@@ -1199,56 +1426,6 @@ const CadastrosAuxiliares = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <FilterCard
-                searchTerm={searchTerms.caminhao}
-                onSearchChange={(value) =>
-                  setSearchTerms({ ...searchTerms, caminhao: value })
-                }
-                statusFilter={statusFilters.caminhao}
-                onStatusChange={(value) =>
-                  setStatusFilters({ ...statusFilters, caminhao: value })
-                }
-                searchPlaceholder="Placa, patrimônio, modelo ou marca..."
-                searchId="search-caminhao"
-                statusId="status-caminhao"
-              />
-
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleImportCSV("Caminhão")}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar CSV
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        Exportar
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Caminhão", "csv")}
-                      >
-                        Exportar CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Caminhão", "pdf")}
-                      >
-                        Exportar PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <Button onClick={() => setShowCaminhaoDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Caminhão
-                </Button>
-              </div>
-
               {filteredData.caminhoes.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   {searchTerms.caminhao
@@ -1321,6 +1498,56 @@ const CadastrosAuxiliares = () => {
 
         {/* Aba Motorista */}
         <TabsContent value="motorista" className="space-y-4">
+          <FilterCard
+            searchTerm={searchTerms.motorista}
+            onSearchChange={(value) =>
+              setSearchTerms({ ...searchTerms, motorista: value })
+            }
+            statusFilter={statusFilters.motorista}
+            onStatusChange={(value) =>
+              setStatusFilters({ ...statusFilters, motorista: value })
+            }
+            searchPlaceholder="Código, matrícula, nome ou contato..."
+            searchId="search-motorista"
+            statusId="status-motorista"
+          />
+
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleImportCSV("motorista")}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar CSV
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    onClick={() => handleExport("Motorista", "csv")}
+                  >
+                    Exportar CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleExport("Motorista", "pdf")}
+                  >
+                    Exportar PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <Button onClick={() => setShowMotoristaDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Motorista
+            </Button>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Motoristas</CardTitle>
@@ -1329,56 +1556,6 @@ const CadastrosAuxiliares = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <FilterCard
-                searchTerm={searchTerms.motorista}
-                onSearchChange={(value) =>
-                  setSearchTerms({ ...searchTerms, motorista: value })
-                }
-                statusFilter={statusFilters.motorista}
-                onStatusChange={(value) =>
-                  setStatusFilters({ ...statusFilters, motorista: value })
-                }
-                searchPlaceholder="Código, matrícula, nome ou contato..."
-                searchId="search-motorista"
-                statusId="status-motorista"
-              />
-
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleImportCSV("Motorista")}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar CSV
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        Exportar
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Motorista", "csv")}
-                      >
-                        Exportar CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Motorista", "pdf")}
-                      >
-                        Exportar PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <Button onClick={() => setShowMotoristaDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Motorista
-                </Button>
-              </div>
-
               {filteredData.motoristas.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   {searchTerms.motorista
@@ -1447,6 +1624,56 @@ const CadastrosAuxiliares = () => {
 
         {/* Aba Operações */}
         <TabsContent value="operacoes" className="space-y-4">
+          <FilterCard
+            searchTerm={searchTerms.operacao}
+            onSearchChange={(value) =>
+              setSearchTerms({ ...searchTerms, operacao: value })
+            }
+            statusFilter={statusFilters.operacao}
+            onStatusChange={(value) =>
+              setStatusFilters({ ...statusFilters, operacao: value })
+            }
+            searchPlaceholder="Código ou descrição..."
+            searchId="search-operacao"
+            statusId="status-operacao"
+          />
+
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleImportCSV("operacao")}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar CSV
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    onClick={() => handleExport("Operação", "csv")}
+                  >
+                    Exportar CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleExport("Operação", "pdf")}
+                  >
+                    Exportar PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <Button onClick={() => setShowOperacaoDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Operação
+            </Button>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Operações</CardTitle>
@@ -1455,56 +1682,6 @@ const CadastrosAuxiliares = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <FilterCard
-                searchTerm={searchTerms.operacao}
-                onSearchChange={(value) =>
-                  setSearchTerms({ ...searchTerms, operacao: value })
-                }
-                statusFilter={statusFilters.operacao}
-                onStatusChange={(value) =>
-                  setStatusFilters({ ...statusFilters, operacao: value })
-                }
-                searchPlaceholder="Código ou descrição..."
-                searchId="search-operacao"
-                statusId="status-operacao"
-              />
-
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleImportCSV("Operação")}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar CSV
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        Exportar
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Operação", "csv")}
-                      >
-                        Exportar CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Operação", "pdf")}
-                      >
-                        Exportar PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <Button onClick={() => setShowOperacaoDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Operação
-                </Button>
-              </div>
-
               {filteredData.operacoes.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   {searchTerms.operacao
@@ -1569,6 +1746,56 @@ const CadastrosAuxiliares = () => {
 
         {/* Aba Centro de Custo */}
         <TabsContent value="centro-custo" className="space-y-4">
+          <FilterCard
+            searchTerm={searchTerms.centroCusto}
+            onSearchChange={(value) =>
+              setSearchTerms({ ...searchTerms, centroCusto: value })
+            }
+            statusFilter={statusFilters.centroCusto}
+            onStatusChange={(value) =>
+              setStatusFilters({ ...statusFilters, centroCusto: value })
+            }
+            searchPlaceholder="Código ou descrição..."
+            searchId="search-centro-custo"
+            statusId="status-centro-custo"
+          />
+
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleImportCSV("centroCusto")}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar CSV
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    onClick={() => handleExport("Centro de Custo", "csv")}
+                  >
+                    Exportar CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleExport("Centro de Custo", "pdf")}
+                  >
+                    Exportar PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <Button onClick={() => setShowCentroCustoDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Centro de Custo
+            </Button>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Centros de Custo</CardTitle>
@@ -1578,56 +1805,6 @@ const CadastrosAuxiliares = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <FilterCard
-                searchTerm={searchTerms.centroCusto}
-                onSearchChange={(value) =>
-                  setSearchTerms({ ...searchTerms, centroCusto: value })
-                }
-                statusFilter={statusFilters.centroCusto}
-                onStatusChange={(value) =>
-                  setStatusFilters({ ...statusFilters, centroCusto: value })
-                }
-                searchPlaceholder="Código ou descrição..."
-                searchId="search-centro-custo"
-                statusId="status-centro-custo"
-              />
-
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleImportCSV("Centro de Custo")}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar CSV
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        Exportar
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Centro de Custo", "csv")}
-                      >
-                        Exportar CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Centro de Custo", "pdf")}
-                      >
-                        Exportar PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <Button onClick={() => setShowCentroCustoDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Centro de Custo
-                </Button>
-              </div>
-
               {filteredData.centrosCusto.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   {searchTerms.centroCusto
@@ -1692,6 +1869,56 @@ const CadastrosAuxiliares = () => {
 
         {/* Aba Responsável */}
         <TabsContent value="responsavel" className="space-y-4">
+          <FilterCard
+            searchTerm={searchTerms.responsavel}
+            onSearchChange={(value) =>
+              setSearchTerms({ ...searchTerms, responsavel: value })
+            }
+            statusFilter={statusFilters.responsavel}
+            onStatusChange={(value) =>
+              setStatusFilters({ ...statusFilters, responsavel: value })
+            }
+            searchPlaceholder="Código ou nome..."
+            searchId="search-responsavel"
+            statusId="status-responsavel"
+          />
+
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleImportCSV("responsavel")}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar CSV
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    onClick={() => handleExport("Responsável", "csv")}
+                  >
+                    Exportar CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleExport("Responsável", "pdf")}
+                  >
+                    Exportar PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <Button onClick={() => setShowResponsavelDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Responsável
+            </Button>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Responsáveis</CardTitle>
@@ -1700,56 +1927,6 @@ const CadastrosAuxiliares = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <FilterCard
-                searchTerm={searchTerms.responsavel}
-                onSearchChange={(value) =>
-                  setSearchTerms({ ...searchTerms, responsavel: value })
-                }
-                statusFilter={statusFilters.responsavel}
-                onStatusChange={(value) =>
-                  setStatusFilters({ ...statusFilters, responsavel: value })
-                }
-                searchPlaceholder="Código ou nome..."
-                searchId="search-responsavel"
-                statusId="status-responsavel"
-              />
-
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleImportCSV("Responsável")}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar CSV
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        Exportar
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Responsável", "csv")}
-                      >
-                        Exportar CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Responsável", "pdf")}
-                      >
-                        Exportar PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <Button onClick={() => setShowResponsavelDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Responsável
-                </Button>
-              </div>
-
               {filteredData.responsaveis.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   {searchTerms.responsavel
@@ -1814,6 +1991,211 @@ const CadastrosAuxiliares = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog Genérico de Importação */}
+      <Dialog
+        open={dialogImportAberto}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDialogImportAberto(false);
+            setTipoImportacao("");
+            setCsvFile(null);
+            setCsvData([]);
+            setCsvPreview(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>
+              Importar{" "}
+              {tipoImportacao === "localizacao"
+                ? "Localizações"
+                : tipoImportacao === "caminhao"
+                ? "Caminhões"
+                : tipoImportacao === "motorista"
+                ? "Motoristas"
+                : tipoImportacao === "operacao"
+                ? "Operações"
+                : tipoImportacao === "centroCusto"
+                ? "Centros de Custo"
+                : tipoImportacao === "responsavel"
+                ? "Responsáveis"
+                : ""}
+            </DialogTitle>
+            <DialogDescription>
+              Importe dados através de arquivo CSV. Baixe o template para o
+              formato correto.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center p-4 border rounded-lg">
+              <div>
+                <h4 className="font-medium">Template CSV</h4>
+                <p className="text-sm text-muted-foreground">
+                  Baixe o modelo com o formato correto para importação
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => downloadTemplate(tipoImportacao)}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Baixar Template
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="csvFile">Arquivo CSV</Label>
+              <Input
+                id="csvFile"
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+              />
+            </div>
+
+            {csvPreview && csvData.length > 0 && (
+              <div className="space-y-2">
+                <Label>Prévia dos Dados ({csvData.length} registros)</Label>
+                <div className="max-h-60 overflow-auto border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {tipoImportacao === "localizacao" && (
+                          <>
+                            <TableHead>Código</TableHead>
+                            <TableHead>Descrição</TableHead>
+                            <TableHead>Tipo de Estoque</TableHead>
+                            <TableHead>Capacidade</TableHead>
+                          </>
+                        )}
+                        {tipoImportacao === "caminhao" && (
+                          <>
+                            <TableHead>Placa</TableHead>
+                            <TableHead>Patrimônio</TableHead>
+                            <TableHead>Modelo</TableHead>
+                            <TableHead>Marca</TableHead>
+                          </>
+                        )}
+                        {tipoImportacao === "motorista" && (
+                          <>
+                            <TableHead>Código</TableHead>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Matrícula</TableHead>
+                            <TableHead>Contato</TableHead>
+                          </>
+                        )}
+                        {(tipoImportacao === "operacao" ||
+                          tipoImportacao === "centroCusto") && (
+                          <>
+                            <TableHead>Código</TableHead>
+                            <TableHead>Descrição</TableHead>
+                          </>
+                        )}
+                        {tipoImportacao === "responsavel" && (
+                          <>
+                            <TableHead>Código</TableHead>
+                            <TableHead>Nome</TableHead>
+                          </>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {csvData.slice(0, 5).map((item, index) => (
+                        <TableRow key={index}>
+                          {tipoImportacao === "localizacao" && (
+                            <>
+                              <TableCell className="font-medium">
+                                {item.codigo}
+                              </TableCell>
+                              <TableCell>{item.descricao}</TableCell>
+                              <TableCell>{item.tipo_estoque}</TableCell>
+                              <TableCell>{item.capacidade}</TableCell>
+                            </>
+                          )}
+                          {tipoImportacao === "caminhao" && (
+                            <>
+                              <TableCell className="font-medium">
+                                {item.placa}
+                              </TableCell>
+                              <TableCell>{item.patrimonio}</TableCell>
+                              <TableCell>{item.modelo}</TableCell>
+                              <TableCell>{item.marca}</TableCell>
+                            </>
+                          )}
+                          {tipoImportacao === "motorista" && (
+                            <>
+                              <TableCell className="font-medium">
+                                {item.codigo}
+                              </TableCell>
+                              <TableCell>{item.nome}</TableCell>
+                              <TableCell>{item.matricula}</TableCell>
+                              <TableCell>{item.contato}</TableCell>
+                            </>
+                          )}
+                          {(tipoImportacao === "operacao" ||
+                            tipoImportacao === "centroCusto") && (
+                            <>
+                              <TableCell className="font-medium">
+                                {item.codigo}
+                              </TableCell>
+                              <TableCell>{item.descricao}</TableCell>
+                            </>
+                          )}
+                          {tipoImportacao === "responsavel" && (
+                            <>
+                              <TableCell className="font-medium">
+                                {item.codigo}
+                              </TableCell>
+                              <TableCell>{item.nome}</TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {csvData.length > 5 && (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      ... e mais {csvData.length - 5} registros
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDialogImportAberto(false);
+                setTipoImportacao("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={importarCSV}
+              disabled={!csvPreview || csvData.length === 0}
+            >
+              Importar {csvData.length}{" "}
+              {tipoImportacao === "localizacao"
+                ? "Localizações"
+                : tipoImportacao === "caminhao"
+                ? "Caminhões"
+                : tipoImportacao === "motorista"
+                ? "Motoristas"
+                : tipoImportacao === "operacao"
+                ? "Operações"
+                : tipoImportacao === "centroCusto"
+                ? "Centros de Custo"
+                : tipoImportacao === "responsavel"
+                ? "Responsáveis"
+                : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog Localização */}
       <Dialog

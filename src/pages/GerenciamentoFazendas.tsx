@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,6 +22,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,17 +33,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   Plus,
-  Upload,
-  Download,
   Edit,
   Trash2,
   Search,
@@ -52,10 +64,38 @@ import {
   TreePine,
   AlertTriangle,
   Wheat,
+  Upload,
+  Download,
+  ChevronDown,
+  ChevronRight,
+  Map,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
-// Componente genérico para filtros
+// Interfaces
+interface Fazenda {
+  id: string;
+  descricao: string;
+  municipio: string;
+  estado: string;
+  latitude: string;
+  longitude: string;
+  tamanho_total: string;
+  status: "Ativo" | "Inativo";
+  talhoes: Talhao[]; // Talhões da fazenda
+}
+
+interface Talhao {
+  id: string;
+  latitude?: string;
+  longitude?: string;
+  area: string;
+  tipo: "Talhão" | "Carreador";
+  status: "Ativo" | "Inativo";
+  observacoes?: string;
+}
+
+// Componente de filtro
 interface FilterCardProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
@@ -117,60 +157,28 @@ const FilterCard: React.FC<FilterCardProps> = ({
   );
 };
 
-// Interfaces
-interface Fazenda {
-  id: string;
-  descricao: string;
-  municipio: string;
-  estado: string;
-  latitude: string;
-  longitude: string;
-  tamanho_total: string;
-  status: "Ativo" | "Inativo";
-}
-
-interface Talhao {
-  id: string;
-  referencia_fazenda: string;
-  latitude?: string;
-  longitude?: string;
-  area: string;
-  tipo: "Talhão" | "Carreador";
-  status: "Ativo" | "Inativo";
-}
-
 const GerenciamentoFazendas = () => {
-  const [activeTab, setActiveTab] = useState("fazendas");
+  // Estados de filtros
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [filteredFazendas, setFilteredFazendas] = useState<Fazenda[]>([]);
+  const [expandedFazendas, setExpandedFazendas] = useState<Set<string>>(
+    new Set()
+  );
 
-  // Estados de filtros por aba
-  const [searchTerms, setSearchTerms] = useState({
-    fazendas: "",
-    talhoes: "",
-  });
-  const [statusFilters, setStatusFilters] = useState({
-    fazendas: "todos",
-    talhoes: "todos",
-  });
-  const [filteredData, setFilteredData] = useState({
-    fazendas: [] as Fazenda[],
-    talhoes: [] as Talhao[],
-  });
+  // Estados de paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 3;
 
   // Função para filtrar dados
   const filterData = (
     data: any[],
     searchTerm: string,
     searchFields: string[],
-    statusFilter: string = "todos"
+    statusFilter: string
   ) => {
     let filtered = data;
 
-    // Filtro por status
-    if (statusFilter !== "todos") {
-      filtered = filtered.filter((item) => item.status === statusFilter);
-    }
-
-    // Filtro por termo de busca
     if (searchTerm) {
       filtered = filtered.filter((item) =>
         searchFields.some((field) => {
@@ -181,6 +189,10 @@ const GerenciamentoFazendas = () => {
           );
         })
       );
+    }
+
+    if (statusFilter !== "todos") {
+      filtered = filtered.filter((item) => item.status === statusFilter);
     }
 
     return filtered;
@@ -197,6 +209,33 @@ const GerenciamentoFazendas = () => {
       longitude: "-48.2772",
       tamanho_total: "1000.50",
       status: "Ativo",
+      talhoes: [
+        {
+          id: "1",
+          latitude: "-18.9200",
+          longitude: "-48.2800",
+          area: "250.25",
+          tipo: "Talhão",
+          status: "Ativo",
+          observacoes: "Talhão principal para soja",
+        },
+        {
+          id: "2",
+          latitude: "-18.9150",
+          longitude: "-48.2750",
+          area: "300.50",
+          tipo: "Talhão",
+          status: "Ativo",
+          observacoes: "Talhão para milho",
+        },
+        {
+          id: "3",
+          area: "449.75",
+          tipo: "Carreador",
+          status: "Ativo",
+          observacoes: "Último item obrigatório para todas as fazendas",
+        },
+      ],
     },
     {
       id: "2",
@@ -207,6 +246,24 @@ const GerenciamentoFazendas = () => {
       longitude: "-47.8103",
       tamanho_total: "2500.75",
       status: "Ativo",
+      talhoes: [
+        {
+          id: "4",
+          latitude: "-21.1850",
+          longitude: "-47.8200",
+          area: "500.25",
+          tipo: "Talhão",
+          status: "Ativo",
+          observacoes: "Talhão A - Soja",
+        },
+        {
+          id: "5",
+          area: "2000.50",
+          tipo: "Carreador",
+          status: "Ativo",
+          observacoes: "Carreador principal",
+        },
+      ],
     },
     {
       id: "3",
@@ -217,9 +274,77 @@ const GerenciamentoFazendas = () => {
       longitude: "-49.2643",
       tamanho_total: "1800.25",
       status: "Inativo",
+      talhoes: [],
+    },
+    {
+      id: "4",
+      descricao: "Fazenda Vista Alegre",
+      municipio: "Campinas",
+      estado: "SP",
+      latitude: "-22.9056",
+      longitude: "-47.0608",
+      tamanho_total: "3200.75",
+      status: "Ativo",
+      talhoes: [
+        {
+          id: "6",
+          latitude: "-22.9100",
+          longitude: "-47.0650",
+          area: "800.25",
+          tipo: "Talhão",
+          status: "Ativo",
+          observacoes: "Talhão principal",
+        },
+        {
+          id: "7",
+          area: "2400.50",
+          tipo: "Carreador",
+          status: "Ativo",
+          observacoes: "Carreador principal",
+        },
+      ],
+    },
+    {
+      id: "5",
+      descricao: "Fazenda São Pedro",
+      municipio: "Sorocaba",
+      estado: "SP",
+      latitude: "-23.5015",
+      longitude: "-47.4526",
+      tamanho_total: "1500.00",
+      status: "Ativo",
+      talhoes: [
+        {
+          id: "8",
+          latitude: "-23.5050",
+          longitude: "-47.4550",
+          area: "500.00",
+          tipo: "Talhão",
+          status: "Ativo",
+          observacoes: "Talhão A",
+        },
+        {
+          id: "9",
+          latitude: "-23.5080",
+          longitude: "-47.4580",
+          area: "500.00",
+          tipo: "Talhão",
+          status: "Ativo",
+          observacoes: "Talhão B",
+        },
+        {
+          id: "10",
+          area: "500.00",
+          tipo: "Carreador",
+          status: "Ativo",
+          observacoes: "Carreador",
+        },
+      ],
     },
   ]);
+
   const [showFazendaDialog, setShowFazendaDialog] = useState(false);
+  const [showMapDialog, setShowMapDialog] = useState(false);
   const [editingFazenda, setEditingFazenda] = useState<Fazenda | null>(null);
   const [fazendaForm, setFazendaForm] = useState({
     descricao: "",
@@ -228,119 +353,66 @@ const GerenciamentoFazendas = () => {
     latitude: "",
     longitude: "",
     tamanho_total: "",
-    status: "Ativo",
+    status: "Ativo" as "Ativo" | "Inativo",
+    talhoes: [] as Talhao[],
   });
 
-  // Estados para Talhões
-  const [talhoes, setTalhoes] = useState<Talhao[]>([
-    {
-      id: "1",
-      referencia_fazenda: "1",
-      latitude: "-18.9200",
-      longitude: "-48.2800",
-      area: "250.25",
-      tipo: "Talhão",
-      status: "Ativo",
-    },
-    {
-      id: "2",
-      referencia_fazenda: "1",
-      latitude: "-18.9150",
-      longitude: "-48.2750",
-      area: "300.50",
-      tipo: "Talhão",
-      status: "Ativo",
-    },
-    {
-      id: "3",
-      referencia_fazenda: "1",
-      area: "449.75",
-      tipo: "Carreador",
-      status: "Ativo",
-    },
-    {
-      id: "4",
-      referencia_fazenda: "2",
-      latitude: "-21.1800",
-      longitude: "-47.8150",
-      area: "500.25",
-      tipo: "Talhão",
-      status: "Ativo",
-    },
-    {
-      id: "5",
-      referencia_fazenda: "2",
-      area: "2000.50",
-      tipo: "Carreador",
-      status: "Ativo",
-    },
-  ]);
-  const [showTalhaoDialog, setShowTalhaoDialog] = useState(false);
+  // Estados para edição de talhões
   const [editingTalhao, setEditingTalhao] = useState<Talhao | null>(null);
   const [talhaoForm, setTalhaoForm] = useState({
-    referencia_fazenda: "",
     latitude: "",
     longitude: "",
     area: "",
-    tipo: "Talhão",
-    status: "Ativo",
+    tipo: "Talhão" as "Talhão" | "Carreador",
+    status: "Ativo" as "Ativo" | "Inativo",
+    observacoes: "",
   });
 
   // Efeito para aplicar filtros
   useEffect(() => {
-    setFilteredData({
-      fazendas: filterData(
-        fazendas,
-        searchTerms.fazendas,
-        ["descricao", "municipio", "estado"],
-        statusFilters.fazendas
-      ),
-      talhoes: filterData(
-        talhoes,
-        searchTerms.talhoes,
-        ["referencia_fazenda", "tipo"],
-        statusFilters.talhoes
-      ),
-    });
-  }, [searchTerms, statusFilters, fazendas, talhoes]);
+    const filtered = filterData(
+      fazendas,
+      searchTerm,
+      ["descricao", "municipio", "estado"],
+      statusFilter
+    );
+    setFilteredFazendas(filtered);
+    setCurrentPage(1); // Reset para primeira página quando filtros mudarem
+  }, [searchTerm, statusFilter, fazendas]);
 
   // Função para validar área total dos talhões
   const validarAreaTotal = (
-    fazendaId: string,
+    talhoes: Talhao[],
     novaArea: number,
     talhaoId?: string
   ) => {
-    const fazenda = fazendas.find((f) => f.id === fazendaId);
-    if (!fazenda) return { valido: false, mensagem: "Fazenda não encontrada" };
-
-    const areaTotalFazenda = parseFloat(fazenda.tamanho_total);
-    const talhoesDaFazenda = talhoes.filter(
-      (t) =>
-        t.referencia_fazenda === fazendaId &&
-        t.status === "Ativo" &&
-        t.id !== talhaoId
-    );
-
-    const areaAtualTalhoes = talhoesDaFazenda.reduce(
-      (total, t) => total + parseFloat(t.area),
+    const talhoesAtuais = talhoes.filter((t) => t.id !== talhaoId);
+    const areaAtual = talhoesAtuais.reduce(
+      (sum, t) => sum + parseFloat(t.area),
       0
     );
-    const areaTotalComNova = areaAtualTalhoes + novaArea;
+    const areaTotal = areaAtual + novaArea;
 
-    if (areaTotalComNova > areaTotalFazenda) {
-      return {
-        valido: false,
-        mensagem: `Área total dos talhões (${areaTotalComNova.toFixed(
-          2
-        )} ha) excede o tamanho total da fazenda (${areaTotalFazenda} ha)`,
-      };
-    }
-
-    return { valido: true, mensagem: "" };
+    return { areaAtual, areaTotal };
   };
 
   // Funções de Fazenda
   const handleSaveFazenda = () => {
+    // Validar área total dos talhões
+    const validacao = validarAreaTotal(fazendaForm.talhoes, 0);
+    const areaTotalFazenda = parseFloat(fazendaForm.tamanho_total);
+
+    if (validacao.areaTotal > areaTotalFazenda) {
+      toast({
+        title: "Erro de Validação",
+        description: `A soma das áreas dos talhões (${validacao.areaTotal.toFixed(
+          2
+        )} ha) excede o tamanho total da fazenda (${areaTotalFazenda} ha)`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (editingFazenda) {
       setFazendas(
         fazendas.map((faz) =>
@@ -376,24 +448,12 @@ const GerenciamentoFazendas = () => {
       longitude: fazenda.longitude,
       tamanho_total: fazenda.tamanho_total,
       status: fazenda.status,
+      talhoes: fazenda.talhoes,
     });
     setShowFazendaDialog(true);
   };
 
   const handleDeleteFazenda = (id: string) => {
-    // Verificar se há talhões vinculados
-    const talhoesVinculados = talhoes.filter(
-      (t) => t.referencia_fazenda === id
-    );
-    if (talhoesVinculados.length > 0) {
-      toast({
-        title: "Erro",
-        description: "Não é possível excluir fazenda com talhões vinculados.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setFazendas(fazendas.filter((faz) => faz.id !== id));
     toast({ title: "Fazenda removida com sucesso!" });
   };
@@ -408,118 +468,317 @@ const GerenciamentoFazendas = () => {
       latitude: "",
       longitude: "",
       tamanho_total: "",
-      status: "Ativo",
+      status: "Ativo" as "Ativo" | "Inativo",
+      talhoes: [],
     });
   };
 
   // Funções de Talhão
-  const handleSaveTalhao = () => {
-    // Validar área total
-    const validacao = validarAreaTotal(
-      talhaoForm.referencia_fazenda,
-      parseFloat(talhaoForm.area),
-      editingTalhao?.id
-    );
-
-    if (!validacao.valido) {
+  const handleAddTalhao = () => {
+    if (!talhaoForm.area || parseFloat(talhaoForm.area) <= 0) {
       toast({
-        title: "Erro de Validação",
-        description: validacao.mensagem,
+        title: "Erro",
+        description: "Área deve ser maior que zero",
         variant: "destructive",
       });
       return;
     }
 
-    if (editingTalhao) {
-      setTalhoes(
-        talhoes.map((tal) =>
-          tal.id === editingTalhao.id
-            ? {
-                ...editingTalhao,
-                ...talhaoForm,
-                tipo: talhaoForm.tipo as "Talhão" | "Carreador",
-                status: talhaoForm.status as "Ativo" | "Inativo",
-              }
-            : tal
-        )
-      );
-      toast({ title: "Talhão atualizado com sucesso!" });
-    } else {
-      const newTalhao: Talhao = {
-        id: Date.now().toString(),
-        ...talhaoForm,
-        tipo: talhaoForm.tipo as "Talhão" | "Carreador",
-        status: talhaoForm.status as "Ativo" | "Inativo",
-      };
-      setTalhoes([...talhoes, newTalhao]);
-      toast({ title: "Talhão cadastrado com sucesso!" });
-    }
-    handleCloseTalhaoDialog();
+    const newTalhao: Talhao = {
+      id: Date.now().toString(),
+      ...talhaoForm,
+      tipo: talhaoForm.tipo as "Talhão" | "Carreador",
+      status: talhaoForm.status as "Ativo" | "Inativo",
+    };
+
+    setFazendaForm({
+      ...fazendaForm,
+      talhoes: [...fazendaForm.talhoes, newTalhao],
+    });
+
+    // Limpar formulário
+    setTalhaoForm({
+      latitude: "",
+      longitude: "",
+      area: "",
+      tipo: "Talhão" as "Talhão" | "Carreador",
+      status: "Ativo" as "Ativo" | "Inativo",
+      observacoes: "",
+    });
+
+    toast({ title: "Talhão adicionado com sucesso!" });
   };
 
   const handleEditTalhao = (talhao: Talhao) => {
     setEditingTalhao(talhao);
     setTalhaoForm({
-      referencia_fazenda: talhao.referencia_fazenda,
       latitude: talhao.latitude || "",
       longitude: talhao.longitude || "",
       area: talhao.area,
       tipo: talhao.tipo,
       status: talhao.status,
+      observacoes: talhao.observacoes || "",
     });
-    setShowTalhaoDialog(true);
   };
 
-  const handleDeleteTalhao = (id: string) => {
-    setTalhoes(talhoes.filter((tal) => tal.id !== id));
-    toast({ title: "Talhão removido com sucesso!" });
-  };
+  const handleUpdateTalhao = () => {
+    if (!editingTalhao) return;
 
-  const handleCloseTalhaoDialog = () => {
-    setShowTalhaoDialog(false);
+    const updatedTalhoes = fazendaForm.talhoes.map((tal) =>
+      tal.id === editingTalhao.id
+        ? {
+            ...tal,
+            ...talhaoForm,
+            tipo: talhaoForm.tipo as "Talhão" | "Carreador",
+            status: talhaoForm.status as "Ativo" | "Inativo",
+          }
+        : tal
+    );
+
+    setFazendaForm({
+      ...fazendaForm,
+      talhoes: updatedTalhoes,
+    });
+
     setEditingTalhao(null);
     setTalhaoForm({
-      referencia_fazenda: "",
       latitude: "",
       longitude: "",
       area: "",
-      tipo: "Talhão",
-      status: "Ativo",
+      tipo: "Talhão" as "Talhão" | "Carreador",
+      status: "Ativo" as "Ativo" | "Inativo",
+      observacoes: "",
     });
+
+    toast({ title: "Talhão atualizado com sucesso!" });
+  };
+
+  const handleDeleteTalhao = (talhaoId: string) => {
+    setFazendaForm({
+      ...fazendaForm,
+      talhoes: fazendaForm.talhoes.filter((tal) => tal.id !== talhaoId),
+    });
+    toast({ title: "Talhão removido com sucesso!" });
   };
 
   // Função para calcular área total dos talhões de uma fazenda
-  const calcularAreaTotalTalhoes = (fazendaId: string) => {
+  const calcularAreaTotalTalhoes = (talhoes: Talhao[]) => {
     return talhoes
-      .filter((t) => t.referencia_fazenda === fazendaId && t.status === "Ativo")
+      .filter((t) => t.status === "Ativo")
       .reduce((total, t) => total + parseFloat(t.area), 0);
   };
 
-  // Função para obter nome da fazenda
-  const getNomeFazenda = (fazendaId: string) => {
-    const fazenda = fazendas.find((f) => f.id === fazendaId);
-    return fazenda ? fazenda.descricao : "Fazenda não encontrada";
-  };
+  // Funções de Export/Import
+  const handleExport = (tipo: string, formato: string) => {
+    if (tipo === "Fazenda") {
+      const dados = filteredFazendas.map((fazenda) => ({
+        Descrição: fazenda.descricao,
+        Município: fazenda.municipio,
+        Estado: fazenda.estado,
+        Latitude: fazenda.latitude,
+        Longitude: fazenda.longitude,
+        "Tamanho Total (ha)": fazenda.tamanho_total,
+        Status: fazenda.status,
+        "Total de Talhões": fazenda.talhoes.length,
+        "Área dos Talhões": calcularAreaTotalTalhoes(fazenda.talhoes).toFixed(
+          2
+        ),
+      }));
 
-  // Funções de Importação
-  const handleImportCSV = (tipo: string) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".csv";
-    input.onchange = (e: any) => {
-      const file = e.target.files[0];
-      if (file) {
-        toast({ title: `Importando ${tipo} do arquivo ${file.name}...` });
+      if (formato === "csv") {
+        const csvContent = [
+          Object.keys(dados[0] || {}).join(","),
+          ...dados.map((row) => Object.values(row).join(",")),
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `fazendas_${new Date().toISOString().split("T")[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
       }
-    };
-    input.click();
+    }
+
+    toast({
+      title: `Exportação ${formato.toUpperCase()} realizada com sucesso!`,
+    });
   };
 
-  // Funções de Exportação
-  const handleExport = (tipo: string, formato: "csv" | "pdf") => {
+  // Estados para importação CSV
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvData, setCsvData] = useState<any[]>([]);
+  const [csvPreview, setCsvPreview] = useState(false);
+  const [dialogImportAberto, setDialogImportAberto] = useState(false);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === "text/csv") {
+      setCsvFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const csv = e.target?.result as string;
+        const lines = csv.split("\n");
+        const headers = lines[0].split(",").map((h) => h.trim());
+        const data = lines
+          .slice(1)
+          .map((line) => {
+            const values = line.split(",").map((v) => v.trim());
+            const obj: any = {};
+            headers.forEach((header, index) => {
+              obj[header] = values[index] || "";
+            });
+            return obj;
+          })
+          .filter((row) => row.descricao); // Remove linhas vazias
+
+        setCsvData(data);
+        setCsvPreview(true);
+      };
+      reader.readAsText(file);
+    } else {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um arquivo CSV válido.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const importarCSV = () => {
+    const novosIds = csvData.map(
+      (_, index) => Math.max(...fazendas.map((f) => parseInt(f.id))) + index + 1
+    );
+    const novosFornecedores: Fazenda[] = csvData.map((item, index) => ({
+      id: novosIds[index].toString(),
+      descricao: item.descricao || "",
+      municipio: item.municipio || "",
+      estado: item.estado || "",
+      latitude: item.latitude || "",
+      longitude: item.longitude || "",
+      tamanho_total: item.tamanho_total || "",
+      status: "Ativo" as "Ativo" | "Inativo",
+      talhoes: [],
+    }));
+
+    setFazendas((prev) => [...prev, ...novosFornecedores]);
     toast({
-      title: `Exportando ${tipo} em formato ${formato.toUpperCase()}...`,
+      title: "Importação concluída!",
+      description: `${novosFornecedores.length} fazendas importadas com sucesso.`,
+      variant: "default",
     });
+
+    setCsvFile(null);
+    setCsvData([]);
+    setCsvPreview(false);
+    setDialogImportAberto(false);
+  };
+
+  const downloadTemplate = () => {
+    const csvContent =
+      "descricao,municipio,estado,latitude,longitude,tamanho_total\n" +
+      "Fazenda Exemplo Ltda,Uberlândia,MG,-18.9186,-48.2772,1000.50";
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.setAttribute("hidden", "");
+    a.setAttribute("href", url);
+    a.setAttribute("download", "template_fazendas.csv");
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleImportCSV = () => {
+    setDialogImportAberto(true);
+  };
+
+  // Função para gerar mapa
+  const handleGenerateMap = () => {
+    setShowMapDialog(true);
+  };
+
+  // Função para gerar URL do Google Maps com múltiplos pontos
+  const generateMapUrl = () => {
+    const fazendasComCoordenadas = fazendas.filter(
+      (f) =>
+        f.latitude &&
+        f.longitude &&
+        parseFloat(f.latitude) !== 0 &&
+        parseFloat(f.longitude) !== 0
+    );
+
+    if (fazendasComCoordenadas.length === 0) {
+      toast({
+        title: "Aviso",
+        description: "Nenhuma fazenda com coordenadas válidas encontrada.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Se há apenas uma fazenda, mostrar ela
+    if (fazendasComCoordenadas.length === 1) {
+      const fazenda = fazendasComCoordenadas[0];
+      return `https://www.google.com/maps?q=${fazenda.latitude},${fazenda.longitude}`;
+    }
+
+    // Para múltiplas fazendas, criar uma URL com todos os pontos
+    const coordinates = fazendasComCoordenadas
+      .map((f) => `${f.latitude},${f.longitude}`)
+      .join("/");
+
+    return `https://www.google.com/maps/dir/${coordinates}`;
+  };
+
+  // Função para gerar dados do mapa para visualização
+  const getMapData = () => {
+    return fazendas
+      .map((fazenda) => ({
+        id: fazenda.id,
+        nome: fazenda.descricao,
+        municipio: fazenda.municipio,
+        estado: fazenda.estado,
+        latitude: parseFloat(fazenda.latitude) || 0,
+        longitude: parseFloat(fazenda.longitude) || 0,
+        tamanho_total: parseFloat(fazenda.tamanho_total) || 0,
+        status: fazenda.status,
+        talhoes: fazenda.talhoes
+          .map((talhao) => ({
+            id: talhao.id,
+            tipo: talhao.tipo,
+            area: parseFloat(talhao.area) || 0,
+            latitude: talhao.latitude ? parseFloat(talhao.latitude) : null,
+            longitude: talhao.longitude ? parseFloat(talhao.longitude) : null,
+            status: talhao.status,
+            observacoes: talhao.observacoes,
+          }))
+          .filter((t) => t.latitude !== null && t.longitude !== null),
+      }))
+      .filter((f) => f.latitude !== 0 && f.longitude !== 0);
+  };
+
+  // Função para alternar expansão de fazenda
+  const toggleFazendaExpansion = (fazendaId: string) => {
+    const newExpanded = new Set(expandedFazendas);
+    if (newExpanded.has(fazendaId)) {
+      newExpanded.delete(fazendaId);
+    } else {
+      newExpanded.add(fazendaId);
+    }
+    setExpandedFazendas(newExpanded);
+  };
+
+  // Funções de paginação
+  const totalPages = Math.ceil(filteredFazendas.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentFazendas = filteredFazendas.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   return (
@@ -528,12 +787,13 @@ const GerenciamentoFazendas = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            Gerenciamento de Fazendas
+            Cadastro de Fazendas & Talhões
           </h1>
           <p className="text-muted-foreground">
-            Gerencie fazendas e seus talhões
+            Gerencie fazendas e seus talhões em um único cadastro
           </p>
         </div>
+        <div></div>
       </div>
 
       {/* Cards de Estatísticas */}
@@ -546,11 +806,9 @@ const GerenciamentoFazendas = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">
-              {fazendas.length}
-            </div>
+            <div className="text-2xl font-bold">{fazendas.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {filteredData.fazendas.length} filtradas
+              Total de fazendas cadastradas
             </p>
           </CardContent>
         </Card>
@@ -559,555 +817,1020 @@ const GerenciamentoFazendas = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Talhões</CardTitle>
             <div className="p-2 bg-blue-100 rounded-lg">
-              <MapPin className="h-5 w-5 text-blue-600" />
+              <TreePine className="h-5 w-5 text-blue-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">
-              {talhoes.length}
+            <div className="text-2xl font-bold">
+              {fazendas.reduce((acc, f) => acc + f.talhoes.length, 0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {filteredData.talhoes.length} filtrados
+              Total de talhões cadastrados
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="fazendas">Fazendas</TabsTrigger>
-          <TabsTrigger value="talhoes">Talhões</TabsTrigger>
-        </TabsList>
+      {/* Filtros */}
+      <FilterCard
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        searchPlaceholder="Buscar por descrição, município ou estado..."
+        searchId="search-fazendas"
+        statusId="status-fazendas"
+      />
 
-        {/* Aba Fazendas */}
-        <TabsContent value="fazendas" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Fazendas</CardTitle>
-              <CardDescription>
-                {filteredData.fazendas.length} fazenda(s) encontrada(s)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FilterCard
-                searchTerm={searchTerms.fazendas}
-                onSearchChange={(value) =>
-                  setSearchTerms({ ...searchTerms, fazendas: value })
-                }
-                statusFilter={statusFilters.fazendas}
-                onStatusChange={(value) =>
-                  setStatusFilters({ ...statusFilters, fazendas: value })
-                }
-                searchPlaceholder="Descrição, município ou estado..."
-                searchId="search-fazendas"
-                statusId="status-fazendas"
-              />
-
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleImportCSV("Fazenda")}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar CSV
+      {/* Botões de Ação */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex gap-2">
+          {/* Botão Importar */}
+          <Dialog
+            open={dialogImportAberto}
+            onOpenChange={setDialogImportAberto}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Importar CSV
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Importar Fazendas</DialogTitle>
+                <DialogDescription>
+                  Importe fazendas através de arquivo CSV. Baixe o template para
+                  o formato correto.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium">Template CSV</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Baixe o modelo com o formato correto para importação
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={downloadTemplate}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar Template
                   </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        Exportar
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Fazenda", "csv")}
-                      >
-                        Exportar CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Fazenda", "pdf")}
-                      >
-                        Exportar PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
-                <Button onClick={() => setShowFazendaDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Fazenda
-                </Button>
-              </div>
 
-              {filteredData.fazendas.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  {searchTerms.fazendas
-                    ? "Nenhuma fazenda encontrada com os filtros aplicados."
-                    : "Nenhuma fazenda cadastrada."}
+                <div className="space-y-2">
+                  <Label htmlFor="csvFile">Arquivo CSV</Label>
+                  <Input
+                    id="csvFile"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                  />
                 </div>
-              ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Município</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead>Coordenadas</TableHead>
-                        <TableHead>Tamanho Total (ha)</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredData.fazendas.map((faz) => {
-                        const areaTalhoes = calcularAreaTotalTalhoes(faz.id);
-                        const areaFazenda = parseFloat(faz.tamanho_total);
-                        const divergencia =
-                          Math.abs(areaFazenda - areaTalhoes) > 0.01;
 
-                        return (
-                          <TableRow key={faz.id}>
-                            <TableCell className="font-medium">
-                              {faz.descricao}
-                            </TableCell>
-                            <TableCell>{faz.municipio}</TableCell>
-                            <TableCell>{faz.estado}</TableCell>
-                            <TableCell>
-                              {faz.latitude}, {faz.longitude}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span>{faz.tamanho_total}</span>
-                                {divergencia && (
-                                  <span className="text-xs text-orange-600">
-                                    Talhões: {areaTalhoes.toFixed(2)} ha
-                                  </span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  faz.status === "Ativo"
-                                    ? "default"
-                                    : "secondary"
-                                }
-                              >
-                                {faz.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditFazenda(faz)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteFazenda(faz.id)}
-                                  className="hover:bg-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
+                {csvPreview && csvData.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Prévia dos Dados ({csvData.length} registros)</Label>
+                    <div className="max-h-60 overflow-auto border rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Descrição</TableHead>
+                            <TableHead>Município</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Tamanho Total</TableHead>
                           </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                        </TableHeader>
+                        <TableBody>
+                          {csvData.slice(0, 5).map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">
+                                {item.descricao}
+                              </TableCell>
+                              <TableCell>{item.municipio}</TableCell>
+                              <TableCell>{item.estado}</TableCell>
+                              <TableCell>{item.tamanho_total}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      {csvData.length > 5 && (
+                        <div className="p-2 text-center text-sm text-muted-foreground">
+                          ... e mais {csvData.length - 5} registros
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setDialogImportAberto(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={importarCSV}
+                  disabled={!csvPreview || csvData.length === 0}
+                >
+                  Importar {csvData.length} Fazendas
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
-        {/* Aba Talhões */}
-        <TabsContent value="talhoes" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Talhões</CardTitle>
-              <CardDescription>
-                {filteredData.talhoes.length} talhão(ões) encontrado(s)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FilterCard
-                searchTerm={searchTerms.talhoes}
-                onSearchChange={(value) =>
-                  setSearchTerms({ ...searchTerms, talhoes: value })
-                }
-                statusFilter={statusFilters.talhoes}
-                onStatusChange={(value) =>
-                  setStatusFilters({ ...statusFilters, talhoes: value })
-                }
-                searchPlaceholder="Referência da fazenda ou tipo..."
-                searchId="search-talhoes"
-                statusId="status-talhoes"
-              />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport("Fazenda", "csv")}>
+                Exportar CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("Fazenda", "pdf")}>
+                Exportar PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleImportCSV("Talhão")}
+          <Button variant="outline" onClick={handleGenerateMap}>
+            <Map className="h-4 w-4 mr-2" />
+            Gerar Mapa
+          </Button>
+        </div>
+        <Button onClick={() => setShowFazendaDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Fazenda
+        </Button>
+      </div>
+
+      {/* Card Principal com Grid */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Fazendas Cadastradas</CardTitle>
+          <CardDescription>
+            {filteredFazendas.length} fazenda(s) encontrada(s)
+            {filteredFazendas.length > itemsPerPage && (
+              <span className="ml-2">
+                • Página {currentPage} de {totalPages}
+              </span>
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Listagem de Fazendas */}
+          <div className="space-y-4">
+            {filteredFazendas.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                {searchTerm
+                  ? "Nenhuma fazenda encontrada com os filtros aplicados."
+                  : "Nenhuma fazenda cadastrada."}
+              </div>
+            ) : (
+              currentFazendas.map((fazenda) => {
+                const areaTalhoes = calcularAreaTotalTalhoes(fazenda.talhoes);
+                const areaFazenda = parseFloat(fazenda.tamanho_total);
+                const divergencia = Math.abs(areaFazenda - areaTalhoes) > 0.01;
+                const isExpanded = expandedFazendas.has(fazenda.id);
+
+                return (
+                  <Card
+                    key={fazenda.id}
+                    className="border-l-4 border-l-blue-500"
                   >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar CSV
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        Exportar
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Talhão", "csv")}
-                      >
-                        Exportar CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleExport("Talhão", "pdf")}
-                      >
-                        Exportar PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Collapsible>
+                            <CollapsibleTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  toggleFazendaExpansion(fazenda.id)
+                                }
+                                className="p-1 h-8 w-8"
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </CollapsibleTrigger>
+                          </Collapsible>
+                          <div>
+                            <CardTitle className="text-lg">
+                              {fazenda.descricao}
+                            </CardTitle>
+                            <CardDescription>
+                              {fazenda.municipio}/{fazenda.estado} •{" "}
+                              {fazenda.latitude}, {fazenda.longitude}
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              fazenda.status === "Ativo"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {fazenda.status}
+                          </Badge>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditFazenda(fazenda)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteFazenda(fazenda.id)}
+                              className="hover:bg-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Tamanho Total
+                          </p>
+                          <p className="text-lg font-semibold">
+                            {fazenda.tamanho_total} ha
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Área dos Talhões
+                          </p>
+                          <p className="text-lg font-semibold">
+                            {areaTalhoes.toFixed(2)} ha
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Diferença
+                          </p>
+                          <p
+                            className={`text-lg font-semibold ${
+                              divergencia ? "text-red-600" : "text-green-600"
+                            }`}
+                          >
+                            {(areaFazenda - areaTalhoes).toFixed(2)} ha
+                            {divergencia && (
+                              <Badge
+                                variant="destructive"
+                                className="ml-2 text-xs"
+                              >
+                                Divergência
+                              </Badge>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Resumo dos Talhões */}
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-medium">
+                          Talhões ({fazenda.talhoes.length})
+                        </h4>
+                        <div className="text-xs text-muted-foreground">
+                          {
+                            fazenda.talhoes.filter((t) => t.tipo === "Talhão")
+                              .length
+                          }{" "}
+                          talhões •{" "}
+                          {
+                            fazenda.talhoes.filter(
+                              (t) => t.tipo === "Carreador"
+                            ).length
+                          }{" "}
+                          carreadores
+                        </div>
+                      </div>
+
+                      {/* Lista completa dos talhões (colapsível) */}
+                      <Collapsible open={isExpanded}>
+                        <CollapsibleContent>
+                          {fazenda.talhoes.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              Nenhum talhão cadastrado
+                            </p>
+                          ) : (
+                            <div className="space-y-2">
+                              {fazenda.talhoes.map((talhao) => (
+                                <div
+                                  key={talhao.id}
+                                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <Badge variant="outline">
+                                      {talhao.tipo}
+                                    </Badge>
+                                    <span className="text-sm font-medium">
+                                      {talhao.area} ha
+                                    </span>
+                                    {talhao.tipo === "Talhão" && (
+                                      <span className="text-xs text-muted-foreground">
+                                        {talhao.latitude}, {talhao.longitude}
+                                      </span>
+                                    )}
+                                    {talhao.observacoes && (
+                                      <span className="text-xs text-muted-foreground">
+                                        {talhao.observacoes}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Badge
+                                      variant={
+                                        talhao.status === "Ativo"
+                                          ? "default"
+                                          : "secondary"
+                                      }
+                                      className="text-xs"
+                                    >
+                                      {talhao.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
+          </div>
+
+          {/* Paginação */}
+          {filteredFazendas.length > itemsPerPage && (
+            <div className="flex justify-center mt-6">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      className={
+                        currentPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => handlePageChange(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      className={
+                        currentPage === totalPages
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialog do Mapa */}
+      <Dialog open={showMapDialog} onOpenChange={setShowMapDialog}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Mapa das Fazendas e Talhões</DialogTitle>
+            <DialogDescription>
+              Visualização das coordenadas das fazendas e seus talhões
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Resumo das coordenadas */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  Resumo das Coordenadas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {getMapData().length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Fazendas com Coordenadas
+                    </div>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">
+                      {getMapData().reduce(
+                        (acc, f) => acc + f.talhoes.length,
+                        0
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Talhões com Coordenadas
+                    </div>
+                  </div>
+                  <div className="text-center p-4 bg-orange-50 rounded-lg">
+                    <div className="text-2xl font-bold text-orange-600">
+                      {getMapData()
+                        .reduce((acc, f) => acc + f.tamanho_total, 0)
+                        .toFixed(2)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Área Total (ha)
+                    </div>
+                  </div>
                 </div>
-                <Button onClick={() => setShowTalhaoDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Talhão
+              </CardContent>
+            </Card>
+
+            {/* Lista detalhada das fazendas */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  Detalhes das Coordenadas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {getMapData().map((fazenda) => (
+                    <div key={fazenda.id} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold">{fazenda.nome}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {fazenda.municipio}/{fazenda.estado}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              fazenda.status === "Ativo"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {fazenda.status}
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const url = `https://www.google.com/maps?q=${fazenda.latitude},${fazenda.longitude}`;
+                              window.open(url, "_blank");
+                            }}
+                          >
+                            <MapPin className="h-4 w-4 mr-1" />
+                            Ver no Maps
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Coordenadas da Fazenda
+                          </p>
+                          <p className="text-sm font-mono">
+                            {fazenda.latitude}, {fazenda.longitude}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Tamanho Total
+                          </p>
+                          <p className="text-sm font-semibold">
+                            {fazenda.tamanho_total} ha
+                          </p>
+                        </div>
+                      </div>
+
+                      {fazenda.talhoes.length > 0 && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground mb-2">
+                            Talhões com Coordenadas ({fazenda.talhoes.length})
+                          </p>
+                          <div className="space-y-2">
+                            {fazenda.talhoes.map((talhao) => (
+                              <div
+                                key={talhao.id}
+                                className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Badge variant="outline" className="text-xs">
+                                    {talhao.tipo}
+                                  </Badge>
+                                  <span className="text-sm font-mono">
+                                    {talhao.latitude}, {talhao.longitude}
+                                  </span>
+                                  <span className="text-sm text-muted-foreground">
+                                    {talhao.area} ha
+                                  </span>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const url = `https://www.google.com/maps?q=${talhao.latitude},${talhao.longitude}`;
+                                    window.open(url, "_blank");
+                                  }}
+                                >
+                                  <MapPin className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Botões de ação */}
+            <div className="flex justify-between items-center">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const url = generateMapUrl();
+                    if (url) {
+                      window.open(url, "_blank");
+                    }
+                  }}
+                >
+                  <Map className="h-4 w-4 mr-2" />
+                  Abrir no Google Maps
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const mapData = getMapData();
+                    const csvContent = [
+                      "Fazenda,Municipio,Estado,Latitude_Fazenda,Longitude_Fazenda,Tamanho_Total,Talhoes_Com_Coordenadas",
+                      ...mapData.map(
+                        (f) =>
+                          `"${f.nome}","${f.municipio}","${f.estado}",${f.latitude},${f.longitude},${f.tamanho_total},${f.talhoes.length}`
+                      ),
+                    ].join("\n");
+
+                    const blob = new Blob([csvContent], { type: "text/csv" });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `coordenadas_fazendas_${
+                      new Date().toISOString().split("T")[0]
+                    }.csv`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar Coordenadas
                 </Button>
               </div>
-
-              {filteredData.talhoes.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  {searchTerms.talhoes
-                    ? "Nenhum talhão encontrado com os filtros aplicados."
-                    : "Nenhum talhão cadastrado."}
-                </div>
-              ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fazenda</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Coordenadas</TableHead>
-                        <TableHead>Área (ha)</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredData.talhoes.map((tal) => (
-                        <TableRow key={tal.id}>
-                          <TableCell className="font-medium">
-                            {getNomeFazenda(tal.referencia_fazenda)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{tal.tipo}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            {tal.tipo === "Talhão"
-                              ? `${tal.latitude}, ${tal.longitude}`
-                              : "N/A"}
-                          </TableCell>
-                          <TableCell>{tal.area}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                tal.status === "Ativo" ? "default" : "secondary"
-                              }
-                            >
-                              {tal.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditTalhao(tal)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteTalhao(tal.id)}
-                                className="hover:bg-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              <Button variant="outline" onClick={() => setShowMapDialog(false)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog Fazenda */}
       <Dialog open={showFazendaDialog} onOpenChange={setShowFazendaDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingFazenda ? "Editar Fazenda" : "Nova Fazenda"}
             </DialogTitle>
-            <DialogDescription>Preencha os dados da fazenda</DialogDescription>
+            <DialogDescription>
+              Preencha os dados da fazenda e seus talhões
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="faz-descricao">Descrição</Label>
-              <Input
-                id="faz-descricao"
-                value={fazendaForm.descricao}
-                onChange={(e) =>
-                  setFazendaForm({
-                    ...fazendaForm,
-                    descricao: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="faz-municipio">Município</Label>
-                <Input
-                  id="faz-municipio"
-                  value={fazendaForm.municipio}
-                  onChange={(e) =>
-                    setFazendaForm({
-                      ...fazendaForm,
-                      municipio: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="faz-estado">Estado</Label>
-                <Input
-                  id="faz-estado"
-                  value={fazendaForm.estado}
-                  onChange={(e) =>
-                    setFazendaForm({
-                      ...fazendaForm,
-                      estado: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="faz-latitude">Latitude</Label>
-                <Input
-                  id="faz-latitude"
-                  value={fazendaForm.latitude}
-                  onChange={(e) =>
-                    setFazendaForm({
-                      ...fazendaForm,
-                      latitude: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="faz-longitude">Longitude</Label>
-                <Input
-                  id="faz-longitude"
-                  value={fazendaForm.longitude}
-                  onChange={(e) =>
-                    setFazendaForm({
-                      ...fazendaForm,
-                      longitude: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="faz-tamanho">Tamanho Total (ha)</Label>
-              <Input
-                id="faz-tamanho"
-                type="number"
-                step="0.01"
-                value={fazendaForm.tamanho_total}
-                onChange={(e) =>
-                  setFazendaForm({
-                    ...fazendaForm,
-                    tamanho_total: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="faz-status">Status</Label>
-              <Select
-                value={fazendaForm.status}
-                onValueChange={(value) =>
-                  setFazendaForm({
-                    ...fazendaForm,
-                    status: value as "Ativo" | "Inativo",
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Ativo">Ativo</SelectItem>
-                  <SelectItem value="Inativo">Inativo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
+          <div className="space-y-6">
+            {/* Dados Gerais da Fazenda */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  Dados Gerais da Fazenda
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="faz-descricao">Descrição / Nome</Label>
+                    <Input
+                      id="faz-descricao"
+                      value={fazendaForm.descricao}
+                      onChange={(e) =>
+                        setFazendaForm({
+                          ...fazendaForm,
+                          descricao: e.target.value,
+                        })
+                      }
+                      placeholder="Ex: Fazenda São José"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="faz-municipio">Município</Label>
+                    <Input
+                      id="faz-municipio"
+                      value={fazendaForm.municipio}
+                      onChange={(e) =>
+                        setFazendaForm({
+                          ...fazendaForm,
+                          municipio: e.target.value,
+                        })
+                      }
+                      placeholder="Ex: Uberlândia"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="faz-estado">UF</Label>
+                    <Input
+                      id="faz-estado"
+                      value={fazendaForm.estado}
+                      onChange={(e) =>
+                        setFazendaForm({
+                          ...fazendaForm,
+                          estado: e.target.value,
+                        })
+                      }
+                      placeholder="Ex: MG"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="faz-latitude">Latitude</Label>
+                    <Input
+                      id="faz-latitude"
+                      value={fazendaForm.latitude}
+                      onChange={(e) =>
+                        setFazendaForm({
+                          ...fazendaForm,
+                          latitude: e.target.value,
+                        })
+                      }
+                      placeholder="Ex: -18.9186"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="faz-longitude">Longitude</Label>
+                    <Input
+                      id="faz-longitude"
+                      value={fazendaForm.longitude}
+                      onChange={(e) =>
+                        setFazendaForm({
+                          ...fazendaForm,
+                          longitude: e.target.value,
+                        })
+                      }
+                      placeholder="Ex: -48.2772"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="faz-tamanho">Tamanho Total (ha)</Label>
+                    <Input
+                      id="faz-tamanho"
+                      type="number"
+                      step="0.01"
+                      value={fazendaForm.tamanho_total}
+                      onChange={(e) =>
+                        setFazendaForm({
+                          ...fazendaForm,
+                          tamanho_total: e.target.value,
+                        })
+                      }
+                      placeholder="Ex: 1000.50"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="faz-status">Status</Label>
+                    <Select
+                      value={fazendaForm.status}
+                      onValueChange={(value) =>
+                        setFazendaForm({
+                          ...fazendaForm,
+                          status: value as "Ativo" | "Inativo",
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Ativo">Ativo</SelectItem>
+                        <SelectItem value="Inativo">Inativo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Talhões da Fazenda */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Talhões da Fazenda</CardTitle>
+                <CardDescription>
+                  Adicione os talhões que compõem esta fazenda
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Formulário para adicionar talhão */}
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <h4 className="font-medium mb-3">Adicionar Talhão</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="tal-tipo">Tipo</Label>
+                      <Select
+                        value={talhaoForm.tipo}
+                        onValueChange={(value) =>
+                          setTalhaoForm({
+                            ...talhaoForm,
+                            tipo: value as "Talhão" | "Carreador",
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Talhão">Talhão</SelectItem>
+                          <SelectItem value="Carreador">Carreador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="tal-area">Área (ha)</Label>
+                      <Input
+                        id="tal-area"
+                        type="number"
+                        step="0.01"
+                        value={talhaoForm.area}
+                        onChange={(e) =>
+                          setTalhaoForm({
+                            ...talhaoForm,
+                            area: e.target.value,
+                          })
+                        }
+                        placeholder="Ex: 100.5"
+                      />
+                    </div>
+                  </div>
+
+                  {talhaoForm.tipo === "Talhão" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <Label htmlFor="tal-latitude">Latitude</Label>
+                        <Input
+                          id="tal-latitude"
+                          value={talhaoForm.latitude}
+                          onChange={(e) =>
+                            setTalhaoForm({
+                              ...talhaoForm,
+                              latitude: e.target.value,
+                            })
+                          }
+                          placeholder="Ex: -18.9200"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="tal-longitude">Longitude</Label>
+                        <Input
+                          id="tal-longitude"
+                          value={talhaoForm.longitude}
+                          onChange={(e) =>
+                            setTalhaoForm({
+                              ...talhaoForm,
+                              longitude: e.target.value,
+                            })
+                          }
+                          placeholder="Ex: -48.2800"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <Label htmlFor="tal-observacoes">Observações</Label>
+                      <Input
+                        id="tal-observacoes"
+                        value={talhaoForm.observacoes}
+                        onChange={(e) =>
+                          setTalhaoForm({
+                            ...talhaoForm,
+                            observacoes: e.target.value,
+                          })
+                        }
+                        placeholder="Ex: Talhão principal para soja"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="tal-status">Status</Label>
+                      <Select
+                        value={talhaoForm.status}
+                        onValueChange={(value) =>
+                          setTalhaoForm({
+                            ...talhaoForm,
+                            status: value as "Ativo" | "Inativo",
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Ativo">Ativo</SelectItem>
+                          <SelectItem value="Inativo">Inativo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-4">
+                    {editingTalhao ? (
+                      <>
+                        <Button onClick={handleUpdateTalhao}>
+                          Atualizar Talhão
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setEditingTalhao(null)}
+                        >
+                          Cancelar
+                        </Button>
+                      </>
+                    ) : (
+                      <Button onClick={handleAddTalhao}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar Talhão
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Lista de talhões */}
+                <div>
+                  <h4 className="font-medium mb-3">
+                    Talhões Cadastrados ({fazendaForm.talhoes.length})
+                  </h4>
+                  {fazendaForm.talhoes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum talhão cadastrado
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {fazendaForm.talhoes.map((talhao) => (
+                        <div
+                          key={talhao.id}
+                          className="flex items-center justify-between p-3 border rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline">{talhao.tipo}</Badge>
+                            <span className="text-sm font-medium">
+                              {talhao.area} ha
+                            </span>
+                            {talhao.tipo === "Talhão" && (
+                              <span className="text-xs text-muted-foreground">
+                                {talhao.latitude}, {talhao.longitude}
+                              </span>
+                            )}
+                            {talhao.observacoes && (
+                              <span className="text-xs text-muted-foreground">
+                                {talhao.observacoes}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                talhao.status === "Ativo"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                              className="text-xs"
+                            >
+                              {talhao.status}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditTalhao(talhao)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteTalhao(talhao.id)}
+                              className="hover:bg-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Resumo de áreas */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Total de Talhões
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {fazendaForm.talhoes.length}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Soma das Áreas (ha)
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {calcularAreaTotalTalhoes(fazendaForm.talhoes).toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Diferença vs. Tamanho Total
+                    </p>
+                    <p
+                      className={`text-lg font-semibold ${
+                        Math.abs(
+                          parseFloat(fazendaForm.tamanho_total) -
+                            calcularAreaTotalTalhoes(fazendaForm.talhoes)
+                        ) > 0.01
+                          ? "text-red-600"
+                          : "text-green-600"
+                      }`}
+                    >
+                      {(
+                        parseFloat(fazendaForm.tamanho_total) -
+                        calcularAreaTotalTalhoes(fazendaForm.talhoes)
+                      ).toFixed(2)}{" "}
+                      ha
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseFazendaDialog}>
               Cancelar
             </Button>
-            <Button onClick={handleSaveFazenda}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog Talhão */}
-      <Dialog open={showTalhaoDialog} onOpenChange={setShowTalhaoDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingTalhao ? "Editar Talhão" : "Novo Talhão"}
-            </DialogTitle>
-            <DialogDescription>Preencha os dados do talhão</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="tal-fazenda">Fazenda</Label>
-              <Select
-                value={talhaoForm.referencia_fazenda}
-                onValueChange={(value) =>
-                  setTalhaoForm({
-                    ...talhaoForm,
-                    referencia_fazenda: value,
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a fazenda" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fazendas.map((faz) => (
-                    <SelectItem key={faz.id} value={faz.id}>
-                      {faz.descricao}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="tal-tipo">Tipo</Label>
-              <Select
-                value={talhaoForm.tipo}
-                onValueChange={(value) =>
-                  setTalhaoForm({
-                    ...talhaoForm,
-                    tipo: value as "Talhão" | "Carreador",
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Talhão">Talhão</SelectItem>
-                  <SelectItem value="Carreador">Carreador</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {talhaoForm.tipo === "Talhão" && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="tal-latitude">Latitude</Label>
-                  <Input
-                    id="tal-latitude"
-                    value={talhaoForm.latitude}
-                    onChange={(e) =>
-                      setTalhaoForm({
-                        ...talhaoForm,
-                        latitude: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="tal-longitude">Longitude</Label>
-                  <Input
-                    id="tal-longitude"
-                    value={talhaoForm.longitude}
-                    onChange={(e) =>
-                      setTalhaoForm({
-                        ...talhaoForm,
-                        longitude: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            )}
-            <div>
-              <Label htmlFor="tal-area">Área (ha)</Label>
-              <Input
-                id="tal-area"
-                type="number"
-                step="0.01"
-                value={talhaoForm.area}
-                onChange={(e) =>
-                  setTalhaoForm({
-                    ...talhaoForm,
-                    area: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="tal-status">Status</Label>
-              <Select
-                value={talhaoForm.status}
-                onValueChange={(value) =>
-                  setTalhaoForm({
-                    ...talhaoForm,
-                    status: value as "Ativo" | "Inativo",
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Ativo">Ativo</SelectItem>
-                  <SelectItem value="Inativo">Inativo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCloseTalhaoDialog}>
-              Cancelar
+            <Button onClick={handleSaveFazenda}>
+              {editingFazenda ? "Atualizar Fazenda" : "Salvar Fazenda"}
             </Button>
-            <Button onClick={handleSaveTalhao}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
