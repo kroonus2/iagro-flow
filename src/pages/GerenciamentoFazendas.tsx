@@ -994,7 +994,6 @@ const GerenciamentoFazendas = () => {
               currentFazendas.map((fazenda) => {
                 const areaTalhoes = calcularAreaTotalTalhoes(fazenda.talhoes);
                 const areaFazenda = parseFloat(fazenda.tamanho_total);
-                const divergencia = Math.abs(areaFazenda - areaTalhoes) > 0.01;
                 const isExpanded = expandedFazendas.has(fazenda.id);
 
                 return (
@@ -1027,13 +1026,13 @@ const GerenciamentoFazendas = () => {
                             <CardTitle className="text-lg">
                               {fazenda.descricao}
                             </CardTitle>
-                            <CardDescription>
+                            <CardDescription className="text-xs">
                               {fazenda.municipio}/{fazenda.estado} •{" "}
                               {fazenda.latitude}, {fazenda.longitude}
                             </CardDescription>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col md:flex-row items-center gap-2">
                           <Badge
                             variant={
                               fazenda.status === "Ativo"
@@ -1079,26 +1078,6 @@ const GerenciamentoFazendas = () => {
                           </p>
                           <p className="text-lg font-semibold">
                             {areaTalhoes.toFixed(2)} ha
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">
-                            Diferença
-                          </p>
-                          <p
-                            className={`text-lg font-semibold ${
-                              divergencia ? "text-red-600" : "text-green-600"
-                            }`}
-                          >
-                            {(areaFazenda - areaTalhoes).toFixed(2)} ha
-                            {divergencia && (
-                              <Badge
-                                variant="destructive"
-                                className="ml-2 text-xs"
-                              >
-                                Divergência
-                              </Badge>
-                            )}
                           </p>
                         </div>
                       </div>
@@ -1436,7 +1415,7 @@ const GerenciamentoFazendas = () => {
 
       {/* Dialog Fazenda */}
       <Dialog open={showFazendaDialog} onOpenChange={setShowFazendaDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingFazenda ? "Editar Fazenda" : "Nova Fazenda"}
@@ -1781,7 +1760,7 @@ const GerenciamentoFazendas = () => {
                 </div>
 
                 {/* Resumo de áreas */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
+                <div className="flex md:flex-row flex-col md:justify-around gap-4 p-4 bg-blue-50 rounded-lg">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
                       Total de Talhões
@@ -1796,27 +1775,6 @@ const GerenciamentoFazendas = () => {
                     </p>
                     <p className="text-lg font-semibold">
                       {calcularAreaTotalTalhoes(fazendaForm.talhoes).toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Diferença vs. Tamanho Total
-                    </p>
-                    <p
-                      className={`text-lg font-semibold ${
-                        Math.abs(
-                          parseFloat(fazendaForm.tamanho_total) -
-                            calcularAreaTotalTalhoes(fazendaForm.talhoes)
-                        ) > 0.01
-                          ? "text-red-600"
-                          : "text-green-600"
-                      }`}
-                    >
-                      {(
-                        parseFloat(fazendaForm.tamanho_total) -
-                        calcularAreaTotalTalhoes(fazendaForm.talhoes)
-                      ).toFixed(2)}{" "}
-                      ha
                     </p>
                   </div>
                 </div>
