@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -55,8 +56,59 @@ import {
   DollarSign,
   Users,
   Activity,
+  Eye,
+  AlertTriangle,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+
+// Componente para cabeçalhos ordenáveis
+interface SortableHeaderProps {
+  children: React.ReactNode;
+  sortKey: string;
+  onSort: (key: string) => void;
+  sortConfig: { key: string; direction: "asc" | "desc" } | null;
+  className?: string;
+}
+
+const SortableHeader: React.FC<SortableHeaderProps> = ({
+  children,
+  sortKey,
+  onSort,
+  sortConfig,
+  className = "",
+}) => {
+  const isActive = sortConfig?.key === sortKey;
+  const direction = isActive ? sortConfig.direction : null;
+
+  return (
+    <TableHead
+      className={`cursor-pointer hover:bg-muted/50 select-none ${className}`}
+      onClick={() => onSort(sortKey)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        <div className="flex flex-col">
+          <ChevronUp
+            className={`h-3 w-3 ${
+              isActive && direction === "asc"
+                ? "text-primary"
+                : "text-muted-foreground/50"
+            }`}
+          />
+          <ChevronDown
+            className={`h-3 w-3 -mt-1 ${
+              isActive && direction === "desc"
+                ? "text-primary"
+                : "text-muted-foreground/50"
+            }`}
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
+};
 
 // Componente genérico para filtros
 interface FilterCardProps {
@@ -138,6 +190,7 @@ interface Caminhao {
   modelo: string;
   marca: string;
   ano: string;
+  observacoes?: string;
   status: "Ativo" | "Inativo";
 }
 
@@ -147,26 +200,25 @@ interface Motorista {
   matricula: string;
   nome: string;
   contato: string;
+  cnh?: string;
+  dataExpiracaoCnh?: string;
   status: "Ativo" | "Inativo";
 }
 
 interface Operacao {
   id: string;
-  codigo: string;
   descricao: string;
   status: "Ativo" | "Inativo";
 }
 
 interface CentroCusto {
   id: string;
-  codigo: string;
   descricao: string;
   status: "Ativo" | "Inativo";
 }
 
 interface Responsavel {
   id: string;
-  codigo: string;
   nome: string;
   status: "Ativo" | "Inativo";
 }
@@ -200,6 +252,40 @@ const CadastrosAuxiliares = () => {
     responsaveis: [] as Responsavel[],
   });
 
+  // Estados para ordenação
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: "asc" | "desc";
+  } | null>(null);
+
+  // Função para ordenar dados
+  const sortData = (data: any[], key: string, direction: "asc" | "desc") => {
+    return [...data].sort((a, b) => {
+      let aValue = a[key];
+      let bValue = b[key];
+
+      // Tratamento especial para diferentes tipos de dados
+      if (key === "volume" || key === "ano") {
+        aValue = parseInt(aValue) || 0;
+        bValue = parseInt(bValue) || 0;
+      } else if (key === "dataExpiracaoCnh") {
+        aValue = aValue ? new Date(aValue).getTime() : 0;
+        bValue = bValue ? new Date(bValue).getTime() : 0;
+      } else {
+        aValue = (aValue || "").toString().toLowerCase();
+        bValue = (bValue || "").toString().toLowerCase();
+      }
+
+      if (aValue < bValue) {
+        return direction === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return direction === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
   // Função para filtrar dados
   const filterData = (
     data: any[],
@@ -228,6 +314,19 @@ const CadastrosAuxiliares = () => {
     }
 
     return filtered;
+  };
+
+  // Função para lidar com clique na ordenação
+  const handleSort = (key: string) => {
+    let direction: "asc" | "desc" = "asc";
+    if (
+      sortConfig &&
+      sortConfig.key === key &&
+      sortConfig.direction === "asc"
+    ) {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
   };
 
   // Estados para Localização
@@ -294,6 +393,8 @@ const CadastrosAuxiliares = () => {
       modelo: "F32",
       marca: "Volvo",
       ano: "2023",
+      observacoes:
+        "Caminhão em excelente estado, recentemente revisado. Equipado com sistema de rastreamento GPS e câmeras de segurança.",
       status: "Ativo",
     },
     {
@@ -304,6 +405,8 @@ const CadastrosAuxiliares = () => {
       modelo: "FH16",
       marca: "Volvo",
       ano: "2022",
+      observacoes:
+        "Veículo principal da frota. Requer manutenção preventiva a cada 10.000 km. Motor em perfeito funcionamento.",
       status: "Ativo",
     },
     {
@@ -314,6 +417,8 @@ const CadastrosAuxiliares = () => {
       modelo: "Actros",
       marca: "Mercedes-Benz",
       ano: "2024",
+      observacoes:
+        "Caminhão temporariamente fora de operação devido a problemas no sistema de freios. Aguardando peças de reposição.",
       status: "Inativo",
     },
     {
@@ -324,6 +429,8 @@ const CadastrosAuxiliares = () => {
       modelo: "Scania R",
       marca: "Scania",
       ano: "2023",
+      observacoes:
+        "Veículo novo, ainda em período de garantia. Equipado com sistema de telemetria avançado para monitoramento de performance.",
       status: "Ativo",
     },
     {
@@ -334,11 +441,17 @@ const CadastrosAuxiliares = () => {
       modelo: "Constellation",
       marca: "Volkswagen",
       ano: "2021",
+      observacoes:
+        "Caminhão confiável, utilizado principalmente para rotas urbanas. Baixo consumo de combustível e manutenção simples.",
       status: "Ativo",
     },
   ]);
   const [showCaminhaoDialog, setShowCaminhaoDialog] = useState(false);
   const [editingCaminhao, setEditingCaminhao] = useState<Caminhao | null>(null);
+  const [showCaminhaoDetalhes, setShowCaminhaoDetalhes] = useState(false);
+  const [caminhaoDetalhes, setCaminhaoDetalhes] = useState<Caminhao | null>(
+    null
+  );
   const [caminhaoForm, setCaminhaoForm] = useState({
     placa: "",
     patrimonio: "",
@@ -346,6 +459,7 @@ const CadastrosAuxiliares = () => {
     modelo: "",
     marca: "",
     ano: "",
+    observacoes: "",
     status: "Ativo",
   });
 
@@ -357,6 +471,8 @@ const CadastrosAuxiliares = () => {
       matricula: "9999999",
       nome: "Ze",
       contato: "3499999999",
+      cnh: "12345678901",
+      dataExpiracaoCnh: "2025-12-31",
       status: "Ativo",
     },
     {
@@ -365,6 +481,8 @@ const CadastrosAuxiliares = () => {
       matricula: "8888888",
       nome: "João Silva",
       contato: "3498888888",
+      cnh: "98765432109",
+      dataExpiracaoCnh: "2024-06-15",
       status: "Ativo",
     },
     {
@@ -373,6 +491,8 @@ const CadastrosAuxiliares = () => {
       matricula: "7777777",
       nome: "Maria Santos",
       contato: "3497777777",
+      cnh: "11122233344",
+      dataExpiracaoCnh: "2023-11-20",
       status: "Inativo",
     },
     {
@@ -381,6 +501,8 @@ const CadastrosAuxiliares = () => {
       matricula: "6666666",
       nome: "Carlos Oliveira",
       contato: "3496666666",
+      cnh: "55566677788",
+      dataExpiracaoCnh: "2026-03-10",
       status: "Ativo",
     },
     {
@@ -389,6 +511,8 @@ const CadastrosAuxiliares = () => {
       matricula: "5555555",
       nome: "Ana Costa",
       contato: "3495555555",
+      cnh: "99988877766",
+      dataExpiracaoCnh: "2025-08-25",
       status: "Ativo",
     },
   ]);
@@ -396,11 +520,17 @@ const CadastrosAuxiliares = () => {
   const [editingMotorista, setEditingMotorista] = useState<Motorista | null>(
     null
   );
+  const [showMotoristaDetalhes, setShowMotoristaDetalhes] = useState(false);
+  const [motoristaDetalhes, setMotoristaDetalhes] = useState<Motorista | null>(
+    null
+  );
   const [motoristaForm, setMotoristaForm] = useState({
     codigo: "",
     matricula: "",
     nome: "",
     contato: "",
+    cnh: "",
+    dataExpiracaoCnh: "",
     status: "Ativo",
   });
 
@@ -408,31 +538,26 @@ const CadastrosAuxiliares = () => {
   const [operacoes, setOperacoes] = useState<Operacao[]>([
     {
       id: "1",
-      codigo: "225",
       descricao: "COMBATE A BROCA AVIÃO",
       status: "Ativo",
     },
     {
       id: "2",
-      codigo: "226",
       descricao: "APLICAÇÃO HERBICIDA ÁREA A",
       status: "Ativo",
     },
     {
       id: "3",
-      codigo: "227",
       descricao: "PULVERIZAÇÃO FUNGICIDA",
       status: "Inativo",
     },
     {
       id: "4",
-      codigo: "228",
       descricao: "CONTROLE DE PRAGAS SOLO",
       status: "Ativo",
     },
     {
       id: "5",
-      codigo: "229",
       descricao: "APLICAÇÃO FERTILIZANTE FOLIAR",
       status: "Ativo",
     },
@@ -440,7 +565,6 @@ const CadastrosAuxiliares = () => {
   const [showOperacaoDialog, setShowOperacaoDialog] = useState(false);
   const [editingOperacao, setEditingOperacao] = useState<Operacao | null>(null);
   const [operacaoForm, setOperacaoForm] = useState({
-    codigo: "",
     descricao: "",
     status: "Ativo",
   });
@@ -449,31 +573,26 @@ const CadastrosAuxiliares = () => {
   const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([
     {
       id: "1",
-      codigo: "3101020605",
       descricao: "Combate Prag Doe C Soca",
       status: "Ativo",
     },
     {
       id: "2",
-      codigo: "3101020606",
       descricao: "Aplicação Defensivos Área Norte",
       status: "Ativo",
     },
     {
       id: "3",
-      codigo: "3101020607",
       descricao: "Manutenção Preventiva Equipamentos",
       status: "Inativo",
     },
     {
       id: "4",
-      codigo: "3101020608",
       descricao: "Pulverização Área Sul",
       status: "Ativo",
     },
     {
       id: "5",
-      codigo: "3101020609",
       descricao: "Controle Fitossanitário",
       status: "Ativo",
     },
@@ -482,7 +601,6 @@ const CadastrosAuxiliares = () => {
   const [editingCentroCusto, setEditingCentroCusto] =
     useState<CentroCusto | null>(null);
   const [centroCustoForm, setCentroCustoForm] = useState({
-    codigo: "",
     descricao: "",
     status: "Ativo",
   });
@@ -498,31 +616,26 @@ const CadastrosAuxiliares = () => {
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([
     {
       id: "1",
-      codigo: "3103590",
       nome: "LUCIANO APARECIDO GRAÇAS",
       status: "Ativo",
     },
     {
       id: "2",
-      codigo: "3103591",
       nome: "FERNANDO HENRIQUE SILVA",
       status: "Ativo",
     },
     {
       id: "3",
-      codigo: "3103592",
       nome: "ROBERTO CARLOS SANTOS",
       status: "Inativo",
     },
     {
       id: "4",
-      codigo: "3103593",
       nome: "PATRICIA MARIA OLIVEIRA",
       status: "Ativo",
     },
     {
       id: "5",
-      codigo: "3103594",
       nome: "ANDERSON LUIZ COSTA",
       status: "Ativo",
     },
@@ -531,50 +644,97 @@ const CadastrosAuxiliares = () => {
   const [editingResponsavel, setEditingResponsavel] =
     useState<Responsavel | null>(null);
   const [responsavelForm, setResponsavelForm] = useState({
-    codigo: "",
     nome: "",
     status: "Ativo",
   });
 
-  // Efeito para aplicar filtros
+  // Efeito para aplicar filtros e ordenação
   useEffect(() => {
+    let localizacoesFiltered = filterData(
+      localizacoes,
+      searchTerms.localizacao,
+      ["codigo", "descricao", "tipo_estoque"],
+      statusFilters.localizacao
+    );
+    let caminhoesFiltered = filterData(
+      caminhoes,
+      searchTerms.caminhao,
+      ["placa", "patrimonio", "modelo", "marca"],
+      statusFilters.caminhao
+    );
+    let motoristasFiltered = filterData(
+      motoristas,
+      searchTerms.motorista,
+      ["codigo", "matricula", "nome", "contato"],
+      statusFilters.motorista
+    );
+    let operacoesFiltered = filterData(
+      operacoes,
+      searchTerms.operacao,
+      ["descricao"],
+      statusFilters.operacao
+    );
+    let centrosCustoFiltered = filterData(
+      centrosCusto,
+      searchTerms.centroCusto,
+      ["descricao"],
+      statusFilters.centroCusto
+    );
+    let responsaveisFiltered = filterData(
+      responsaveis,
+      searchTerms.responsavel,
+      ["nome"],
+      statusFilters.responsavel
+    );
+
+    // Aplicar ordenação se configurada
+    if (sortConfig) {
+      if (activeTab === "localizacao") {
+        localizacoesFiltered = sortData(
+          localizacoesFiltered,
+          sortConfig.key,
+          sortConfig.direction
+        );
+      } else if (activeTab === "caminhao") {
+        caminhoesFiltered = sortData(
+          caminhoesFiltered,
+          sortConfig.key,
+          sortConfig.direction
+        );
+      } else if (activeTab === "motorista") {
+        motoristasFiltered = sortData(
+          motoristasFiltered,
+          sortConfig.key,
+          sortConfig.direction
+        );
+      } else if (activeTab === "operacoes") {
+        operacoesFiltered = sortData(
+          operacoesFiltered,
+          sortConfig.key,
+          sortConfig.direction
+        );
+      } else if (activeTab === "centro-custo") {
+        centrosCustoFiltered = sortData(
+          centrosCustoFiltered,
+          sortConfig.key,
+          sortConfig.direction
+        );
+      } else if (activeTab === "responsavel") {
+        responsaveisFiltered = sortData(
+          responsaveisFiltered,
+          sortConfig.key,
+          sortConfig.direction
+        );
+      }
+    }
+
     setFilteredData({
-      localizacoes: filterData(
-        localizacoes,
-        searchTerms.localizacao,
-        ["codigo", "descricao", "tipo_estoque"],
-        statusFilters.localizacao
-      ),
-      caminhoes: filterData(
-        caminhoes,
-        searchTerms.caminhao,
-        ["placa", "patrimonio", "modelo", "marca"],
-        statusFilters.caminhao
-      ),
-      motoristas: filterData(
-        motoristas,
-        searchTerms.motorista,
-        ["codigo", "matricula", "nome", "contato"],
-        statusFilters.motorista
-      ),
-      operacoes: filterData(
-        operacoes,
-        searchTerms.operacao,
-        ["codigo", "descricao"],
-        statusFilters.operacao
-      ),
-      centrosCusto: filterData(
-        centrosCusto,
-        searchTerms.centroCusto,
-        ["codigo", "descricao"],
-        statusFilters.centroCusto
-      ),
-      responsaveis: filterData(
-        responsaveis,
-        searchTerms.responsavel,
-        ["codigo", "nome"],
-        statusFilters.responsavel
-      ),
+      localizacoes: localizacoesFiltered,
+      caminhoes: caminhoesFiltered,
+      motoristas: motoristasFiltered,
+      operacoes: operacoesFiltered,
+      centrosCusto: centrosCustoFiltered,
+      responsaveis: responsaveisFiltered,
     });
   }, [
     searchTerms,
@@ -585,6 +745,8 @@ const CadastrosAuxiliares = () => {
     operacoes,
     centrosCusto,
     responsaveis,
+    sortConfig,
+    activeTab,
   ]);
 
   // Funções de Localização
@@ -679,6 +841,7 @@ const CadastrosAuxiliares = () => {
       modelo: caminhao.modelo,
       marca: caminhao.marca,
       ano: caminhao.ano,
+      observacoes: caminhao.observacoes || "",
       status: caminhao.status,
     });
     setShowCaminhaoDialog(true);
@@ -699,8 +862,14 @@ const CadastrosAuxiliares = () => {
       modelo: "",
       marca: "",
       ano: "",
+      observacoes: "",
       status: "Ativo",
     });
+  };
+
+  const handleViewCaminhaoDetalhes = (caminhao: Caminhao) => {
+    setCaminhaoDetalhes(caminhao);
+    setShowCaminhaoDetalhes(true);
   };
 
   // Funções de Motorista
@@ -737,6 +906,8 @@ const CadastrosAuxiliares = () => {
       matricula: motorista.matricula,
       nome: motorista.nome,
       contato: motorista.contato,
+      cnh: motorista.cnh || "",
+      dataExpiracaoCnh: motorista.dataExpiracaoCnh || "",
       status: motorista.status,
     });
     setShowMotoristaDialog(true);
@@ -755,8 +926,32 @@ const CadastrosAuxiliares = () => {
       matricula: "",
       nome: "",
       contato: "",
+      cnh: "",
+      dataExpiracaoCnh: "",
       status: "Ativo",
     });
+  };
+
+  const handleViewMotoristaDetalhes = (motorista: Motorista) => {
+    setMotoristaDetalhes(motorista);
+    setShowMotoristaDetalhes(true);
+  };
+
+  // Função para verificar se a CNH está expirada
+  const isCnhExpirada = (dataExpiracao: string) => {
+    const hoje = new Date();
+    const dataExpiracaoDate = new Date(dataExpiracao);
+    return dataExpiracaoDate < hoje;
+  };
+
+  // Função para verificar se a CNH expira em breve (30 dias)
+  const isCnhExpirandoEmBreve = (dataExpiracao: string) => {
+    const hoje = new Date();
+    const dataExpiracaoDate = new Date(dataExpiracao);
+    const diferencaDias = Math.ceil(
+      (dataExpiracaoDate.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    return diferencaDias <= 30 && diferencaDias > 0;
   };
 
   // Funções de Operação
@@ -789,7 +984,6 @@ const CadastrosAuxiliares = () => {
   const handleEditOperacao = (operacao: Operacao) => {
     setEditingOperacao(operacao);
     setOperacaoForm({
-      codigo: operacao.codigo,
       descricao: operacao.descricao,
       status: operacao.status,
     });
@@ -805,7 +999,6 @@ const CadastrosAuxiliares = () => {
     setShowOperacaoDialog(false);
     setEditingOperacao(null);
     setOperacaoForm({
-      codigo: "",
       descricao: "",
       status: "Ativo",
     });
@@ -841,7 +1034,6 @@ const CadastrosAuxiliares = () => {
   const handleEditCentroCusto = (centroCusto: CentroCusto) => {
     setEditingCentroCusto(centroCusto);
     setCentroCustoForm({
-      codigo: centroCusto.codigo,
       descricao: centroCusto.descricao,
       status: centroCusto.status,
     });
@@ -857,7 +1049,6 @@ const CadastrosAuxiliares = () => {
     setShowCentroCustoDialog(false);
     setEditingCentroCusto(null);
     setCentroCustoForm({
-      codigo: "",
       descricao: "",
       status: "Ativo",
     });
@@ -893,7 +1084,6 @@ const CadastrosAuxiliares = () => {
   const handleEditResponsavel = (responsavel: Responsavel) => {
     setEditingResponsavel(responsavel);
     setResponsavelForm({
-      codigo: responsavel.codigo,
       nome: responsavel.nome,
       status: responsavel.status,
     });
@@ -909,7 +1099,6 @@ const CadastrosAuxiliares = () => {
     setShowResponsavelDialog(false);
     setEditingResponsavel(null);
     setResponsavelForm({
-      codigo: "",
       nome: "",
       status: "Ativo",
     });
@@ -978,6 +1167,7 @@ const CadastrosAuxiliares = () => {
         modelo: item.modelo || "",
         marca: item.marca || "",
         ano: item.ano || "",
+        observacoes: item.observacoes || "",
         status: "Ativo" as "Ativo" | "Inativo",
       }));
       setCaminhoes((prev) => [...prev, ...novosItens]);
@@ -992,6 +1182,8 @@ const CadastrosAuxiliares = () => {
         matricula: item.matricula || "",
         nome: item.nome || "",
         contato: item.contato || "",
+        cnh: item.cnh || "",
+        dataExpiracaoCnh: item.dataExpiracaoCnh || "",
         status: "Ativo" as "Ativo" | "Inativo",
       }));
       setMotoristas((prev) => [...prev, ...novosItens]);
@@ -1002,7 +1194,6 @@ const CadastrosAuxiliares = () => {
       );
       const novosItens: Operacao[] = csvData.map((item, index) => ({
         id: novosIds[index].toString(),
-        codigo: item.codigo || "",
         descricao: item.descricao || "",
         status: "Ativo" as "Ativo" | "Inativo",
       }));
@@ -1014,7 +1205,6 @@ const CadastrosAuxiliares = () => {
       );
       const novosItens: CentroCusto[] = csvData.map((item, index) => ({
         id: novosIds[index].toString(),
-        codigo: item.codigo || "",
         descricao: item.descricao || "",
         status: "Ativo" as "Ativo" | "Inativo",
       }));
@@ -1026,7 +1216,6 @@ const CadastrosAuxiliares = () => {
       );
       const novosItens: Responsavel[] = csvData.map((item, index) => ({
         id: novosIds[index].toString(),
-        codigo: item.codigo || "",
         nome: item.nome || "",
         status: "Ativo" as "Ativo" | "Inativo",
       }));
@@ -1059,26 +1248,26 @@ const CadastrosAuxiliares = () => {
         break;
       case "caminhao":
         csvContent =
-          "placa,patrimonio,volume,modelo,marca,ano\n" +
-          "ABC-1234,999999,13000,F32,Volvo,2023";
+          "placa,patrimonio,volume,modelo,marca,ano,observacoes\n" +
+          "ABC-1234,999999,13000,F32,Volvo,2023,Caminhão em excelente estado";
         filename = "template_caminhoes.csv";
         break;
       case "motorista":
         csvContent =
-          "codigo,matricula,nome,contato\n" + "1,9999999,João Silva,3499999999";
+          "codigo,matricula,nome,contato,cnh,dataExpiracaoCnh\n" +
+          "1,9999999,João Silva,3499999999,12345678901,2025-12-31";
         filename = "template_motoristas.csv";
         break;
       case "operacao":
-        csvContent = "codigo,descricao\n" + "225,COMBATE A BROCA AVIÃO";
+        csvContent = "descricao\n" + "COMBATE A BROCA AVIÃO";
         filename = "template_operacoes.csv";
         break;
       case "centroCusto":
-        csvContent =
-          "codigo,descricao\n" + "3101020605,Combate Prag Doe C Soca";
+        csvContent = "descricao\n" + "Combate Prag Doe C Soca";
         filename = "template_centros_custo.csv";
         break;
       case "responsavel":
-        csvContent = "codigo,nome\n" + "3103590,LUCIANO APARECIDO GRAÇAS";
+        csvContent = "nome\n" + "LUCIANO APARECIDO GRAÇAS";
         filename = "template_responsaveis.csv";
         break;
     }
@@ -1107,21 +1296,21 @@ const CadastrosAuxiliares = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Cadastros Auxiliares
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie os cadastros auxiliares do sistema
           </p>
         </div>
       </div>
 
       {/* Cards de Estatísticas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Localizações</CardTitle>
@@ -1228,14 +1417,16 @@ const CadastrosAuxiliares = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="localizacao">Localização</TabsTrigger>
-          <TabsTrigger value="caminhao">Caminhão</TabsTrigger>
-          <TabsTrigger value="motorista">Motorista</TabsTrigger>
-          <TabsTrigger value="operacoes">Operações</TabsTrigger>
-          <TabsTrigger value="centro-custo">Centro de Custo</TabsTrigger>
-          <TabsTrigger value="responsavel">Responsável</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="grid w-full grid-cols-6 min-w-[740px]">
+            <TabsTrigger value="localizacao">Localização</TabsTrigger>
+            <TabsTrigger value="caminhao">Caminhões</TabsTrigger>
+            <TabsTrigger value="motorista">Motoristas</TabsTrigger>
+            <TabsTrigger value="operacoes">Operações</TabsTrigger>
+            <TabsTrigger value="centro-custo">Centros de Custo</TabsTrigger>
+            <TabsTrigger value="responsavel">Responsáveis</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Aba Localização */}
         <TabsContent value="localizacao" className="space-y-4">
@@ -1253,20 +1444,23 @@ const CadastrosAuxiliares = () => {
             statusId="status-localizacao"
           />
 
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 onClick={() => handleImportCSV("localizacao")}
+                className="flex-1 sm:flex-none"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Importar CSV
+                <span className="hidden sm:inline">Importar CSV</span>
+                <span className="sm:hidden">Importar</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" className="flex-1 sm:flex-none">
                     <Download className="h-4 w-4 mr-2" />
-                    Exportar
+                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="sm:hidden">Exportar</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -1283,9 +1477,13 @@ const CadastrosAuxiliares = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <Button onClick={() => setShowLocalizacaoDialog(true)}>
+            <Button
+              onClick={() => setShowLocalizacaoDialog(true)}
+              className="w-full sm:w-auto"
+            >
               <Plus className="h-4 w-4 mr-2" />
-              Nova Localização
+              <span className="hidden sm:inline">Nova Localização</span>
+              <span className="sm:hidden">Nova</span>
             </Button>
           </div>
 
@@ -1305,16 +1503,40 @@ const CadastrosAuxiliares = () => {
                     : "Nenhuma localização cadastrada."}
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Tipo de Estoque</TableHead>
+                        <SortableHeader
+                          sortKey="codigo"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Código
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="descricao"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Descrição
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="tipo_estoque"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Tipo de Estoque
+                        </SortableHeader>
                         <TableHead>Capacidade</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
+                        <SortableHeader
+                          sortKey="status"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Status
+                        </SortableHeader>
+                        <TableHead>Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1337,8 +1559,8 @@ const CadastrosAuxiliares = () => {
                               {loc.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                          <TableCell>
+                            <div className="flex justify-start gap-2">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1382,20 +1604,23 @@ const CadastrosAuxiliares = () => {
             statusId="status-caminhao"
           />
 
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 onClick={() => handleImportCSV("caminhao")}
+                className="flex-1 sm:flex-none"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Importar CSV
+                <span className="hidden sm:inline">Importar CSV</span>
+                <span className="sm:hidden">Importar</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" className="flex-1 sm:flex-none">
                     <Download className="h-4 w-4 mr-2" />
-                    Exportar
+                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="sm:hidden">Exportar</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -1412,9 +1637,13 @@ const CadastrosAuxiliares = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <Button onClick={() => setShowCaminhaoDialog(true)}>
+            <Button
+              onClick={() => setShowCaminhaoDialog(true)}
+              className="w-full sm:w-auto"
+            >
               <Plus className="h-4 w-4 mr-2" />
-              Novo Caminhão
+              <span className="hidden sm:inline">Novo Caminhão</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           </div>
 
@@ -1433,18 +1662,60 @@ const CadastrosAuxiliares = () => {
                     : "Nenhum caminhão cadastrado."}
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Placa</TableHead>
-                        <TableHead>Patrimônio</TableHead>
-                        <TableHead>Volume (L)</TableHead>
-                        <TableHead>Modelo</TableHead>
-                        <TableHead>Marca</TableHead>
-                        <TableHead>Ano</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
+                        <SortableHeader
+                          sortKey="placa"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Placa
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="patrimonio"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Patrimônio
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="volume"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Volume (L)
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="modelo"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Modelo
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="marca"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Marca
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="ano"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Ano
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="status"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Status
+                        </SortableHeader>
+                        <TableHead>Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1467,12 +1738,21 @@ const CadastrosAuxiliares = () => {
                               {cam.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                          <TableCell>
+                            <div className="flex justify-start gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewCaminhaoDetalhes(cam)}
+                                title="Ver detalhes"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleEditCaminhao(cam)}
+                                title="Editar"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -1481,6 +1761,7 @@ const CadastrosAuxiliares = () => {
                                 size="sm"
                                 onClick={() => handleDeleteCaminhao(cam.id)}
                                 className="hover:bg-destructive"
+                                title="Excluir"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -1512,20 +1793,23 @@ const CadastrosAuxiliares = () => {
             statusId="status-motorista"
           />
 
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 onClick={() => handleImportCSV("motorista")}
+                className="flex-1 sm:flex-none"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Importar CSV
+                <span className="hidden sm:inline">Importar CSV</span>
+                <span className="sm:hidden">Importar</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" className="flex-1 sm:flex-none">
                     <Download className="h-4 w-4 mr-2" />
-                    Exportar
+                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="sm:hidden">Exportar</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -1542,9 +1826,13 @@ const CadastrosAuxiliares = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <Button onClick={() => setShowMotoristaDialog(true)}>
+            <Button
+              onClick={() => setShowMotoristaDialog(true)}
+              className="w-full sm:w-auto"
+            >
               <Plus className="h-4 w-4 mr-2" />
-              Novo Motorista
+              <span className="hidden sm:inline">Novo Motorista</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           </div>
 
@@ -1563,16 +1851,40 @@ const CadastrosAuxiliares = () => {
                     : "Nenhum motorista cadastrado."}
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Matrícula</TableHead>
-                        <TableHead>Nome</TableHead>
+                        <SortableHeader
+                          sortKey="codigo"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Código
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="matricula"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Matrícula
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="nome"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Nome
+                        </SortableHeader>
                         <TableHead>Contato</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
+                        <SortableHeader
+                          sortKey="status"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Status
+                        </SortableHeader>
+                        <TableHead>Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1593,12 +1905,21 @@ const CadastrosAuxiliares = () => {
                               {mot.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                          <TableCell>
+                            <div className="flex justify-start gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewMotoristaDetalhes(mot)}
+                                title="Ver detalhes"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleEditMotorista(mot)}
+                                title="Editar"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -1607,6 +1928,7 @@ const CadastrosAuxiliares = () => {
                                 size="sm"
                                 onClick={() => handleDeleteMotorista(mot.id)}
                                 className="hover:bg-destructive"
+                                title="Excluir"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -1633,25 +1955,28 @@ const CadastrosAuxiliares = () => {
             onStatusChange={(value) =>
               setStatusFilters({ ...statusFilters, operacao: value })
             }
-            searchPlaceholder="Código ou descrição..."
+            searchPlaceholder="Descrição..."
             searchId="search-operacao"
             statusId="status-operacao"
           />
 
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 onClick={() => handleImportCSV("operacao")}
+                className="flex-1 sm:flex-none"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Importar CSV
+                <span className="hidden sm:inline">Importar CSV</span>
+                <span className="sm:hidden">Importar</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" className="flex-1 sm:flex-none">
                     <Download className="h-4 w-4 mr-2" />
-                    Exportar
+                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="sm:hidden">Exportar</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -1668,9 +1993,13 @@ const CadastrosAuxiliares = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <Button onClick={() => setShowOperacaoDialog(true)}>
+            <Button
+              onClick={() => setShowOperacaoDialog(true)}
+              className="w-full sm:w-auto"
+            >
               <Plus className="h-4 w-4 mr-2" />
-              Nova Operação
+              <span className="hidden sm:inline">Nova Operação</span>
+              <span className="sm:hidden">Nova</span>
             </Button>
           </div>
 
@@ -1689,23 +2018,33 @@ const CadastrosAuxiliares = () => {
                     : "Nenhuma operação cadastrada."}
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
+                        <SortableHeader
+                          sortKey="descricao"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Descrição
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="status"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Status
+                        </SortableHeader>
+                        <TableHead>Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredData.operacoes.map((op) => (
                         <TableRow key={op.id}>
                           <TableCell className="font-medium">
-                            {op.codigo}
+                            {op.descricao}
                           </TableCell>
-                          <TableCell>{op.descricao}</TableCell>
                           <TableCell>
                             <Badge
                               variant={
@@ -1715,8 +2054,8 @@ const CadastrosAuxiliares = () => {
                               {op.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                          <TableCell>
+                            <div className="flex justify-start gap-2">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1755,25 +2094,28 @@ const CadastrosAuxiliares = () => {
             onStatusChange={(value) =>
               setStatusFilters({ ...statusFilters, centroCusto: value })
             }
-            searchPlaceholder="Código ou descrição..."
+            searchPlaceholder="Descrição..."
             searchId="search-centro-custo"
             statusId="status-centro-custo"
           />
 
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 onClick={() => handleImportCSV("centroCusto")}
+                className="flex-1 sm:flex-none"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Importar CSV
+                <span className="hidden sm:inline">Importar CSV</span>
+                <span className="sm:hidden">Importar</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" className="flex-1 sm:flex-none">
                     <Download className="h-4 w-4 mr-2" />
-                    Exportar
+                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="sm:hidden">Exportar</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -1790,9 +2132,13 @@ const CadastrosAuxiliares = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <Button onClick={() => setShowCentroCustoDialog(true)}>
+            <Button
+              onClick={() => setShowCentroCustoDialog(true)}
+              className="w-full sm:w-auto"
+            >
               <Plus className="h-4 w-4 mr-2" />
-              Novo Centro de Custo
+              <span className="hidden sm:inline">Novo Centro de Custo</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           </div>
 
@@ -1812,23 +2158,33 @@ const CadastrosAuxiliares = () => {
                     : "Nenhum centro de custo cadastrado."}
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
+                        <SortableHeader
+                          sortKey="descricao"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Descrição
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="status"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Status
+                        </SortableHeader>
+                        <TableHead>Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredData.centrosCusto.map((cc) => (
                         <TableRow key={cc.id}>
                           <TableCell className="font-medium">
-                            {cc.codigo}
+                            {cc.descricao}
                           </TableCell>
-                          <TableCell>{cc.descricao}</TableCell>
                           <TableCell>
                             <Badge
                               variant={
@@ -1838,8 +2194,8 @@ const CadastrosAuxiliares = () => {
                               {cc.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                          <TableCell>
+                            <div className="flex justify-start gap-2">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1878,25 +2234,28 @@ const CadastrosAuxiliares = () => {
             onStatusChange={(value) =>
               setStatusFilters({ ...statusFilters, responsavel: value })
             }
-            searchPlaceholder="Código ou nome..."
+            searchPlaceholder="Nome..."
             searchId="search-responsavel"
             statusId="status-responsavel"
           />
 
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 onClick={() => handleImportCSV("responsavel")}
+                className="flex-1 sm:flex-none"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Importar CSV
+                <span className="hidden sm:inline">Importar CSV</span>
+                <span className="sm:hidden">Importar</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" className="flex-1 sm:flex-none">
                     <Download className="h-4 w-4 mr-2" />
-                    Exportar
+                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="sm:hidden">Exportar</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -1913,9 +2272,13 @@ const CadastrosAuxiliares = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <Button onClick={() => setShowResponsavelDialog(true)}>
+            <Button
+              onClick={() => setShowResponsavelDialog(true)}
+              className="w-full sm:w-auto"
+            >
               <Plus className="h-4 w-4 mr-2" />
-              Novo Responsável
+              <span className="hidden sm:inline">Novo Responsável</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           </div>
 
@@ -1934,23 +2297,33 @@ const CadastrosAuxiliares = () => {
                     : "Nenhum responsável cadastrado."}
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
+                        <SortableHeader
+                          sortKey="nome"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Nome
+                        </SortableHeader>
+                        <SortableHeader
+                          sortKey="status"
+                          onSort={handleSort}
+                          sortConfig={sortConfig}
+                        >
+                          Status
+                        </SortableHeader>
+                        <TableHead>Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredData.responsaveis.map((resp) => (
                         <TableRow key={resp.id}>
                           <TableCell className="font-medium">
-                            {resp.codigo}
+                            {resp.nome}
                           </TableCell>
-                          <TableCell>{resp.nome}</TableCell>
                           <TableCell>
                             <Badge
                               variant={
@@ -1962,8 +2335,8 @@ const CadastrosAuxiliares = () => {
                               {resp.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                          <TableCell>
+                            <div className="flex justify-start gap-2">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -2076,6 +2449,7 @@ const CadastrosAuxiliares = () => {
                             <TableHead>Patrimônio</TableHead>
                             <TableHead>Modelo</TableHead>
                             <TableHead>Marca</TableHead>
+                            <TableHead>Observações</TableHead>
                           </>
                         )}
                         {tipoImportacao === "motorista" && (
@@ -2084,18 +2458,18 @@ const CadastrosAuxiliares = () => {
                             <TableHead>Nome</TableHead>
                             <TableHead>Matrícula</TableHead>
                             <TableHead>Contato</TableHead>
+                            <TableHead>CNH</TableHead>
+                            <TableHead>Expiração CNH</TableHead>
                           </>
                         )}
                         {(tipoImportacao === "operacao" ||
                           tipoImportacao === "centroCusto") && (
                           <>
-                            <TableHead>Código</TableHead>
                             <TableHead>Descrição</TableHead>
                           </>
                         )}
                         {tipoImportacao === "responsavel" && (
                           <>
-                            <TableHead>Código</TableHead>
                             <TableHead>Nome</TableHead>
                           </>
                         )}
@@ -2122,6 +2496,9 @@ const CadastrosAuxiliares = () => {
                               <TableCell>{item.patrimonio}</TableCell>
                               <TableCell>{item.modelo}</TableCell>
                               <TableCell>{item.marca}</TableCell>
+                              <TableCell className="max-w-xs truncate">
+                                {item.observacoes || "-"}
+                              </TableCell>
                             </>
                           )}
                           {tipoImportacao === "motorista" && (
@@ -2132,23 +2509,31 @@ const CadastrosAuxiliares = () => {
                               <TableCell>{item.nome}</TableCell>
                               <TableCell>{item.matricula}</TableCell>
                               <TableCell>{item.contato}</TableCell>
+                              <TableCell className="max-w-xs truncate">
+                                {item.cnh || "-"}
+                              </TableCell>
+                              <TableCell>
+                                {item.dataExpiracaoCnh
+                                  ? new Date(
+                                      item.dataExpiracaoCnh
+                                    ).toLocaleDateString("pt-BR")
+                                  : "-"}
+                              </TableCell>
                             </>
                           )}
                           {(tipoImportacao === "operacao" ||
                             tipoImportacao === "centroCusto") && (
                             <>
                               <TableCell className="font-medium">
-                                {item.codigo}
+                                {item.descricao}
                               </TableCell>
-                              <TableCell>{item.descricao}</TableCell>
                             </>
                           )}
                           {tipoImportacao === "responsavel" && (
                             <>
                               <TableCell className="font-medium">
-                                {item.codigo}
+                                {item.nome}
                               </TableCell>
-                              <TableCell>{item.nome}</TableCell>
                             </>
                           )}
                         </TableRow>
@@ -2378,6 +2763,21 @@ const CadastrosAuxiliares = () => {
               />
             </div>
             <div>
+              <Label htmlFor="cam-observacoes">Observações</Label>
+              <Textarea
+                id="cam-observacoes"
+                value={caminhaoForm.observacoes}
+                onChange={(e) =>
+                  setCaminhaoForm({
+                    ...caminhaoForm,
+                    observacoes: e.target.value,
+                  })
+                }
+                placeholder="Digite observações sobre o caminhão (opcional)"
+                rows={3}
+              />
+            </div>
+            <div>
               <Label htmlFor="cam-status">Status</Label>
               <Select
                 value={caminhaoForm.status}
@@ -2466,6 +2866,37 @@ const CadastrosAuxiliares = () => {
               />
             </div>
             <div>
+              <Label htmlFor="mot-cnh">CNH (opcional)</Label>
+              <Input
+                id="mot-cnh"
+                value={motoristaForm.cnh}
+                onChange={(e) =>
+                  setMotoristaForm({
+                    ...motoristaForm,
+                    cnh: e.target.value,
+                  })
+                }
+                placeholder="Digite o número da CNH"
+              />
+            </div>
+            <div>
+              <Label htmlFor="mot-data-expiracao">
+                Data de Expiração da CNH (opcional)
+              </Label>
+              <Input
+                id="mot-data-expiracao"
+                type="date"
+                value={motoristaForm.dataExpiracaoCnh}
+                onChange={(e) =>
+                  setMotoristaForm({
+                    ...motoristaForm,
+                    dataExpiracaoCnh: e.target.value,
+                  })
+                }
+                min={new Date().toISOString().split("T")[0]}
+              />
+            </div>
+            <div>
               <Label htmlFor="mot-status">Status</Label>
               <Select
                 value={motoristaForm.status}
@@ -2505,16 +2936,6 @@ const CadastrosAuxiliares = () => {
             <DialogDescription>Preencha os dados da operação</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="op-codigo">Código</Label>
-              <Input
-                id="op-codigo"
-                value={operacaoForm.codigo}
-                onChange={(e) =>
-                  setOperacaoForm({ ...operacaoForm, codigo: e.target.value })
-                }
-              />
-            </div>
             <div>
               <Label htmlFor="op-descricao">Descrição</Label>
               <Input
@@ -2576,19 +2997,6 @@ const CadastrosAuxiliares = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="cc-codigo">Código</Label>
-              <Input
-                id="cc-codigo"
-                value={centroCustoForm.codigo}
-                onChange={(e) =>
-                  setCentroCustoForm({
-                    ...centroCustoForm,
-                    codigo: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div>
               <Label htmlFor="cc-descricao">Descrição</Label>
               <Input
                 id="cc-descricao"
@@ -2631,6 +3039,286 @@ const CadastrosAuxiliares = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog Detalhes Motorista */}
+      <Dialog
+        open={showMotoristaDetalhes}
+        onOpenChange={setShowMotoristaDetalhes}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Motorista</DialogTitle>
+            <DialogDescription>
+              Informações completas do motorista
+            </DialogDescription>
+          </DialogHeader>
+          {motoristaDetalhes && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Código
+                  </Label>
+                  <p className="text-lg font-semibold">
+                    {motoristaDetalhes.codigo}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Matrícula
+                  </Label>
+                  <p className="text-lg font-semibold">
+                    {motoristaDetalhes.matricula}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Nome
+                  </Label>
+                  <p className="text-lg font-semibold">
+                    {motoristaDetalhes.nome}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Contato
+                  </Label>
+                  <p className="text-lg font-semibold">
+                    {motoristaDetalhes.contato}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Status
+                  </Label>
+                  <div className="mt-1">
+                    <Badge
+                      variant={
+                        motoristaDetalhes.status === "Ativo"
+                          ? "default"
+                          : "secondary"
+                      }
+                    >
+                      {motoristaDetalhes.status}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção CNH */}
+              {(motoristaDetalhes.cnh ||
+                motoristaDetalhes.dataExpiracaoCnh) && (
+                <div className="space-y-4">
+                  <div className="border-t pt-4">
+                    <h3 className="text-lg font-semibold mb-4">
+                      Informações da CNH
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {motoristaDetalhes.cnh && (
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">
+                            Número da CNH
+                          </Label>
+                          <p className="text-lg font-semibold">
+                            {motoristaDetalhes.cnh}
+                          </p>
+                        </div>
+                      )}
+                      {motoristaDetalhes.dataExpiracaoCnh && (
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">
+                            Data de Expiração
+                          </Label>
+                          <p className="text-lg font-semibold">
+                            {new Date(
+                              motoristaDetalhes.dataExpiracaoCnh
+                            ).toLocaleDateString("pt-BR")}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Alertas de CNH */}
+                  {motoristaDetalhes.dataExpiracaoCnh && (
+                    <div className="space-y-2">
+                      {isCnhExpirada(motoristaDetalhes.dataExpiracaoCnh) && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <AlertTriangle className="h-5 w-5 text-red-600" />
+                          <div>
+                            <p className="text-sm font-medium text-red-800">
+                              CNH Expirada
+                            </p>
+                            <p className="text-xs text-red-600">
+                              A CNH expirou em{" "}
+                              {new Date(
+                                motoristaDetalhes.dataExpiracaoCnh
+                              ).toLocaleDateString("pt-BR")}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {!isCnhExpirada(motoristaDetalhes.dataExpiracaoCnh) &&
+                        isCnhExpirandoEmBreve(
+                          motoristaDetalhes.dataExpiracaoCnh
+                        ) && (
+                          <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                            <div>
+                              <p className="text-sm font-medium text-yellow-800">
+                                CNH Expirando em Breve
+                              </p>
+                              <p className="text-xs text-yellow-600">
+                                A CNH expira em{" "}
+                                {new Date(
+                                  motoristaDetalhes.dataExpiracaoCnh
+                                ).toLocaleDateString("pt-BR")}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowMotoristaDetalhes(false)}
+            >
+              Fechar
+            </Button>
+            <Button
+              onClick={() => {
+                setShowMotoristaDetalhes(false);
+                if (motoristaDetalhes) {
+                  handleEditMotorista(motoristaDetalhes);
+                }
+              }}
+            >
+              Editar Motorista
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Detalhes Caminhão */}
+      <Dialog
+        open={showCaminhaoDetalhes}
+        onOpenChange={setShowCaminhaoDetalhes}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Caminhão</DialogTitle>
+            <DialogDescription>
+              Informações completas do veículo
+            </DialogDescription>
+          </DialogHeader>
+          {caminhaoDetalhes && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Placa
+                  </Label>
+                  <p className="text-lg font-semibold">
+                    {caminhaoDetalhes.placa}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Patrimônio
+                  </Label>
+                  <p className="text-lg font-semibold">
+                    {caminhaoDetalhes.patrimonio}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Volume (L)
+                  </Label>
+                  <p className="text-lg font-semibold">
+                    {caminhaoDetalhes.volume}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Ano
+                  </Label>
+                  <p className="text-lg font-semibold">
+                    {caminhaoDetalhes.ano}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Modelo
+                  </Label>
+                  <p className="text-lg font-semibold">
+                    {caminhaoDetalhes.modelo}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Marca
+                  </Label>
+                  <p className="text-lg font-semibold">
+                    {caminhaoDetalhes.marca}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Status
+                  </Label>
+                  <div className="mt-1">
+                    <Badge
+                      variant={
+                        caminhaoDetalhes.status === "Ativo"
+                          ? "default"
+                          : "secondary"
+                      }
+                    >
+                      {caminhaoDetalhes.status}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {caminhaoDetalhes.observacoes && (
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Observações
+                  </Label>
+                  <div className="mt-2 p-4 bg-muted rounded-lg">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                      {caminhaoDetalhes.observacoes}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowCaminhaoDetalhes(false)}
+            >
+              Fechar
+            </Button>
+            <Button
+              onClick={() => {
+                setShowCaminhaoDetalhes(false);
+                if (caminhaoDetalhes) {
+                  handleEditCaminhao(caminhaoDetalhes);
+                }
+              }}
+            >
+              Editar Caminhão
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Dialog Responsável */}
       <Dialog
         open={showResponsavelDialog}
@@ -2646,19 +3334,6 @@ const CadastrosAuxiliares = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="resp-codigo">Código</Label>
-              <Input
-                id="resp-codigo"
-                value={responsavelForm.codigo}
-                onChange={(e) =>
-                  setResponsavelForm({
-                    ...responsavelForm,
-                    codigo: e.target.value,
-                  })
-                }
-              />
-            </div>
             <div>
               <Label htmlFor="resp-nome">Nome</Label>
               <Input
