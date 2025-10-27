@@ -1652,27 +1652,7 @@ const GerenciamentoFazendas = () => {
                 {/* Formulário para adicionar talhão */}
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <h4 className="font-medium mb-3">Adicionar Talhão</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="tal-tipo">Tipo</Label>
-                      <Select
-                        value={talhaoForm.tipo}
-                        onValueChange={(value) =>
-                          setTalhaoForm({
-                            ...talhaoForm,
-                            tipo: value as "Talhão" | "Carreador",
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Talhão">Talhão</SelectItem>
-                          <SelectItem value="Carreador">Carreador</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="tal-area">Área (ha)</Label>
                       <Input
@@ -1689,40 +1669,35 @@ const GerenciamentoFazendas = () => {
                         placeholder="Ex: 100.5"
                       />
                     </div>
-                  </div>
-
-                  {talhaoForm.tipo === "Talhão" && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div>
-                        <Label htmlFor="tal-latitude">Latitude</Label>
-                        <Input
-                          id="tal-latitude"
-                          value={talhaoForm.latitude}
-                          onChange={(e) =>
-                            setTalhaoForm({
-                              ...talhaoForm,
-                              latitude: e.target.value,
-                            })
-                          }
-                          placeholder="Ex: -18.9200"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="tal-longitude">Longitude</Label>
-                        <Input
-                          id="tal-longitude"
-                          value={talhaoForm.longitude}
-                          onChange={(e) =>
-                            setTalhaoForm({
-                              ...talhaoForm,
-                              longitude: e.target.value,
-                            })
-                          }
-                          placeholder="Ex: -48.2800"
-                        />
-                      </div>
+                    <div>
+                      <Label htmlFor="tal-latitude">Latitude</Label>
+                      <Input
+                        id="tal-latitude"
+                        value={talhaoForm.latitude}
+                        onChange={(e) =>
+                          setTalhaoForm({
+                            ...talhaoForm,
+                            latitude: e.target.value,
+                          })
+                        }
+                        placeholder="Ex: -18.9200"
+                      />
                     </div>
-                  )}
+                    <div>
+                      <Label htmlFor="tal-longitude">Longitude</Label>
+                      <Input
+                        id="tal-longitude"
+                        value={talhaoForm.longitude}
+                        onChange={(e) =>
+                          setTalhaoForm({
+                            ...talhaoForm,
+                            longitude: e.target.value,
+                          })
+                        }
+                        placeholder="Ex: -48.2800"
+                      />
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div>
@@ -1762,14 +1737,24 @@ const GerenciamentoFazendas = () => {
                   </div>
 
                   <div className="flex gap-2 mt-4">
-                    {editingTalhao ? (
+                    {editingTalhao && editingTalhao.tipo === "Talhão" ? (
                       <>
                         <Button onClick={handleUpdateTalhao}>
                           Atualizar Talhão
                         </Button>
                         <Button
                           variant="outline"
-                          onClick={() => setEditingTalhao(null)}
+                          onClick={() => {
+                            setEditingTalhao(null);
+                            setTalhaoForm({
+                              latitude: "",
+                              longitude: "",
+                              area: "",
+                              tipo: "Talhão",
+                              status: "Ativo",
+                              observacoes: "",
+                            });
+                          }}
                         >
                           Cancelar
                         </Button>
@@ -1784,59 +1769,125 @@ const GerenciamentoFazendas = () => {
                 </div>
 
                 {/* Lista de talhões */}
-                <div>
-                  <h4 className="font-medium mb-3">
-                    Talhões Cadastrados ({fazendaForm.talhoes.length})
-                  </h4>
-                  {fazendaForm.talhoes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Nenhum talhão cadastrado
-                    </p>
-                  ) : (
+                {fazendaForm.talhoes.filter((t) => t.tipo === "Talhão").length >
+                  0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Talhões Cadastrados</h4>
                     <div className="space-y-2">
-                      {fazendaForm.talhoes.map((talhao) => (
+                      {fazendaForm.talhoes
+                        .filter((t) => t.tipo === "Talhão")
+                        .map((talhao) => (
+                          <div
+                            key={talhao.id}
+                            className="flex items-center justify-between p-3 bg-white border rounded-lg"
+                          >
+                            <div>
+                              <p className="font-medium">
+                                Área: {talhao.area} ha
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {talhao.latitude && talhao.longitude && (
+                                  <span>
+                                    Lat: {talhao.latitude}, Long:{" "}
+                                    {talhao.longitude}
+                                  </span>
+                                )}
+                                {talhao.observacoes && (
+                                  <span className="ml-2">
+                                    • {talhao.observacoes}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={
+                                  talhao.status === "Ativo"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className="text-xs"
+                              >
+                                {talhao.status}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditTalhao(talhao)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteTalhao(talhao.id)}
+                                className="hover:bg-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Carreador da Fazenda */}
+            <Card className="border-orange-200">
+              <CardHeader className="bg-orange-50">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  Carreador (Último Item Obrigatório)
+                </CardTitle>
+                <CardDescription>
+                  Apenas um carreador por fazenda. Não requer latitude e longitude.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-4">
+                {fazendaForm.talhoes.find((t) => t.tipo === "Carreador") ? (
+                  // Exibir carreador existente
+                  <div className="space-y-2">
+                    {fazendaForm.talhoes
+                      .filter((t) => t.tipo === "Carreador")
+                      .map((carreador) => (
                         <div
-                          key={talhao.id}
-                          className="flex items-center justify-between p-3 border rounded-lg"
+                          key={carreador.id}
+                          className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg"
                         >
-                          <div className="flex items-center gap-3">
-                            <Badge variant="outline">{talhao.tipo}</Badge>
-                            <span className="text-sm font-medium">
-                              {talhao.area} ha
-                            </span>
-                            {talhao.tipo === "Talhão" && (
-                              <span className="text-xs text-muted-foreground">
-                                {talhao.latitude}, {talhao.longitude}
-                              </span>
-                            )}
-                            {talhao.observacoes && (
-                              <span className="text-xs text-muted-foreground">
-                                {talhao.observacoes}
-                              </span>
+                          <div>
+                            <p className="font-medium">
+                              Área: {carreador.area} ha
+                            </p>
+                            {carreador.observacoes && (
+                              <p className="text-sm text-muted-foreground">
+                                {carreador.observacoes}
+                              </p>
                             )}
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge
                               variant={
-                                talhao.status === "Ativo"
+                                carreador.status === "Ativo"
                                   ? "default"
                                   : "secondary"
                               }
                               className="text-xs"
                             >
-                              {talhao.status}
+                              {carreador.status}
                             </Badge>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleEditTalhao(talhao)}
+                              onClick={() => handleEditTalhao(carreador)}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDeleteTalhao(talhao.id)}
+                              onClick={() => handleDeleteTalhao(carreador.id)}
                               className="hover:bg-destructive"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -1844,23 +1895,158 @@ const GerenciamentoFazendas = () => {
                           </div>
                         </div>
                       ))}
+                  </div>
+                ) : (
+                  // Formulário para adicionar carreador
+                  <div className="border rounded-lg p-4 bg-orange-50/50">
+                    <h4 className="font-medium mb-3">
+                      {editingTalhao && editingTalhao.tipo === "Carreador"
+                        ? "Editar Carreador"
+                        : "Adicionar Carreador"}
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="carr-area">Área (ha) *</Label>
+                        <Input
+                          id="carr-area"
+                          type="number"
+                          step="0.01"
+                          value={
+                            editingTalhao?.tipo === "Carreador"
+                              ? talhaoForm.area
+                              : talhaoForm.tipo === "Carreador"
+                              ? talhaoForm.area
+                              : ""
+                          }
+                          onChange={(e) =>
+                            setTalhaoForm({
+                              ...talhaoForm,
+                              area: e.target.value,
+                              tipo: "Carreador",
+                            })
+                          }
+                          placeholder="Ex: 100.5"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="carr-status">Status</Label>
+                        <Select
+                          value={
+                            editingTalhao?.tipo === "Carreador"
+                              ? talhaoForm.status
+                              : talhaoForm.tipo === "Carreador"
+                              ? talhaoForm.status
+                              : "Ativo"
+                          }
+                          onValueChange={(value) =>
+                            setTalhaoForm({
+                              ...talhaoForm,
+                              status: value as "Ativo" | "Inativo",
+                              tipo: "Carreador",
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Ativo">Ativo</SelectItem>
+                            <SelectItem value="Inativo">Inativo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Resumo de áreas */}
+                    <div className="mt-4">
+                      <Label htmlFor="carr-observacoes">Observações</Label>
+                      <Input
+                        id="carr-observacoes"
+                        value={
+                          editingTalhao?.tipo === "Carreador"
+                            ? talhaoForm.observacoes
+                            : talhaoForm.tipo === "Carreador"
+                            ? talhaoForm.observacoes
+                            : ""
+                        }
+                        onChange={(e) =>
+                          setTalhaoForm({
+                            ...talhaoForm,
+                            observacoes: e.target.value,
+                            tipo: "Carreador",
+                          })
+                        }
+                        placeholder="Ex: Área de deslocamento interno"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 mt-4">
+                      {editingTalhao && editingTalhao.tipo === "Carreador" ? (
+                        <>
+                          <Button onClick={handleUpdateTalhao}>
+                            Atualizar Carreador
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setEditingTalhao(null);
+                              setTalhaoForm({
+                                latitude: "",
+                                longitude: "",
+                                area: "",
+                                tipo: "Talhão",
+                                status: "Ativo",
+                                observacoes: "",
+                              });
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          onClick={() => {
+                            setTalhaoForm({
+                              ...talhaoForm,
+                              tipo: "Carreador",
+                            });
+                            handleAddTalhao();
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Adicionar Carreador
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Resumo de áreas */}
+            <Card>
+              <CardContent className="pt-6">
                 <div className="flex md:flex-row flex-col md:justify-around gap-4 p-4 bg-blue-50 rounded-lg">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
                       Total de Talhões
                     </p>
                     <p className="text-lg font-semibold">
-                      {fazendaForm.talhoes.length}
+                      {fazendaForm.talhoes.filter((t) => t.tipo === "Talhão").length}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
-                      Soma das Áreas (ha)
+                      Carreador
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {fazendaForm.talhoes.find((t) => t.tipo === "Carreador")
+                        ? "✓ Cadastrado"
+                        : "Não cadastrado"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Área Total (ha)
                     </p>
                     <p className="text-lg font-semibold">
                       {calcularAreaTotalTalhoes(fazendaForm.talhoes).toFixed(2)}
