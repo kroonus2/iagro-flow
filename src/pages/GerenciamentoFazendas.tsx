@@ -1721,20 +1721,6 @@ const GerenciamentoFazendas = () => {
                           placeholder="Ex: -48.2800"
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="tal-longitude">Longitude</Label>
-                        <Input
-                          id="tal-longitude"
-                          value={talhaoForm.longitude}
-                          onChange={(e) =>
-                            setTalhaoForm({
-                              ...talhaoForm,
-                              longitude: e.target.value,
-                            })
-                          }
-                          placeholder="Ex: -48.2800"
-                        />
-                      </div>
                     </div>
                   )}
 
