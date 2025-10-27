@@ -484,16 +484,61 @@ const GerenciamentoFazendas = () => {
       return;
     }
 
+    // Validar carreador
+    if (talhaoForm.tipo === "Carreador") {
+      // Verificar se já existe um carreador
+      const temCarreador = fazendaForm.talhoes.some((t) => t.tipo === "Carreador");
+      if (temCarreador) {
+        toast({
+          title: "Erro",
+          description: "Já existe um carreador cadastrado. Apenas um carreador é permitido por fazenda.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Área do carreador é obrigatória
+      if (!talhaoForm.area) {
+        toast({
+          title: "Erro",
+          description: "A área do carreador é obrigatória",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     const newTalhao: Talhao = {
       id: Date.now().toString(),
       ...talhaoForm,
       tipo: talhaoForm.tipo as "Talhão" | "Carreador",
       status: talhaoForm.status as "Ativo" | "Inativo",
+      // Carreador não deve ter latitude e longitude
+      latitude: talhaoForm.tipo === "Carreador" ? undefined : talhaoForm.latitude,
+      longitude: talhaoForm.tipo === "Carreador" ? undefined : talhaoForm.longitude,
     };
+
+    // Separar talhões e carreadores
+    const talhoes = fazendaForm.talhoes.filter((t) => t.tipo === "Talhão");
+    const carreador = fazendaForm.talhoes.find((t) => t.tipo === "Carreador");
+
+    let novosTalhoes: Talhao[] = [];
+    
+    if (newTalhao.tipo === "Carreador") {
+      // Carreador sempre vai ao final
+      novosTalhoes = [...talhoes, newTalhao];
+    } else {
+      // Adicionar talhão antes do carreador (se existir)
+      if (carreador) {
+        novosTalhoes = [...talhoes, newTalhao, carreador];
+      } else {
+        novosTalhoes = [...talhoes, newTalhao];
+      }
+    }
 
     setFazendaForm({
       ...fazendaForm,
-      talhoes: [...fazendaForm.talhoes, newTalhao],
+      talhoes: novosTalhoes,
     });
 
     // Limpar formulário
@@ -506,7 +551,11 @@ const GerenciamentoFazendas = () => {
       observacoes: "",
     });
 
-    toast({ title: "Talhão adicionado com sucesso!" });
+    toast({ 
+      title: newTalhao.tipo === "Carreador" 
+        ? "Carreador adicionado como último item!" 
+        : "Talhão adicionado com sucesso!" 
+    });
   };
 
   const handleEditTalhao = (talhao: Talhao) => {
@@ -524,20 +573,55 @@ const GerenciamentoFazendas = () => {
   const handleUpdateTalhao = () => {
     if (!editingTalhao) return;
 
-    const updatedTalhoes = fazendaForm.talhoes.map((tal) =>
-      tal.id === editingTalhao.id
-        ? {
-            ...tal,
-            ...talhaoForm,
-            tipo: talhaoForm.tipo as "Talhão" | "Carreador",
-            status: talhaoForm.status as "Ativo" | "Inativo",
-          }
-        : tal
-    );
+    // Validar se está tentando mudar para carreador quando já existe um
+    if (talhaoForm.tipo === "Carreador" && editingTalhao.tipo !== "Carreador") {
+      const temCarreador = fazendaForm.talhoes.some(
+        (t) => t.tipo === "Carreador" && t.id !== editingTalhao.id
+      );
+      if (temCarreador) {
+        toast({
+          title: "Erro",
+          description: "Já existe um carreador cadastrado. Apenas um carreador é permitido por fazenda.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const talhaoAtualizado: Talhao = {
+      ...editingTalhao,
+      ...talhaoForm,
+      tipo: talhaoForm.tipo as "Talhão" | "Carreador",
+      status: talhaoForm.status as "Ativo" | "Inativo",
+      // Carreador não deve ter latitude e longitude
+      latitude: talhaoForm.tipo === "Carreador" ? undefined : talhaoForm.latitude,
+      longitude: talhaoForm.tipo === "Carreador" ? undefined : talhaoForm.longitude,
+    };
+
+    // Remover o talhão que está sendo editado
+    const outrosTalhoes = fazendaForm.talhoes.filter((t) => t.id !== editingTalhao.id);
+    
+    // Separar talhões e carreadores
+    const talhoes = outrosTalhoes.filter((t) => t.tipo === "Talhão");
+    const carreador = outrosTalhoes.find((t) => t.tipo === "Carreador");
+
+    let novosTalhoes: Talhao[] = [];
+    
+    if (talhaoAtualizado.tipo === "Carreador") {
+      // Carreador sempre vai ao final
+      novosTalhoes = [...talhoes, talhaoAtualizado];
+    } else {
+      // Adicionar talhão antes do carreador (se existir)
+      if (carreador) {
+        novosTalhoes = [...talhoes, talhaoAtualizado, carreador];
+      } else {
+        novosTalhoes = [...talhoes, talhaoAtualizado];
+      }
+    }
 
     setFazendaForm({
       ...fazendaForm,
-      talhoes: updatedTalhoes,
+      talhoes: novosTalhoes,
     });
 
     setEditingTalhao(null);
@@ -554,11 +638,16 @@ const GerenciamentoFazendas = () => {
   };
 
   const handleDeleteTalhao = (talhaoId: string) => {
+    const talhao = fazendaForm.talhoes.find((t) => t.id === talhaoId);
     setFazendaForm({
       ...fazendaForm,
       talhoes: fazendaForm.talhoes.filter((tal) => tal.id !== talhaoId),
     });
-    toast({ title: "Talhão removido com sucesso!" });
+    toast({ 
+      title: talhao?.tipo === "Carreador" 
+        ? "Carreador removido com sucesso!" 
+        : "Talhão removido com sucesso!" 
+    });
   };
 
   // Função para calcular área total dos talhões de uma fazenda
@@ -1616,6 +1705,20 @@ const GerenciamentoFazendas = () => {
                             })
                           }
                           placeholder="Ex: -18.9200"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="tal-longitude">Longitude</Label>
+                        <Input
+                          id="tal-longitude"
+                          value={talhaoForm.longitude}
+                          onChange={(e) =>
+                            setTalhaoForm({
+                              ...talhaoForm,
+                              longitude: e.target.value,
+                            })
+                          }
+                          placeholder="Ex: -48.2800"
                         />
                       </div>
                       <div>
