@@ -457,6 +457,32 @@ const GerenciamentoFazendas = () => {
       status: fazenda.status,
       talhoes: fazenda.talhoes,
     });
+
+    // Preencher o formulário do carreador se existir
+    const carreador = fazenda.talhoes.find((t) => t.tipo === "Carreador");
+    if (carreador) {
+      setEditingTalhao(carreador);
+      setTalhaoForm({
+        latitude: "",
+        longitude: "",
+        area: carreador.area,
+        status: carreador.status,
+        observacoes: carreador.observacoes || "",
+      });
+    } else {
+      setEditingTalhao(null);
+      setTalhaoForm({
+        latitude: "",
+        longitude: "",
+        area: "",
+        status: "Ativo",
+        observacoes: "",
+      });
+    }
+
+    // Reset isAddingCarreador para false quando abrir para edição
+    setIsAddingCarreador(false);
+
     setShowFazendaDialog(true);
   };
 
@@ -1615,98 +1641,70 @@ const GerenciamentoFazendas = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                {/* Formulário para adicionar carreador */}
+                {/* Formulário para carreador */}
                 <div className="border rounded-lg p-4 bg-gray-50">
-                  <h4 className="font-medium mb-3">
-                    {editingTalhao && editingTalhao.tipo === "Carreador"
-                      ? "Editar Carreador"
-                      : "Cadastrar Carreador"}
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                    <div>
-                      <Label htmlFor="carr-area">Área (ha) *</Label>
-                      <Input
-                        id="carr-area"
-                        type="number"
-                        step="0.01"
-                        value={talhaoForm.area}
-                        onChange={(e) =>
-                          setTalhaoForm({
-                            ...talhaoForm,
-                            area: e.target.value,
-                          })
-                        }
-                        placeholder="Ex: 100.5"
-                      />
-                    </div>
-                  </div>
+                  <h4 className="font-medium mb-3">Carreador</h4>
+                  <div>
+                    <Label htmlFor="carr-area">Área (ha)</Label>
+                    <Input
+                      id="carr-area"
+                      type="number"
+                      step="0.01"
+                      value={talhaoForm.area}
+                      onChange={(e) => {
+                        const carreadorExistente = fazendaForm.talhoes.find(
+                          (t) => t.tipo === "Carreador"
+                        );
+                        const newArea = e.target.value;
 
-                  <div className="flex gap-2 mt-4">
-                    <Button
-                      onClick={() => {
-                        if (
-                          editingTalhao &&
-                          editingTalhao.tipo === "Carreador"
-                        ) {
-                          setIsAddingCarreador(true);
-                          handleUpdateTalhao();
-                        } else {
-                          setIsAddingCarreador(true);
-                          handleAddTalhao();
+                        setTalhaoForm({
+                          ...talhaoForm,
+                          area: newArea,
+                        });
+
+                        // Atualizar ou adicionar carreador imediatamente
+                        if (carreadorExistente) {
+                          // Atualizar carreador existente
+                          const outrosTalhoes = fazendaForm.talhoes.filter(
+                            (t) => t.tipo === "Talhão"
+                          );
+
+                          if (newArea && parseFloat(newArea) > 0) {
+                            const carreadorAtualizado: Talhao = {
+                              ...carreadorExistente,
+                              area: newArea,
+                            };
+
+                            setFazendaForm({
+                              ...fazendaForm,
+                              talhoes: [...outrosTalhoes, carreadorAtualizado],
+                            });
+                          } else {
+                            // Se o campo estiver vazio, remover o carreador
+                            setFazendaForm({
+                              ...fazendaForm,
+                              talhoes: outrosTalhoes,
+                            });
+                          }
+                        } else if (newArea && parseFloat(newArea) > 0) {
+                          // Adicionar novo carreador
+                          const novoCarreador: Talhao = {
+                            id: Date.now().toString(),
+                            area: newArea,
+                            tipo: "Carreador",
+                            status: "Ativo",
+                          };
+
+                          setFazendaForm({
+                            ...fazendaForm,
+                            talhoes: [...fazendaForm.talhoes, novoCarreador],
+                          });
                         }
                       }}
-                      disabled={
-                        !talhaoForm.area || parseFloat(talhaoForm.area) <= 0
-                      }
-                    >
-                      {editingTalhao && editingTalhao.tipo === "Carreador"
-                        ? "Atualizar Carreador"
-                        : fazendaForm.talhoes.find(
-                            (t) => t.tipo === "Carreador"
-                          )
-                        ? "Substituir Carreador"
-                        : "Salvar Carreador"}
-                    </Button>
+                      placeholder="Ex: 100.5"
+                    />
                   </div>
                 </div>
-
-                {/* Exibir carreador existente */}
-                {fazendaForm.talhoes.find((t) => t.tipo === "Carreador") && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Carreador Cadastrado</h4>
-                    {fazendaForm.talhoes
-                      .filter((t) => t.tipo === "Carreador")
-                      .map((carreador) => (
-                        <div
-                          key={carreador.id}
-                          className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"
-                        >
-                          <div>
-                            <p className="font-medium">
-                              Área: {carreador.area} ha
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditTalhao(carreador)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteTalhao(carreador.id)}
-                              className="hover:bg-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
               </CardContent>
             </Card>
 
