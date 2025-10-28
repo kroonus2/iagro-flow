@@ -71,6 +71,12 @@ import {
   Map,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Interfaces
 interface Fazenda {
@@ -344,7 +350,6 @@ const GerenciamentoFazendas = () => {
   ]);
 
   const [showFazendaDialog, setShowFazendaDialog] = useState(false);
-  const [showMapDialog, setShowMapDialog] = useState(false);
   const [editingFazenda, setEditingFazenda] = useState<Fazenda | null>(null);
   const [fazendaForm, setFazendaForm] = useState({
     descricao: "",
@@ -363,10 +368,12 @@ const GerenciamentoFazendas = () => {
     latitude: "",
     longitude: "",
     area: "",
-    tipo: "Talhão" as "Talhão" | "Carreador",
     status: "Ativo" as "Ativo" | "Inativo",
     observacoes: "",
   });
+
+  // Estado para controle do tipo de área sendo adicionada
+  const [isAddingCarreador, setIsAddingCarreador] = useState(false);
 
   // Efeito para aplicar filtros
   useEffect(() => {
@@ -461,6 +468,8 @@ const GerenciamentoFazendas = () => {
   const handleCloseFazendaDialog = () => {
     setShowFazendaDialog(false);
     setEditingFazenda(null);
+    setEditingTalhao(null);
+    setIsAddingCarreador(false);
     setFazendaForm({
       descricao: "",
       municipio: "",
@@ -470,6 +479,13 @@ const GerenciamentoFazendas = () => {
       tamanho_total: "",
       status: "Ativo" as "Ativo" | "Inativo",
       talhoes: [],
+    });
+    setTalhaoForm({
+      latitude: "",
+      longitude: "",
+      area: "",
+      status: "Ativo" as "Ativo" | "Inativo",
+      observacoes: "",
     });
   };
 
@@ -484,29 +500,15 @@ const GerenciamentoFazendas = () => {
       return;
     }
 
-    // Validar carreador
-    if (talhaoForm.tipo === "Carreador") {
-      // Área do carreador é obrigatória
-      if (!talhaoForm.area) {
-        toast({
-          title: "Erro",
-          description: "A área do carreador é obrigatória",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
     const newTalhao: Talhao = {
       id: Date.now().toString(),
-      ...talhaoForm,
-      tipo: talhaoForm.tipo as "Talhão" | "Carreador",
+      area: talhaoForm.area,
+      tipo: isAddingCarreador ? "Carreador" : "Talhão",
       status: "Ativo" as "Ativo" | "Inativo",
+      observacoes: talhaoForm.observacoes,
       // Carreador não deve ter latitude e longitude
-      latitude:
-        talhaoForm.tipo === "Carreador" ? undefined : talhaoForm.latitude,
-      longitude:
-        talhaoForm.tipo === "Carreador" ? undefined : talhaoForm.longitude,
+      latitude: isAddingCarreador ? undefined : talhaoForm.latitude,
+      longitude: isAddingCarreador ? undefined : talhaoForm.longitude,
     };
 
     // Separar talhões e carreadores
@@ -533,24 +535,13 @@ const GerenciamentoFazendas = () => {
     });
 
     // Limpar formulário
-    if (newTalhao.tipo === "Carreador") {
-      // Se é carreador, limpar só a área e manter tipo
-      setTalhaoForm({
-        ...talhaoForm,
-        area: "",
-        tipo: "Carreador" as "Talhão" | "Carreador",
-      });
-    } else {
-      // Se é talhão, limpar tudo
-      setTalhaoForm({
-        latitude: "",
-        longitude: "",
-        area: "",
-        tipo: "Talhão" as "Talhão" | "Carreador",
-        status: "Ativo" as "Ativo" | "Inativo",
-        observacoes: "",
-      });
-    }
+    setTalhaoForm({
+      latitude: "",
+      longitude: "",
+      area: "",
+      status: "Ativo" as "Ativo" | "Inativo",
+      observacoes: "",
+    });
 
     const carreadorExistia = fazendaForm.talhoes.some(
       (t) => t.tipo === "Carreador"
@@ -561,17 +552,17 @@ const GerenciamentoFazendas = () => {
           ? carreadorExistia
             ? "Carreador substituído!"
             : "Carreador adicionado!"
-          : "Talhão adicionado com sucesso!",
+          : "Área adicionada com sucesso!",
     });
   };
 
   const handleEditTalhao = (talhao: Talhao) => {
     setEditingTalhao(talhao);
+    setIsAddingCarreador(talhao.tipo === "Carreador");
     setTalhaoForm({
       latitude: talhao.latitude || "",
       longitude: talhao.longitude || "",
       area: talhao.area,
-      tipo: talhao.tipo,
       status: talhao.status,
       observacoes: talhao.observacoes || "",
     });
@@ -581,7 +572,7 @@ const GerenciamentoFazendas = () => {
     if (!editingTalhao) return;
 
     // Validar se está tentando mudar para carreador quando já existe um
-    if (talhaoForm.tipo === "Carreador" && editingTalhao.tipo !== "Carreador") {
+    if (isAddingCarreador && editingTalhao.tipo !== "Carreador") {
       const temCarreador = fazendaForm.talhoes.some(
         (t) => t.tipo === "Carreador" && t.id !== editingTalhao.id
       );
@@ -598,14 +589,13 @@ const GerenciamentoFazendas = () => {
 
     const talhaoAtualizado: Talhao = {
       ...editingTalhao,
-      ...talhaoForm,
-      tipo: talhaoForm.tipo as "Talhão" | "Carreador",
+      area: talhaoForm.area,
+      tipo: isAddingCarreador ? "Carreador" : "Talhão",
       status: "Ativo" as "Ativo" | "Inativo",
+      observacoes: talhaoForm.observacoes,
       // Carreador não deve ter latitude e longitude
-      latitude:
-        talhaoForm.tipo === "Carreador" ? undefined : talhaoForm.latitude,
-      longitude:
-        talhaoForm.tipo === "Carreador" ? undefined : talhaoForm.longitude,
+      latitude: isAddingCarreador ? undefined : talhaoForm.latitude,
+      longitude: isAddingCarreador ? undefined : talhaoForm.longitude,
     };
 
     // Remover o talhão que está sendo editado
@@ -637,16 +627,16 @@ const GerenciamentoFazendas = () => {
     });
 
     setEditingTalhao(null);
+    setIsAddingCarreador(false);
     setTalhaoForm({
       latitude: "",
       longitude: "",
       area: "",
-      tipo: "Talhão" as "Talhão" | "Carreador",
       status: "Ativo" as "Ativo" | "Inativo",
       observacoes: "",
     });
 
-    toast({ title: "Talhão atualizado com sucesso!" });
+    toast({ title: "Área atualizada com sucesso!" });
   };
 
   const handleDeleteTalhao = (talhaoId: string) => {
@@ -793,71 +783,6 @@ const GerenciamentoFazendas = () => {
 
   const handleImportCSV = () => {
     setDialogImportAberto(true);
-  };
-
-  // Função para gerar mapa
-  const handleGenerateMap = () => {
-    setShowMapDialog(true);
-  };
-
-  // Função para gerar URL do Google Maps com múltiplos pontos
-  const generateMapUrl = () => {
-    const fazendasComCoordenadas = fazendas.filter(
-      (f) =>
-        f.latitude &&
-        f.longitude &&
-        parseFloat(f.latitude) !== 0 &&
-        parseFloat(f.longitude) !== 0
-    );
-
-    if (fazendasComCoordenadas.length === 0) {
-      toast({
-        title: "Aviso",
-        description: "Nenhuma fazenda com coordenadas válidas encontrada.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Se há apenas uma fazenda, mostrar ela
-    if (fazendasComCoordenadas.length === 1) {
-      const fazenda = fazendasComCoordenadas[0];
-      return `https://www.google.com/maps?q=${fazenda.latitude},${fazenda.longitude}`;
-    }
-
-    // Para múltiplas fazendas, criar uma URL com todos os pontos
-    const coordinates = fazendasComCoordenadas
-      .map((f) => `${f.latitude},${f.longitude}`)
-      .join("/");
-
-    return `https://www.google.com/maps/dir/${coordinates}`;
-  };
-
-  // Função para gerar dados do mapa para visualização
-  const getMapData = () => {
-    return fazendas
-      .map((fazenda) => ({
-        id: fazenda.id,
-        nome: fazenda.descricao,
-        municipio: fazenda.municipio,
-        estado: fazenda.estado,
-        latitude: parseFloat(fazenda.latitude) || 0,
-        longitude: parseFloat(fazenda.longitude) || 0,
-        tamanho_total: parseFloat(fazenda.tamanho_total) || 0,
-        status: fazenda.status,
-        talhoes: fazenda.talhoes
-          .map((talhao) => ({
-            id: talhao.id,
-            tipo: talhao.tipo,
-            area: parseFloat(talhao.area) || 0,
-            latitude: talhao.latitude ? parseFloat(talhao.latitude) : null,
-            longitude: talhao.longitude ? parseFloat(talhao.longitude) : null,
-            status: talhao.status,
-            observacoes: talhao.observacoes,
-          }))
-          .filter((t) => t.latitude !== null && t.longitude !== null),
-      }))
-      .filter((f) => f.latitude !== 0 && f.longitude !== 0);
   };
 
   // Função para alternar expansão de fazenda
@@ -1062,11 +987,6 @@ const GerenciamentoFazendas = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <Button variant="outline" onClick={handleGenerateMap}>
-            <Map className="h-4 w-4 mr-2" />
-            Gerar Mapa
-          </Button>
         </div>
         <Button onClick={() => setShowFazendaDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -1164,6 +1084,65 @@ const GerenciamentoFazendas = () => {
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
+                            {fazenda.talhoes.some(
+                              (t) => t.latitude && t.longitude
+                            ) && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const talhoesComCoordenadas =
+                                          fazenda.talhoes.filter(
+                                            (t) =>
+                                              t.latitude &&
+                                              t.longitude &&
+                                              t.tipo === "Talhão"
+                                          );
+
+                                        if (
+                                          talhoesComCoordenadas.length === 0
+                                        ) {
+                                          toast({
+                                            title: "Aviso",
+                                            description:
+                                              "Esta fazenda não possui áreas com coordenadas.",
+                                            variant: "destructive",
+                                          });
+                                          return;
+                                        }
+
+                                        let url = "";
+                                        if (
+                                          talhoesComCoordenadas.length === 1
+                                        ) {
+                                          const talhao =
+                                            talhoesComCoordenadas[0];
+                                          url = `https://www.google.com/maps?q=${talhao.latitude},${talhao.longitude}`;
+                                        } else {
+                                          const coordinates =
+                                            talhoesComCoordenadas
+                                              .map(
+                                                (t) =>
+                                                  `${t.latitude},${t.longitude}`
+                                              )
+                                              .join("/");
+                                          url = `https://www.google.com/maps/dir/${coordinates}`;
+                                        }
+                                        window.open(url, "_blank");
+                                      }}
+                                    >
+                                      <MapPin className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Ver Mapa da fazenda</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1223,9 +1202,6 @@ const GerenciamentoFazendas = () => {
                                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                                 >
                                   <div className="flex items-center gap-3">
-                                    <Badge variant="outline">
-                                      {talhao.tipo}
-                                    </Badge>
                                     <span className="text-sm font-medium">
                                       {talhao.area} ha
                                     </span>
@@ -1240,6 +1216,29 @@ const GerenciamentoFazendas = () => {
                                       </span>
                                     )}
                                   </div>
+                                  {talhao.tipo === "Talhão" &&
+                                    talhao.latitude &&
+                                    talhao.longitude && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => {
+                                                const url = `https://www.google.com/maps?q=${talhao.latitude},${talhao.longitude}`;
+                                                window.open(url, "_blank");
+                                              }}
+                                            >
+                                              <MapPin className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Ver Mapa da Área</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    )}
                                 </div>
                               ))}
                             </div>
@@ -1299,210 +1298,6 @@ const GerenciamentoFazendas = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Dialog do Mapa */}
-      <Dialog open={showMapDialog} onOpenChange={setShowMapDialog}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Mapa das Fazendas e Áreas</DialogTitle>
-            <DialogDescription>
-              Visualização das coordenadas das fazendas e suas áreas
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Botões de ação - no topo */}
-          <div className="flex gap-3 pb-4">
-            <Button
-              onClick={() => {
-                const url = generateMapUrl();
-                if (url) {
-                  window.open(url, "_blank");
-                }
-              }}
-              className="flex-1"
-              size="lg"
-            >
-              <Map className="h-5 w-5 mr-2" />
-              Abrir no Google Maps
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                const mapData = getMapData();
-                const csvContent = [
-                  "Fazenda,Municipio,Estado,Latitude_Fazenda,Longitude_Fazenda,Tamanho_Total,Talhoes_Com_Coordenadas",
-                  ...mapData.map(
-                    (f) =>
-                      `"${f.nome}","${f.municipio}","${f.estado}",${f.latitude},${f.longitude},${f.tamanho_total},${f.talhoes.length}`
-                  ),
-                ].join("\n");
-
-                const blob = new Blob([csvContent], { type: "text/csv" });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `coordenadas_fazendas_${
-                  new Date().toISOString().split("T")[0]
-                }.csv`;
-                a.click();
-                window.URL.revokeObjectURL(url);
-              }}
-              size="lg"
-            >
-              <Download className="h-5 w-5 mr-2" />
-              Exportar Coordenadas
-            </Button>
-          </div>
-
-          <div className="space-y-6">
-            {/* Resumo das coordenadas */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  Resumo das Coordenadas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {getMapData().length}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Fazendas com Coordenadas
-                    </div>
-                  </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">
-                      {getMapData().reduce(
-                        (acc, f) => acc + f.talhoes.length,
-                        0
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Áreas com Coordenadas
-                    </div>
-                  </div>
-                  <div className="text-center p-4 bg-orange-50 rounded-lg">
-                    <div className="text-2xl font-bold text-orange-600">
-                      {getMapData()
-                        .reduce((acc, f) => acc + f.tamanho_total, 0)
-                        .toFixed(2)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Área Total (ha)
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Lista detalhada das fazendas */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  Detalhes das Coordenadas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {getMapData().map((fazenda) => (
-                    <div key={fazenda.id} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h4 className="font-semibold">{fazenda.nome}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {fazenda.municipio}/{fazenda.estado}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant={
-                              fazenda.status === "Ativo"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {fazenda.status}
-                          </Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const url = `https://www.google.com/maps?q=${fazenda.latitude},${fazenda.longitude}`;
-                              window.open(url, "_blank");
-                            }}
-                          >
-                            <MapPin className="h-4 w-4 mr-1" />
-                            Ver no Maps
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">
-                            Coordenadas da Fazenda
-                          </p>
-                          <p className="text-sm font-mono">
-                            {fazenda.latitude}, {fazenda.longitude}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">
-                            Tamanho Total
-                          </p>
-                          <p className="text-sm font-semibold">
-                            {fazenda.tamanho_total} ha
-                          </p>
-                        </div>
-                      </div>
-
-                      {fazenda.talhoes.length > 0 && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground mb-2">
-                            Áreas com Coordenadas ({fazenda.talhoes.length})
-                          </p>
-                          <div className="space-y-2">
-                            {fazenda.talhoes.map((talhao) => (
-                              <div
-                                key={talhao.id}
-                                className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Badge variant="outline" className="text-xs">
-                                    {talhao.tipo}
-                                  </Badge>
-                                  <span className="text-sm font-mono">
-                                    {talhao.latitude}, {talhao.longitude}
-                                  </span>
-                                  <span className="text-sm text-muted-foreground">
-                                    {talhao.area} ha
-                                  </span>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    const url = `https://www.google.com/maps?q=${talhao.latitude},${talhao.longitude}`;
-                                    window.open(url, "_blank");
-                                  }}
-                                >
-                                  <MapPin className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Dialog Fazenda */}
       <Dialog open={showFazendaDialog} onOpenChange={setShowFazendaDialog}>
@@ -1726,11 +1521,11 @@ const GerenciamentoFazendas = () => {
                           variant="outline"
                           onClick={() => {
                             setEditingTalhao(null);
+                            setIsAddingCarreador(false);
                             setTalhaoForm({
                               latitude: "",
                               longitude: "",
                               area: "",
-                              tipo: "Talhão",
                               status: "Ativo",
                               observacoes: "",
                             });
@@ -1740,7 +1535,12 @@ const GerenciamentoFazendas = () => {
                         </Button>
                       </>
                     ) : (
-                      <Button onClick={handleAddTalhao}>
+                      <Button
+                        onClick={() => {
+                          setIsAddingCarreador(false);
+                          handleAddTalhao();
+                        }}
+                      >
                         <Plus className="h-4 w-4 mr-2" />
                         Adicionar Talhão
                       </Button>
@@ -1829,23 +1629,44 @@ const GerenciamentoFazendas = () => {
                         id="carr-area"
                         type="number"
                         step="0.01"
-                        value={
-                          editingTalhao?.tipo === "Carreador"
-                            ? talhaoForm.area
-                            : talhaoForm.tipo === "Carreador"
-                            ? talhaoForm.area
-                            : ""
-                        }
+                        value={talhaoForm.area}
                         onChange={(e) =>
                           setTalhaoForm({
                             ...talhaoForm,
                             area: e.target.value,
-                            tipo: "Carreador",
                           })
                         }
                         placeholder="Ex: 100.5"
                       />
                     </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      onClick={() => {
+                        if (
+                          editingTalhao &&
+                          editingTalhao.tipo === "Carreador"
+                        ) {
+                          setIsAddingCarreador(true);
+                          handleUpdateTalhao();
+                        } else {
+                          setIsAddingCarreador(true);
+                          handleAddTalhao();
+                        }
+                      }}
+                      disabled={
+                        !talhaoForm.area || parseFloat(talhaoForm.area) <= 0
+                      }
+                    >
+                      {editingTalhao && editingTalhao.tipo === "Carreador"
+                        ? "Atualizar Carreador"
+                        : fazendaForm.talhoes.find(
+                            (t) => t.tipo === "Carreador"
+                          )
+                        ? "Substituir Carreador"
+                        : "Salvar Carreador"}
+                    </Button>
                   </div>
                 </div>
 
@@ -1858,7 +1679,7 @@ const GerenciamentoFazendas = () => {
                       .map((carreador) => (
                         <div
                           key={carreador.id}
-                          className="flex items-center justify-between p-3 bg-white border border-orange-200 rounded-lg"
+                          className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"
                         >
                           <div>
                             <p className="font-medium">
