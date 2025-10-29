@@ -239,7 +239,6 @@ const GerenciamentoFazendas = () => {
           area: "449.75",
           tipo: "Carreador",
           status: "Ativo",
-          observacoes: "Último item obrigatório para todas as fazendas",
         },
       ],
     },
@@ -267,7 +266,6 @@ const GerenciamentoFazendas = () => {
           area: "2000.50",
           tipo: "Carreador",
           status: "Ativo",
-          observacoes: "Carreador principal",
         },
       ],
     },
@@ -306,7 +304,6 @@ const GerenciamentoFazendas = () => {
           area: "2400.50",
           tipo: "Carreador",
           status: "Ativo",
-          observacoes: "Carreador principal",
         },
       ],
     },
@@ -343,7 +340,6 @@ const GerenciamentoFazendas = () => {
           area: "500.00",
           tipo: "Carreador",
           status: "Ativo",
-          observacoes: "Carreador",
         },
       ],
     },
@@ -1203,7 +1199,7 @@ const GerenciamentoFazendas = () => {
                             fazenda.talhoes.filter((t) => t.tipo === "Talhão")
                               .length
                           }{" "}
-                          áreas •{" "}
+                          talhões •{" "}
                           {
                             fazenda.talhoes.filter(
                               (t) => t.tipo === "Carreador"
@@ -1228,6 +1224,11 @@ const GerenciamentoFazendas = () => {
                                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                                 >
                                   <div className="flex items-center gap-3">
+                                    <span className="text-xs font-bold text-muted-foreground border rounded-lg px-2 py-1">
+                                      {talhao.tipo === "Talhão"
+                                        ? "Talhão: "
+                                        : "Carreador: "}
+                                    </span>
                                     <span className="text-sm font-medium">
                                       {talhao.area} ha
                                     </span>
@@ -1472,9 +1473,74 @@ const GerenciamentoFazendas = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Carreador da Fazenda */}
+                {/* Formulário para carreador */}
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <h4 className="font-medium mb-3">Adicionar Carreador</h4>
+                  <div>
+                    <Label htmlFor="carr-area">Área (ha)</Label>
+                    <Input
+                      id="carr-area"
+                      type="number"
+                      step="0.01"
+                      value={talhaoForm.area}
+                      onChange={(e) => {
+                        const carreadorExistente = fazendaForm.talhoes.find(
+                          (t) => t.tipo === "Carreador"
+                        );
+                        const newArea = e.target.value;
+
+                        setTalhaoForm({
+                          ...talhaoForm,
+                          area: newArea,
+                        });
+
+                        // Atualizar ou adicionar carreador imediatamente
+                        if (carreadorExistente) {
+                          // Atualizar carreador existente
+                          const outrosTalhoes = fazendaForm.talhoes.filter(
+                            (t) => t.tipo === "Talhão"
+                          );
+
+                          if (newArea && parseFloat(newArea) > 0) {
+                            const carreadorAtualizado: Talhao = {
+                              ...carreadorExistente,
+                              area: newArea,
+                            };
+
+                            setFazendaForm({
+                              ...fazendaForm,
+                              talhoes: [...outrosTalhoes, carreadorAtualizado],
+                            });
+                          } else {
+                            // Se o campo estiver vazio, remover o carreador
+                            setFazendaForm({
+                              ...fazendaForm,
+                              talhoes: outrosTalhoes,
+                            });
+                          }
+                        } else if (newArea && parseFloat(newArea) > 0) {
+                          // Adicionar novo carreador
+                          const novoCarreador: Talhao = {
+                            id: Date.now().toString(),
+                            area: newArea,
+                            tipo: "Carreador",
+                            status: "Ativo",
+                          };
+
+                          setFazendaForm({
+                            ...fazendaForm,
+                            talhoes: [...fazendaForm.talhoes, novoCarreador],
+                          });
+                        }
+                      }}
+                      placeholder="Ex: 100.5"
+                    />
+                  </div>
+                </div>
                 {/* Formulário para adicionar talhão */}
                 <div className="border rounded-lg p-4 bg-gray-50">
-                  <h4 className="font-medium mb-3">Adicionar Área</h4>
+                  <h4 className="font-medium mb-3">Adicionar Talhão</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="tal-area">Área (ha)</Label>
@@ -1630,91 +1696,13 @@ const GerenciamentoFazendas = () => {
               </CardContent>
             </Card>
 
-            {/* Carreador da Fazenda */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  Carreador
-                </CardTitle>
-                <CardDescription>
-                  Adicione o carreador da fazenda
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {/* Formulário para carreador */}
-                <div className="border rounded-lg p-4 bg-gray-50">
-                  <h4 className="font-medium mb-3">Carreador</h4>
-                  <div>
-                    <Label htmlFor="carr-area">Área (ha)</Label>
-                    <Input
-                      id="carr-area"
-                      type="number"
-                      step="0.01"
-                      value={talhaoForm.area}
-                      onChange={(e) => {
-                        const carreadorExistente = fazendaForm.talhoes.find(
-                          (t) => t.tipo === "Carreador"
-                        );
-                        const newArea = e.target.value;
-
-                        setTalhaoForm({
-                          ...talhaoForm,
-                          area: newArea,
-                        });
-
-                        // Atualizar ou adicionar carreador imediatamente
-                        if (carreadorExistente) {
-                          // Atualizar carreador existente
-                          const outrosTalhoes = fazendaForm.talhoes.filter(
-                            (t) => t.tipo === "Talhão"
-                          );
-
-                          if (newArea && parseFloat(newArea) > 0) {
-                            const carreadorAtualizado: Talhao = {
-                              ...carreadorExistente,
-                              area: newArea,
-                            };
-
-                            setFazendaForm({
-                              ...fazendaForm,
-                              talhoes: [...outrosTalhoes, carreadorAtualizado],
-                            });
-                          } else {
-                            // Se o campo estiver vazio, remover o carreador
-                            setFazendaForm({
-                              ...fazendaForm,
-                              talhoes: outrosTalhoes,
-                            });
-                          }
-                        } else if (newArea && parseFloat(newArea) > 0) {
-                          // Adicionar novo carreador
-                          const novoCarreador: Talhao = {
-                            id: Date.now().toString(),
-                            area: newArea,
-                            tipo: "Carreador",
-                            status: "Ativo",
-                          };
-
-                          setFazendaForm({
-                            ...fazendaForm,
-                            talhoes: [...fazendaForm.talhoes, novoCarreador],
-                          });
-                        }
-                      }}
-                      placeholder="Ex: 100.5"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Resumo de áreas */}
             <Card>
               <CardContent className="pt-6">
                 <div className="flex md:flex-row flex-col md:justify-around gap-4 p-4 bg-blue-50 rounded-lg">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
-                      Total de Áreas
+                      Total de Talhões
                     </p>
                     <p className="text-lg font-semibold">
                       {
