@@ -10,7 +10,7 @@ import Home from "./pages/Home";
 import DashboardGerencial from "./pages/DashboardGerencial";
 import DashboardOperacional from "./pages/DashboardOperacional";
 import ReceitasSmartCalda from "./pages/ReceitasSmartCalda";
-import Cargas from "./pages/Cargas";
+import EstoquesGerais from "./pages/EstoquesGerais";
 import OrdensProducao from "./pages/OrdensProducao";
 import Entregas from "./pages/Entregas";
 import Configuracoes from "./pages/Configuracoes";
@@ -26,6 +26,7 @@ import Sobre from "./pages/Sobre";
 import InsumosAgricolas from "./pages/InsumosAgricolas";
 import CadastrosAuxiliares from "./pages/CadastrosAuxiliares";
 import GerenciamentoFazendas from "./pages/GerenciamentoFazendas";
+import Movimentacoes from "./pages/Movimentacoes";
 
 const queryClient = new QueryClient();
 
@@ -74,7 +75,8 @@ const App = () => (
                 path="/cadastros-auxiliares"
                 element={<CadastrosAuxiliares />}
               />
-              <Route path="/cargas" element={<Cargas />} />
+              <Route path="/estoques-gerais" element={<EstoquesGerais />} />
+              <Route path="/movimentacoes" element={<Movimentacoes />} />
               <Route
                 path="/importacao-receitas"
                 element={<ImportacaoReceitas />}

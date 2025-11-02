@@ -19,6 +19,7 @@ import {
   Download,
   HelpCircle,
   Wheat,
+  ArrowUpDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -90,7 +91,8 @@ const menuItems: MenuItem[] = [
     title: "Serviços",
     icon: FlaskConical,
     subItems: [
-      { title: "Estoque Geral", icon: Package, path: "/cargas" },
+      { title: "Estoques Gerais", icon: Package, path: "/estoques-gerais" },
+      { title: "Movimentações", icon: ArrowUpDown, path: "/movimentacoes" },
       { title: "Receitas", icon: FlaskConical, path: "/receitas" },
       {
         title: "Importar Receitas",
@@ -98,7 +100,6 @@ const menuItems: MenuItem[] = [
         path: "/importacao-receitas",
       },
       { title: "Ordens de Produção", icon: Activity, path: "/ordens-producao" },
-      { title: "Supervisório", icon: Activity, path: "/supervisorio" },
     ],
   },
   {
@@ -106,6 +107,7 @@ const menuItems: MenuItem[] = [
     icon: Truck,
     path: "/entregas",
   },
+  { title: "Supervisório", icon: Activity, path: "/supervisorio" },
   {
     title: "Configurações",
     icon: Settings,
