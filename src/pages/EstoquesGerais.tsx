@@ -55,6 +55,7 @@ import {
   Edit,
   Download,
   ArrowUpDown,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -308,21 +309,44 @@ const Cargas = () => {
     },
   ]);
 
-  const [novaCarga, setNovaCarga] = useState({
+  // Estado para dados comuns da nota fiscal
+  const [dadosComunsNota, setDadosComunsNota] = useState({
     nota: "",
     idFornecedor: "",
     dataEntrada: "",
-    idItem: "",
-    lote: "",
-    qtde: "",
-    unidade: "LITROS",
-    validade: "",
-    tipoEmbalagem: "",
-    qtdeEmbalagem: "",
-    capEmbalagem: "",
-    saldoAtual: "",
-    localizacao: "",
   });
+
+  // Tipo para itens do formulário
+  type ItemFormulario = {
+    id: string; // ID único para identificar o item na lista
+    idItem: string;
+    lote: string;
+    qtde: string;
+    unidade: string;
+    validade: string;
+    tipoEmbalagem: string;
+    qtdeEmbalagem: string;
+    capEmbalagem: string;
+    saldoAtual: string;
+    localizacao: string;
+  };
+
+  // Estado para lista de itens do formulário
+  const [itensFormulario, setItensFormulario] = useState<ItemFormulario[]>([
+    {
+      id: Date.now().toString(),
+      idItem: "",
+      lote: "",
+      qtde: "",
+      unidade: "LITROS",
+      validade: "",
+      tipoEmbalagem: "",
+      qtdeEmbalagem: "",
+      capEmbalagem: "",
+      saldoAtual: "",
+      localizacao: "",
+    },
+  ]);
 
   const [novaRequisicao, setNovaRequisicao] = useState({
     hardware: "",
@@ -767,57 +791,114 @@ const Cargas = () => {
     }
   };
 
+  // Função para adicionar novo item ao formulário
+  const adicionarItem = () => {
+    setItensFormulario([
+      ...itensFormulario,
+      {
+        id: Date.now().toString(),
+        idItem: "",
+        lote: "",
+        qtde: "",
+        unidade: "LITROS",
+        validade: "",
+        tipoEmbalagem: "",
+        qtdeEmbalagem: "",
+        capEmbalagem: "",
+        saldoAtual: "",
+        localizacao: "",
+      },
+    ]);
+  };
+
+  // Função para remover item do formulário
+  const removerItem = (id: string) => {
+    if (itensFormulario.length > 1) {
+      setItensFormulario(itensFormulario.filter((item) => item.id !== id));
+    } else {
+      toast.error("É necessário ter pelo menos um item");
+    }
+  };
+
+  // Função para atualizar um item específico
+  const atualizarItem = (id: string, campo: keyof ItemFormulario, valor: string) => {
+    setItensFormulario(
+      itensFormulario.map((item) =>
+        item.id === id ? { ...item, [campo]: valor } : item
+      )
+    );
+  };
+
   const handleIncluirCarga = () => {
+    // Validar dados comuns
     if (
-      !novaCarga.nota ||
-      !novaCarga.idFornecedor ||
-      !novaCarga.dataEntrada ||
-      !novaCarga.idItem ||
-      !novaCarga.qtde ||
-      !novaCarga.unidade
+      !dadosComunsNota.nota ||
+      !dadosComunsNota.idFornecedor ||
+      !dadosComunsNota.dataEntrada
     ) {
-      toast.error("Preencha todos os campos obrigatórios");
+      toast.error("Preencha os dados comuns da nota fiscal");
       return;
     }
 
-    const novaEntrada: EntradaNotaFiscal = {
-      nota: Number(novaCarga.nota),
-      idFornecedor: Number(novaCarga.idFornecedor),
-      dataEntrada: novaCarga.dataEntrada,
-      idItem: Number(novaCarga.idItem),
-      lote: novaCarga.lote || "",
-      qtde: Number(novaCarga.qtde),
-      unidade: novaCarga.unidade,
-      validade: novaCarga.validade || "",
-      tipoEmbalagem: novaCarga.tipoEmbalagem || "",
-      qtdeEmbalagem: novaCarga.qtdeEmbalagem
-        ? Number(novaCarga.qtdeEmbalagem)
-        : 0,
-      capEmbalagem: novaCarga.capEmbalagem ? Number(novaCarga.capEmbalagem) : 0,
-      saldoAtual: novaCarga.saldoAtual
-        ? Number(novaCarga.saldoAtual)
-        : Number(novaCarga.qtde),
-      localizacao: novaCarga.localizacao || "",
-    };
+    // Validar itens
+    const itensValidos = itensFormulario.filter(
+      (item) => item.idItem && item.qtde && item.unidade
+    );
 
-    setEntradasEstoquePrimario([...entradasEstoquePrimario, novaEntrada]);
-    toast.success("Entrada registrada com sucesso!");
+    if (itensValidos.length === 0) {
+      toast.error("Adicione pelo menos um item válido");
+      return;
+    }
+
+    // Criar entradas para cada item
+    const novasEntradas: EntradaNotaFiscal[] = itensValidos.map((item) => ({
+      nota: Number(dadosComunsNota.nota),
+      idFornecedor: Number(dadosComunsNota.idFornecedor),
+      dataEntrada: dadosComunsNota.dataEntrada,
+      idItem: Number(item.idItem),
+      lote: item.lote || "",
+      qtde: Number(item.qtde),
+      unidade: item.unidade,
+      validade: item.validade || "",
+      tipoEmbalagem: item.tipoEmbalagem || "",
+      qtdeEmbalagem: item.qtdeEmbalagem ? Number(item.qtdeEmbalagem) : 0,
+      capEmbalagem: item.capEmbalagem ? Number(item.capEmbalagem) : 0,
+      saldoAtual: item.saldoAtual
+        ? Number(item.saldoAtual)
+        : Number(item.qtde),
+      localizacao: item.localizacao || "",
+    }));
+
+    setEntradasEstoquePrimario([
+      ...entradasEstoquePrimario,
+      ...novasEntradas,
+    ]);
+    toast.success(
+      `${novasEntradas.length} entrada(s) registrada(s) com sucesso!`
+    );
     setDialogOpen(false);
-    setNovaCarga({
+    
+    // Resetar formulário
+    setDadosComunsNota({
       nota: "",
       idFornecedor: "",
       dataEntrada: "",
-      idItem: "",
-      lote: "",
-      qtde: "",
-      unidade: "LITROS",
-      validade: "",
-      tipoEmbalagem: "",
-      qtdeEmbalagem: "",
-      capEmbalagem: "",
-      saldoAtual: "",
-      localizacao: "",
     });
+    setItensFormulario([
+      {
+        id: Date.now().toString(),
+        idItem: "",
+        lote: "",
+        qtde: "",
+        unidade: "LITROS",
+        validade: "",
+        tipoEmbalagem: "",
+        qtdeEmbalagem: "",
+        capEmbalagem: "",
+        saldoAtual: "",
+        localizacao: "",
+      },
+    ]);
   };
 
   const handleCriarRequisicao = () => {
@@ -1059,237 +1140,355 @@ const Cargas = () => {
                   <span className="hidden sm:inline">Nova Entrada</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Registrar Nova Entrada</DialogTitle>
                   <DialogDescription>
-                    Registre uma nova entrada de produto no estoque.
+                    Registre uma nova entrada de produto no estoque. Você pode
+                    adicionar múltiplos itens para a mesma nota fiscal.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="nota">Número da Nota *</Label>
-                      <Input
-                        id="nota"
-                        type="number"
-                        value={novaCarga.nota}
-                        onChange={(e) =>
-                          setNovaCarga({ ...novaCarga, nota: e.target.value })
-                        }
-                        placeholder="999999"
-                      />
+                <div className="grid gap-6 py-4">
+                  {/* Dados Comuns da Nota Fiscal */}
+                  <div className="space-y-4">
+                    <div className="border-b pb-3">
+                      <h3 className="text-lg font-semibold">
+                        Dados da Nota Fiscal
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Informações comuns para todos os itens
+                      </p>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="idFornecedor">Fornecedor *</Label>
-                      <Select
-                        value={novaCarga.idFornecedor}
-                        onValueChange={(value) =>
-                          setNovaCarga({ ...novaCarga, idFornecedor: value })
-                        }
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nota">Número da Nota *</Label>
+                        <Input
+                          id="nota"
+                          type="number"
+                          value={dadosComunsNota.nota}
+                          onChange={(e) =>
+                            setDadosComunsNota({
+                              ...dadosComunsNota,
+                              nota: e.target.value,
+                            })
+                          }
+                          placeholder="999999"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="idFornecedor">Fornecedor *</Label>
+                        <Select
+                          value={dadosComunsNota.idFornecedor}
+                          onValueChange={(value) =>
+                            setDadosComunsNota({
+                              ...dadosComunsNota,
+                              idFornecedor: value,
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">Fornecedor A</SelectItem>
+                            <SelectItem value="2">Fornecedor B</SelectItem>
+                            <SelectItem value="3">Fornecedor C</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dataEntrada">Data de Entrada *</Label>
+                        <Input
+                          id="dataEntrada"
+                          type="date"
+                          value={dadosComunsNota.dataEntrada}
+                          onChange={(e) =>
+                            setDadosComunsNota({
+                              ...dadosComunsNota,
+                              dataEntrada: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Lista de Itens */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b pb-3">
+                      <div>
+                        <h3 className="text-lg font-semibold">Itens da Nota</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Adicione os produtos desta nota fiscal
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={adicionarItem}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">Fornecedor A</SelectItem>
-                          <SelectItem value="2">Fornecedor B</SelectItem>
-                          <SelectItem value="3">Fornecedor C</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar Item
+                      </Button>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dataEntrada">Data de Entrada *</Label>
-                      <Input
-                        id="dataEntrada"
-                        type="date"
-                        value={novaCarga.dataEntrada}
-                        onChange={(e) =>
-                          setNovaCarga({
-                            ...novaCarga,
-                            dataEntrada: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="idItem">Item *</Label>
-                      <Select
-                        value={novaCarga.idItem}
-                        onValueChange={(value) =>
-                          setNovaCarga({ ...novaCarga, idItem: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o item" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1005392">
-                            U 46 BR (1005392)
-                          </SelectItem>
-                          <SelectItem value="1027638">DEZ (1027638)</SelectItem>
-                          <SelectItem value="1027636">
-                            MIRANT (1027636)
-                          </SelectItem>
-                          <SelectItem value="1003390">
-                            FERTILIZANTE (1003390)
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lote">Número do Lote</Label>
-                      <Input
-                        id="lote"
-                        value={novaCarga.lote}
-                        onChange={(e) =>
-                          setNovaCarga({ ...novaCarga, lote: e.target.value })
-                        }
-                        placeholder="NR42123259600"
-                      />
-                    </div>
-                  </div>
+                    <div className="space-y-6">
+                      {itensFormulario.map((item, index) => (
+                        <Card key={item.id} className="p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-semibold">
+                              Item {index + 1}
+                            </h4>
+                            {itensFormulario.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removerItem(item.id)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="qtde">Quantidade *</Label>
-                      <Input
-                        id="qtde"
-                        type="number"
-                        value={novaCarga.qtde}
-                        onChange={(e) =>
-                          setNovaCarga({ ...novaCarga, qtde: e.target.value })
-                        }
-                        placeholder="0"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="unidade">Unidade *</Label>
-                      <Select
-                        value={novaCarga.unidade}
-                        onValueChange={(value) =>
-                          setNovaCarga({ ...novaCarga, unidade: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="LITROS">
-                            Litros (LITROS)
-                          </SelectItem>
-                          <SelectItem value="KILOS">Quilos (KILOS)</SelectItem>
-                          <SelectItem value="UNIDADES">
-                            Unidades (UNIDADES)
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="validade">Data de Validade</Label>
-                      <Input
-                        id="validade"
-                        type="date"
-                        value={novaCarga.validade}
-                        onChange={(e) =>
-                          setNovaCarga({
-                            ...novaCarga,
-                            validade: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
+                          <div className="grid gap-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor={`item-${item.id}-idItem`}>
+                                  Item *
+                                </Label>
+                                <Select
+                                  value={item.idItem}
+                                  onValueChange={(value) =>
+                                    atualizarItem(item.id, "idItem", value)
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione o item" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="1005392">
+                                      U 46 BR (1005392)
+                                    </SelectItem>
+                                    <SelectItem value="1027638">
+                                      DEZ (1027638)
+                                    </SelectItem>
+                                    <SelectItem value="1027636">
+                                      MIRANT (1027636)
+                                    </SelectItem>
+                                    <SelectItem value="1003390">
+                                      FERTILIZANTE (1003390)
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`item-${item.id}-lote`}>
+                                  Número do Lote
+                                </Label>
+                                <Input
+                                  id={`item-${item.id}-lote`}
+                                  value={item.lote}
+                                  onChange={(e) =>
+                                    atualizarItem(item.id, "lote", e.target.value)
+                                  }
+                                  placeholder="NR42123259600"
+                                />
+                              </div>
+                            </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="tipoEmbalagem">Tipo de Embalagem</Label>
-                      <Input
-                        id="tipoEmbalagem"
-                        value={novaCarga.tipoEmbalagem}
-                        onChange={(e) =>
-                          setNovaCarga({
-                            ...novaCarga,
-                            tipoEmbalagem: e.target.value,
-                          })
-                        }
-                        placeholder="IBCS1000"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="qtdeEmbalagem">
-                        Quantidade de Embalagens
-                      </Label>
-                      <Input
-                        id="qtdeEmbalagem"
-                        type="number"
-                        value={novaCarga.qtdeEmbalagem}
-                        onChange={(e) =>
-                          setNovaCarga({
-                            ...novaCarga,
-                            qtdeEmbalagem: e.target.value,
-                          })
-                        }
-                        placeholder="5"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="capEmbalagem">
-                        Capacidade da Embalagem
-                      </Label>
-                      <Input
-                        id="capEmbalagem"
-                        type="number"
-                        value={novaCarga.capEmbalagem}
-                        onChange={(e) =>
-                          setNovaCarga({
-                            ...novaCarga,
-                            capEmbalagem: e.target.value,
-                          })
-                        }
-                        placeholder="1000"
-                      />
-                    </div>
-                  </div>
+                            <div className="grid grid-cols-3 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor={`item-${item.id}-qtde`}>
+                                  Quantidade *
+                                </Label>
+                                <Input
+                                  id={`item-${item.id}-qtde`}
+                                  type="number"
+                                  value={item.qtde}
+                                  onChange={(e) =>
+                                    atualizarItem(item.id, "qtde", e.target.value)
+                                  }
+                                  placeholder="0"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`item-${item.id}-unidade`}>
+                                  Unidade *
+                                </Label>
+                                <Select
+                                  value={item.unidade}
+                                  onValueChange={(value) =>
+                                    atualizarItem(item.id, "unidade", value)
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="LITROS">
+                                      Litros (LITROS)
+                                    </SelectItem>
+                                    <SelectItem value="KILOS">
+                                      Quilos (KILOS)
+                                    </SelectItem>
+                                    <SelectItem value="UNIDADES">
+                                      Unidades (UNIDADES)
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`item-${item.id}-validade`}>
+                                  Data de Validade
+                                </Label>
+                                <Input
+                                  id={`item-${item.id}-validade`}
+                                  type="date"
+                                  value={item.validade}
+                                  onChange={(e) =>
+                                    atualizarItem(
+                                      item.id,
+                                      "validade",
+                                      e.target.value
+                                    )
+                                  }
+                                />
+                              </div>
+                            </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="saldoAtual">Saldo Atual</Label>
-                      <Input
-                        id="saldoAtual"
-                        type="number"
-                        value={novaCarga.saldoAtual}
-                        onChange={(e) =>
-                          setNovaCarga({
-                            ...novaCarga,
-                            saldoAtual: e.target.value,
-                          })
-                        }
-                        placeholder="Deixe vazio para usar a quantidade"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="localizacao">Localização</Label>
-                      <Input
-                        id="localizacao"
-                        value={novaCarga.localizacao}
-                        onChange={(e) =>
-                          setNovaCarga({
-                            ...novaCarga,
-                            localizacao: e.target.value,
-                          })
-                        }
-                        placeholder="ARM-001"
-                      />
+                            <div className="grid grid-cols-3 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor={`item-${item.id}-tipoEmbalagem`}>
+                                  Tipo de Embalagem
+                                </Label>
+                                <Input
+                                  id={`item-${item.id}-tipoEmbalagem`}
+                                  value={item.tipoEmbalagem}
+                                  onChange={(e) =>
+                                    atualizarItem(
+                                      item.id,
+                                      "tipoEmbalagem",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="IBCS1000"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`item-${item.id}-qtdeEmbalagem`}>
+                                  Quantidade de Embalagens
+                                </Label>
+                                <Input
+                                  id={`item-${item.id}-qtdeEmbalagem`}
+                                  type="number"
+                                  value={item.qtdeEmbalagem}
+                                  onChange={(e) =>
+                                    atualizarItem(
+                                      item.id,
+                                      "qtdeEmbalagem",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="5"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`item-${item.id}-capEmbalagem`}>
+                                  Capacidade da Embalagem
+                                </Label>
+                                <Input
+                                  id={`item-${item.id}-capEmbalagem`}
+                                  type="number"
+                                  value={item.capEmbalagem}
+                                  onChange={(e) =>
+                                    atualizarItem(
+                                      item.id,
+                                      "capEmbalagem",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="1000"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor={`item-${item.id}-saldoAtual`}>
+                                  Saldo Atual
+                                </Label>
+                                <Input
+                                  id={`item-${item.id}-saldoAtual`}
+                                  type="number"
+                                  value={item.saldoAtual}
+                                  onChange={(e) =>
+                                    atualizarItem(
+                                      item.id,
+                                      "saldoAtual",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Deixe vazio para usar a quantidade"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`item-${item.id}-localizacao`}>
+                                  Localização
+                                </Label>
+                                <Input
+                                  id={`item-${item.id}-localizacao`}
+                                  value={item.localizacao}
+                                  onChange={(e) =>
+                                    atualizarItem(
+                                      item.id,
+                                      "localizacao",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="ARM-001"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
                     </div>
                   </div>
                 </div>
                 <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDialogOpen(false);
+                      setDadosComunsNota({
+                        nota: "",
+                        idFornecedor: "",
+                        dataEntrada: "",
+                      });
+                      setItensFormulario([
+                        {
+                          id: Date.now().toString(),
+                          idItem: "",
+                          lote: "",
+                          qtde: "",
+                          unidade: "LITROS",
+                          validade: "",
+                          tipoEmbalagem: "",
+                          qtdeEmbalagem: "",
+                          capEmbalagem: "",
+                          saldoAtual: "",
+                          localizacao: "",
+                        },
+                      ]);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
                   <Button type="submit" onClick={handleIncluirCarga}>
-                    Registrar Entrada
+                    Registrar {itensFormulario.length > 1 ? "Entradas" : "Entrada"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
