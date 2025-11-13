@@ -56,6 +56,7 @@ import {
   Download,
   ArrowUpDown,
   Trash2,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -182,6 +183,42 @@ const localizacoes: {
     codigo: "FRAC-003",
     descricao: "Aplicação em Campo",
     tipoEstoque: "FRACIONÁRIO",
+  },
+};
+
+// Mapeamento de tipos de embalagem (cadastro do sistema)
+const tiposEmbalagem: {
+  [key: number]: { codigo: string; descricao: string; capacidade: number };
+} = {
+  1: {
+    codigo: "IBCS1000",
+    descricao: "IBC 1000L",
+    capacidade: 1000,
+  },
+  2: {
+    codigo: "IBCS1001",
+    descricao: "IBC 1000L Tipo 2",
+    capacidade: 1000,
+  },
+  3: {
+    codigo: "BAGS500",
+    descricao: "Saco 500kg",
+    capacidade: 500,
+  },
+  4: {
+    codigo: "GALÃO20L",
+    descricao: "Galão 20L",
+    capacidade: 20,
+  },
+  5: {
+    codigo: "BALDE5L",
+    descricao: "Balde 5L",
+    capacidade: 5,
+  },
+  6: {
+    codigo: "BALDE10L",
+    descricao: "Balde 10L",
+    capacidade: 10,
   },
 };
 
@@ -324,11 +361,11 @@ const Cargas = () => {
     qtde: string;
     unidade: string;
     validade: string;
-    tipoEmbalagem: string;
+    idTipoEmbalagem: string; // ID do tipo de embalagem
     qtdeEmbalagem: string;
     capEmbalagem: string;
     saldoAtual: string;
-    localizacao: string;
+    idLocalizacao: string; // ID da localização
   };
 
   // Estado para lista de itens do formulário
@@ -340,13 +377,29 @@ const Cargas = () => {
       qtde: "",
       unidade: "LITROS",
       validade: "",
-      tipoEmbalagem: "",
+      idTipoEmbalagem: "",
       qtdeEmbalagem: "",
       capEmbalagem: "",
       saldoAtual: "",
-      localizacao: "",
+      idLocalizacao: "",
     },
   ]);
+
+  // Estado para controlar quais itens estão expandidos
+  const [itensExpandidos, setItensExpandidos] = useState<Set<string>>(
+    new Set([itensFormulario[0]?.id || ""])
+  );
+
+  // Função para alternar expansão de um item
+  const toggleItemExpansao = (id: string) => {
+    const novosExpandidos = new Set(itensExpandidos);
+    if (novosExpandidos.has(id)) {
+      novosExpandidos.delete(id);
+    } else {
+      novosExpandidos.add(id);
+    }
+    setItensExpandidos(novosExpandidos);
+  };
 
   const [novaRequisicao, setNovaRequisicao] = useState({
     hardware: "",
@@ -793,22 +846,25 @@ const Cargas = () => {
 
   // Função para adicionar novo item ao formulário
   const adicionarItem = () => {
+    const novoId = Date.now().toString();
     setItensFormulario([
       ...itensFormulario,
       {
-        id: Date.now().toString(),
+        id: novoId,
         idItem: "",
         lote: "",
         qtde: "",
         unidade: "LITROS",
         validade: "",
-        tipoEmbalagem: "",
+        idTipoEmbalagem: "",
         qtdeEmbalagem: "",
         capEmbalagem: "",
         saldoAtual: "",
-        localizacao: "",
+        idLocalizacao: "",
       },
     ]);
+    // Expandir o novo item automaticamente
+    setItensExpandidos(new Set([...itensExpandidos, novoId]));
   };
 
   // Função para remover item do formulário
@@ -851,23 +907,29 @@ const Cargas = () => {
     }
 
     // Criar entradas para cada item
-    const novasEntradas: EntradaNotaFiscal[] = itensValidos.map((item) => ({
-      nota: Number(dadosComunsNota.nota),
-      idFornecedor: Number(dadosComunsNota.idFornecedor),
-      dataEntrada: dadosComunsNota.dataEntrada,
-      idItem: Number(item.idItem),
-      lote: item.lote || "",
-      qtde: Number(item.qtde),
-      unidade: item.unidade,
-      validade: item.validade || "",
-      tipoEmbalagem: item.tipoEmbalagem || "",
-      qtdeEmbalagem: item.qtdeEmbalagem ? Number(item.qtdeEmbalagem) : 0,
-      capEmbalagem: item.capEmbalagem ? Number(item.capEmbalagem) : 0,
-      saldoAtual: item.saldoAtual
-        ? Number(item.saldoAtual)
-        : Number(item.qtde),
-      localizacao: item.localizacao || "",
-    }));
+    const novasEntradas: EntradaNotaFiscal[] = itensValidos.map((item) => {
+      const tipoEmb = tiposEmbalagem[Number(item.idTipoEmbalagem)];
+      const loc = localizacoes[Number(item.idLocalizacao)];
+      return {
+        nota: Number(dadosComunsNota.nota),
+        idFornecedor: Number(dadosComunsNota.idFornecedor),
+        dataEntrada: dadosComunsNota.dataEntrada,
+        idItem: Number(item.idItem),
+        lote: item.lote || "",
+        qtde: Number(item.qtde),
+        unidade: item.unidade,
+        validade: item.validade || "",
+        tipoEmbalagem: tipoEmb?.codigo || "",
+        qtdeEmbalagem: item.qtdeEmbalagem ? Number(item.qtdeEmbalagem) : 0,
+        capEmbalagem: item.capEmbalagem
+          ? Number(item.capEmbalagem)
+          : tipoEmb?.capacidade || 0,
+        saldoAtual: item.saldoAtual
+          ? Number(item.saldoAtual)
+          : Number(item.qtde),
+        localizacao: loc?.codigo || "",
+      };
+    });
 
     setEntradasEstoquePrimario([
       ...entradasEstoquePrimario,
@@ -884,21 +946,23 @@ const Cargas = () => {
       idFornecedor: "",
       dataEntrada: "",
     });
+    const primeiroId = Date.now().toString();
     setItensFormulario([
       {
-        id: Date.now().toString(),
+        id: primeiroId,
         idItem: "",
         lote: "",
         qtde: "",
         unidade: "LITROS",
         validade: "",
-        tipoEmbalagem: "",
+        idTipoEmbalagem: "",
         qtdeEmbalagem: "",
         capEmbalagem: "",
         saldoAtual: "",
-        localizacao: "",
+        idLocalizacao: "",
       },
     ]);
+    setItensExpandidos(new Set([primeiroId]));
   };
 
   const handleCriarRequisicao = () => {
@@ -1234,227 +1298,297 @@ const Cargas = () => {
                     </div>
 
                     <div className="space-y-6">
-                      {itensFormulario.map((item, index) => (
-                        <Card key={item.id} className="p-4">
-                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="font-semibold">
-                              Item {index + 1}
-                            </h4>
-                            {itensFormulario.length > 1 && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removerItem(item.id)}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                      {itensFormulario.map((item, index) => {
+                        const material = materiaisAgricolas[Number(item.idItem)];
+                        const nomeProduto =
+                          material?.nomeComercial ||
+                          material?.descricao ||
+                          "Selecione um item";
+                        const isExpandido = itensExpandidos.has(item.id);
+
+                        return (
+                          <Card key={item.id} className="overflow-hidden">
+                            {/* Header do Item - Clicável para expandir/recolher */}
+                            <div
+                              className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                              onClick={() => toggleItemExpansao(item.id)}
+                            >
+                              <div className="flex items-center gap-3 flex-1">
+                                {isExpandido ? (
+                                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                )}
+                                <div className="flex-1">
+                                  <h4 className="font-semibold">
+                                    Item {index + 1}
+                                    {item.idItem && (
+                                      <span className="text-muted-foreground font-normal ml-2">
+                                        - {nomeProduto}
+                                      </span>
+                                    )}
+                                  </h4>
+                                  {!isExpandido && item.idItem && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {item.qtde && (
+                                        <>
+                                          Qtd: {item.qtde} {item.unidade}
+                                          {item.lote && ` • Lote: ${item.lote}`}
+                                        </>
+                                      )}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              {itensFormulario.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removerItem(item.id);
+                                  }}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+
+                            {/* Conteúdo do Item - Mostrado apenas se expandido */}
+                            {isExpandido && (
+                              <div className="p-4 pt-0 border-t">
+                                <div className="grid gap-4">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`item-${item.id}-idItem`}>
+                                        Item *
+                                      </Label>
+                                      <Select
+                                        value={item.idItem}
+                                        onValueChange={(value) =>
+                                          atualizarItem(item.id, "idItem", value)
+                                        }
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Selecione o item" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="1005392">
+                                            U 46 BR (1005392)
+                                          </SelectItem>
+                                          <SelectItem value="1027638">
+                                            DEZ (1027638)
+                                          </SelectItem>
+                                          <SelectItem value="1027636">
+                                            MIRANT (1027636)
+                                          </SelectItem>
+                                          <SelectItem value="1003390">
+                                            FERTILIZANTE (1003390)
+                                          </SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`item-${item.id}-lote`}>
+                                        Número do Lote
+                                      </Label>
+                                      <Input
+                                        id={`item-${item.id}-lote`}
+                                        value={item.lote}
+                                        onChange={(e) =>
+                                          atualizarItem(item.id, "lote", e.target.value)
+                                        }
+                                        placeholder="NR42123259600"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`item-${item.id}-qtde`}>
+                                        Quantidade *
+                                      </Label>
+                                      <Input
+                                        id={`item-${item.id}-qtde`}
+                                        type="number"
+                                        value={item.qtde}
+                                        onChange={(e) =>
+                                          atualizarItem(item.id, "qtde", e.target.value)
+                                        }
+                                        placeholder="0"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`item-${item.id}-unidade`}>
+                                        Unidade *
+                                      </Label>
+                                      <Select
+                                        value={item.unidade}
+                                        onValueChange={(value) =>
+                                          atualizarItem(item.id, "unidade", value)
+                                        }
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="LITROS">
+                                            Litros (LITROS)
+                                          </SelectItem>
+                                          <SelectItem value="KILOS">
+                                            Quilos (KILOS)
+                                          </SelectItem>
+                                          <SelectItem value="UNIDADES">
+                                            Unidades (UNIDADES)
+                                          </SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`item-${item.id}-validade`}>
+                                        Data de Validade
+                                      </Label>
+                                      <Input
+                                        id={`item-${item.id}-validade`}
+                                        type="date"
+                                        value={item.validade}
+                                        onChange={(e) =>
+                                          atualizarItem(
+                                            item.id,
+                                            "validade",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`item-${item.id}-idTipoEmbalagem`}>
+                                        Tipo de Embalagem
+                                      </Label>
+                                      <Select
+                                        value={item.idTipoEmbalagem}
+                                        onValueChange={(value) => {
+                                          atualizarItem(item.id, "idTipoEmbalagem", value);
+                                          // Preencher capacidade automaticamente se disponível
+                                          const tipoEmb = tiposEmbalagem[Number(value)];
+                                          if (tipoEmb && !item.capEmbalagem) {
+                                            atualizarItem(
+                                              item.id,
+                                              "capEmbalagem",
+                                              tipoEmb.capacidade.toString()
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Selecione o tipo" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {Object.entries(tiposEmbalagem).map(
+                                            ([id, emb]) => (
+                                              <SelectItem key={id} value={id}>
+                                                {emb.codigo} - {emb.descricao}
+                                              </SelectItem>
+                                            )
+                                          )}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`item-${item.id}-qtdeEmbalagem`}>
+                                        Quantidade de Embalagens
+                                      </Label>
+                                      <Input
+                                        id={`item-${item.id}-qtdeEmbalagem`}
+                                        type="number"
+                                        value={item.qtdeEmbalagem}
+                                        onChange={(e) =>
+                                          atualizarItem(
+                                            item.id,
+                                            "qtdeEmbalagem",
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder="5"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`item-${item.id}-capEmbalagem`}>
+                                        Capacidade da Embalagem
+                                      </Label>
+                                      <Input
+                                        id={`item-${item.id}-capEmbalagem`}
+                                        type="number"
+                                        value={item.capEmbalagem}
+                                        onChange={(e) =>
+                                          atualizarItem(
+                                            item.id,
+                                            "capEmbalagem",
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder="1000"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`item-${item.id}-saldoAtual`}>
+                                        Saldo Atual
+                                      </Label>
+                                      <Input
+                                        id={`item-${item.id}-saldoAtual`}
+                                        type="number"
+                                        value={item.saldoAtual}
+                                        onChange={(e) =>
+                                          atualizarItem(
+                                            item.id,
+                                            "saldoAtual",
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder="Deixe vazio para usar a quantidade"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`item-${item.id}-idLocalizacao`}>
+                                        Localização
+                                      </Label>
+                                      <Select
+                                        value={item.idLocalizacao}
+                                        onValueChange={(value) =>
+                                          atualizarItem(item.id, "idLocalizacao", value)
+                                        }
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Selecione a localização" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {Object.entries(localizacoes)
+                                            .filter(
+                                              ([_, loc]) => loc.tipoEstoque === "PRIMÁRIO"
+                                            )
+                                            .map(([id, loc]) => (
+                                              <SelectItem key={id} value={id}>
+                                                {loc.codigo} - {loc.descricao}
+                                              </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                             )}
-                          </div>
-
-                          <div className="grid gap-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor={`item-${item.id}-idItem`}>
-                                  Item *
-                                </Label>
-                                <Select
-                                  value={item.idItem}
-                                  onValueChange={(value) =>
-                                    atualizarItem(item.id, "idItem", value)
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecione o item" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="1005392">
-                                      U 46 BR (1005392)
-                                    </SelectItem>
-                                    <SelectItem value="1027638">
-                                      DEZ (1027638)
-                                    </SelectItem>
-                                    <SelectItem value="1027636">
-                                      MIRANT (1027636)
-                                    </SelectItem>
-                                    <SelectItem value="1003390">
-                                      FERTILIZANTE (1003390)
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor={`item-${item.id}-lote`}>
-                                  Número do Lote
-                                </Label>
-                                <Input
-                                  id={`item-${item.id}-lote`}
-                                  value={item.lote}
-                                  onChange={(e) =>
-                                    atualizarItem(item.id, "lote", e.target.value)
-                                  }
-                                  placeholder="NR42123259600"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor={`item-${item.id}-qtde`}>
-                                  Quantidade *
-                                </Label>
-                                <Input
-                                  id={`item-${item.id}-qtde`}
-                                  type="number"
-                                  value={item.qtde}
-                                  onChange={(e) =>
-                                    atualizarItem(item.id, "qtde", e.target.value)
-                                  }
-                                  placeholder="0"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor={`item-${item.id}-unidade`}>
-                                  Unidade *
-                                </Label>
-                                <Select
-                                  value={item.unidade}
-                                  onValueChange={(value) =>
-                                    atualizarItem(item.id, "unidade", value)
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="LITROS">
-                                      Litros (LITROS)
-                                    </SelectItem>
-                                    <SelectItem value="KILOS">
-                                      Quilos (KILOS)
-                                    </SelectItem>
-                                    <SelectItem value="UNIDADES">
-                                      Unidades (UNIDADES)
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor={`item-${item.id}-validade`}>
-                                  Data de Validade
-                                </Label>
-                                <Input
-                                  id={`item-${item.id}-validade`}
-                                  type="date"
-                                  value={item.validade}
-                                  onChange={(e) =>
-                                    atualizarItem(
-                                      item.id,
-                                      "validade",
-                                      e.target.value
-                                    )
-                                  }
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor={`item-${item.id}-tipoEmbalagem`}>
-                                  Tipo de Embalagem
-                                </Label>
-                                <Input
-                                  id={`item-${item.id}-tipoEmbalagem`}
-                                  value={item.tipoEmbalagem}
-                                  onChange={(e) =>
-                                    atualizarItem(
-                                      item.id,
-                                      "tipoEmbalagem",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="IBCS1000"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor={`item-${item.id}-qtdeEmbalagem`}>
-                                  Quantidade de Embalagens
-                                </Label>
-                                <Input
-                                  id={`item-${item.id}-qtdeEmbalagem`}
-                                  type="number"
-                                  value={item.qtdeEmbalagem}
-                                  onChange={(e) =>
-                                    atualizarItem(
-                                      item.id,
-                                      "qtdeEmbalagem",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="5"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor={`item-${item.id}-capEmbalagem`}>
-                                  Capacidade da Embalagem
-                                </Label>
-                                <Input
-                                  id={`item-${item.id}-capEmbalagem`}
-                                  type="number"
-                                  value={item.capEmbalagem}
-                                  onChange={(e) =>
-                                    atualizarItem(
-                                      item.id,
-                                      "capEmbalagem",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="1000"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor={`item-${item.id}-saldoAtual`}>
-                                  Saldo Atual
-                                </Label>
-                                <Input
-                                  id={`item-${item.id}-saldoAtual`}
-                                  type="number"
-                                  value={item.saldoAtual}
-                                  onChange={(e) =>
-                                    atualizarItem(
-                                      item.id,
-                                      "saldoAtual",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="Deixe vazio para usar a quantidade"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor={`item-${item.id}-localizacao`}>
-                                  Localização
-                                </Label>
-                                <Input
-                                  id={`item-${item.id}-localizacao`}
-                                  value={item.localizacao}
-                                  onChange={(e) =>
-                                    atualizarItem(
-                                      item.id,
-                                      "localizacao",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="ARM-001"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
+                          </Card>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1468,21 +1602,23 @@ const Cargas = () => {
                         idFornecedor: "",
                         dataEntrada: "",
                       });
+                      const primeiroId = Date.now().toString();
                       setItensFormulario([
                         {
-                          id: Date.now().toString(),
+                          id: primeiroId,
                           idItem: "",
                           lote: "",
                           qtde: "",
                           unidade: "LITROS",
                           validade: "",
-                          tipoEmbalagem: "",
+                          idTipoEmbalagem: "",
                           qtdeEmbalagem: "",
                           capEmbalagem: "",
                           saldoAtual: "",
-                          localizacao: "",
+                          idLocalizacao: "",
                         },
                       ]);
+                      setItensExpandidos(new Set([primeiroId]));
                     }}
                   >
                     Cancelar
