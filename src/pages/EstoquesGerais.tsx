@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,27 +109,58 @@ const SortableHeader: React.FC<SortableHeaderProps> = ({
 
 // Dados simulados de materiais agrícolas (vinculados ao InsumosAgricolas.tsx)
 const materiaisAgricolas: {
-  [key: number]: { codigo: string; descricao: string; nomeComercial: string };
+  [key: number]: {
+    codigo: string;
+    descricao: string;
+    nomeComercial: string;
+    categoriaId?: number;
+  };
 } = {
   1005392: {
     codigo: "1005392",
     descricao: "HERBICIDA NUFARM U 46 BR",
     nomeComercial: "U 46 BR",
+    categoriaId: 69,
   },
   1027638: {
     codigo: "1027638",
     descricao: "HERBICIDA UPL DEZ",
     nomeComercial: "DEZ",
+    categoriaId: 69,
   },
   1027636: {
     codigo: "1027636",
     descricao: "HERBICIDA IHARA MIRANT",
     nomeComercial: "MIRANT",
+    categoriaId: 69,
   },
   1003390: {
     codigo: "1003390",
     descricao: "FERTILIZANTE",
     nomeComercial: "FERTILIZANTE",
+    categoriaId: 617,
+  },
+};
+
+// Mapeamento de categorias (baseado em InsumosAgricolas.tsx)
+const categorias: {
+  [key: number]: { codigo: string; descricaoResumida: string };
+} = {
+  69: {
+    codigo: "69",
+    descricaoResumida: "Herbicida 2,4 D-DIMETILAM 806 G/L",
+  },
+  617: {
+    codigo: "617",
+    descricaoResumida: "Fertilizante (Adubo)",
+  },
+  3001: {
+    codigo: "3001",
+    descricaoResumida: "Herbicida Tebuthiuron 500 G/L",
+  },
+  5027: {
+    codigo: "5027",
+    descricaoResumida: "Formicida Isca Sulfluramida",
   },
 };
 
@@ -236,6 +267,7 @@ type EntradaNotaFiscal = {
   capEmbalagem: number;
   saldoAtual: number;
   localizacao: string;
+  ativo: boolean;
 };
 
 type EstoqueTecnicoFracionario = {
@@ -251,7 +283,7 @@ type EstoqueTecnicoFracionario = {
 
 const Cargas = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("todos");
+  const [statusFilter, setStatusFilter] = useState("ativos"); // Por padrão mostrar apenas ativos
   const [dialogOpen, setDialogOpen] = useState(false);
   const [requisicaoDialogOpen, setRequisicaoDialogOpen] = useState(false);
   const [xmlDialogOpen, setXmlDialogOpen] = useState(false);
@@ -281,9 +313,23 @@ const Cargas = () => {
     direction: "asc" | "desc";
   } | null>(null);
 
+  // Estado para controlar quais itens estão expandidos no estoque primário
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+
+  // Estado para controlar quais itens estão expandidos no estoque técnico
+  const [expandedItemsTecnico, setExpandedItemsTecnico] = useState<Set<number>>(
+    new Set()
+  );
+
+  // Estado para controlar quais itens estão expandidos no estoque fracionário
+  const [expandedItemsFracionario, setExpandedItemsFracionario] = useState<
+    Set<number>
+  >(new Set());
+
   const [entradasEstoquePrimario, setEntradasEstoquePrimario] = useState<
     EntradaNotaFiscal[]
   >([
+    // Nota Fiscal 999999 - Fornecedor A
     {
       nota: 999999,
       idFornecedor: 1,
@@ -298,6 +344,7 @@ const Cargas = () => {
       capEmbalagem: 1000,
       saldoAtual: 4000,
       localizacao: "ARM-001",
+      ativo: true,
     },
     {
       nota: 999999,
@@ -313,6 +360,7 @@ const Cargas = () => {
       capEmbalagem: 1000,
       saldoAtual: 3000,
       localizacao: "ARM-003",
+      ativo: true,
     },
     {
       nota: 999999,
@@ -328,6 +376,7 @@ const Cargas = () => {
       capEmbalagem: 100,
       saldoAtual: 700,
       localizacao: "ARM-002",
+      ativo: true,
     },
     {
       nota: 999999,
@@ -343,6 +392,140 @@ const Cargas = () => {
       capEmbalagem: 8,
       saldoAtual: 350,
       localizacao: "ARM-003",
+      ativo: true,
+    },
+    // Nota Fiscal 1000123 - Fornecedor A - Mais itens do mesmo produto
+    {
+      nota: 1000123,
+      idFornecedor: 1,
+      dataEntrada: "2025-10-15",
+      idItem: 1005392,
+      lote: "NR42123259700",
+      qtde: 3000,
+      unidade: "LITROS",
+      validade: "2026-11-15",
+      tipoEmbalagem: "IBCS1000",
+      qtdeEmbalagem: 3,
+      capEmbalagem: 1000,
+      saldoAtual: 2500,
+      localizacao: "ARM-001",
+      ativo: true,
+    },
+    {
+      nota: 1000123,
+      idFornecedor: 1,
+      dataEntrada: "2025-10-15",
+      idItem: 1005392,
+      lote: "NR42123259800",
+      qtde: 2000,
+      unidade: "LITROS",
+      validade: "2026-11-20",
+      tipoEmbalagem: "IBCS1000",
+      qtdeEmbalagem: 2,
+      capEmbalagem: 1000,
+      saldoAtual: 0,
+      localizacao: "ARM-001",
+      ativo: false, // Saldo zerado
+    },
+    // Nota Fiscal 1000456 - Fornecedor B
+    {
+      nota: 1000456,
+      idFornecedor: 2,
+      dataEntrada: "2025-10-18",
+      idItem: 1027638,
+      lote: "SY003-24-20-161",
+      qtde: 600,
+      unidade: "KILOS",
+      validade: "2025-12-18",
+      tipoEmbalagem: "BAGS500",
+      qtdeEmbalagem: 6,
+      capEmbalagem: 100,
+      saldoAtual: 450,
+      localizacao: "ARM-002",
+      ativo: true,
+    },
+    {
+      nota: 1000456,
+      idFornecedor: 2,
+      dataEntrada: "2025-10-18",
+      idItem: 1027636,
+      lote: "005-22-12001",
+      qtde: 200,
+      unidade: "LITROS",
+      validade: "2026-12-18",
+      tipoEmbalagem: "GALÃO20L",
+      qtdeEmbalagem: 25,
+      capEmbalagem: 8,
+      saldoAtual: 180,
+      localizacao: "ARM-003",
+      ativo: true,
+    },
+    // Nota Fiscal 1000789 - Fornecedor C
+    {
+      nota: 1000789,
+      idFornecedor: 3,
+      dataEntrada: "2025-10-20",
+      idItem: 1003390,
+      lote: "FERT-2025-001",
+      qtde: 5000,
+      unidade: "LITROS",
+      validade: "2027-01-20",
+      tipoEmbalagem: "IBCS1001",
+      qtdeEmbalagem: 5,
+      capEmbalagem: 1000,
+      saldoAtual: 4800,
+      localizacao: "ARM-003",
+      ativo: true,
+    },
+    {
+      nota: 1000789,
+      idFornecedor: 3,
+      dataEntrada: "2025-10-20",
+      idItem: 1027636,
+      lote: "005-22-12002",
+      qtde: 300,
+      unidade: "LITROS",
+      validade: "2026-12-20",
+      tipoEmbalagem: "GALÃO20L",
+      qtdeEmbalagem: 30,
+      capEmbalagem: 10,
+      saldoAtual: 250,
+      localizacao: "ARM-003",
+      ativo: true,
+    },
+    // Nota Fiscal 1001111 - Fornecedor A - Lote já usado (inativo)
+    {
+      nota: 1001111,
+      idFornecedor: 1,
+      dataEntrada: "2025-09-10",
+      idItem: 1005392,
+      lote: "NR42123259500",
+      qtde: 4000,
+      unidade: "LITROS",
+      validade: "2026-09-10",
+      tipoEmbalagem: "IBCS1000",
+      qtdeEmbalagem: 4,
+      capEmbalagem: 1000,
+      saldoAtual: 0,
+      localizacao: "ARM-001",
+      ativo: false, // Saldo zerado
+    },
+    // Nota Fiscal 1001234 - Fornecedor B
+    {
+      nota: 1001234,
+      idFornecedor: 2,
+      dataEntrada: "2025-10-22",
+      idItem: 1027638,
+      lote: "SY003-24-20-162",
+      qtde: 1000,
+      unidade: "KILOS",
+      validade: "2026-01-22",
+      tipoEmbalagem: "BAGS500",
+      qtdeEmbalagem: 10,
+      capEmbalagem: 100,
+      saldoAtual: 850,
+      localizacao: "ARM-002",
+      ativo: true,
     },
   ]);
 
@@ -435,11 +618,44 @@ const Cargas = () => {
   ];
 
   const [movimentacaoForm, setMovimentacaoForm] = useState({
+    entradaId: "", // ID único da entrada (nota + idItem + lote)
     tipoMovimento: "",
     idLocDestino: "",
     qtde: "",
     observacoes: "",
   });
+
+  // Função para gerar ID único da entrada usando separador que não aparece em lotes
+  const gerarIdEntrada = (entrada: EntradaNotaFiscal): string => {
+    // Usar "|||" como separador que não aparece em lotes, notas ou IDs
+    return `${entrada.nota}|||${entrada.idItem}|||${entrada.lote}`;
+  };
+
+  // Função para obter entrada pelo ID
+  const obterEntradaPorId = (id: string): EntradaNotaFiscal | null => {
+    const partes = id.split("|||");
+    if (partes.length !== 3) return null;
+
+    const [nota, idItem, lote] = partes;
+    return (
+      entradasEstoquePrimario.find(
+        (e) =>
+          e.nota.toString() === nota &&
+          e.idItem.toString() === idItem &&
+          e.lote === lote
+      ) || null
+    );
+  };
+
+  // Obter entradas disponíveis para movimentação (apenas ativas com saldo > 0)
+  const entradasDisponiveisMovimentacao = entradasEstoquePrimario
+    .filter((e) => e.ativo && e.saldoAtual > 0)
+    .sort((a, b) => {
+      // Ordenar por data de validade (mais velho primeiro)
+      const dataA = new Date(a.validade).getTime();
+      const dataB = new Date(b.validade).getTime();
+      return dataA - dataB;
+    });
 
   // Dados simulados de Estoque Técnico (localizações SMARTCALDA: 4, 5)
   const [estoqueTecnico, setEstoqueTecnico] = useState<
@@ -651,15 +867,32 @@ const Cargas = () => {
     return filteredData;
   };
 
+  // Usar entradas do estado diretamente (status já é atualizado nas operações)
   const filteredEntradasRaw = entradasEstoquePrimario.filter((entrada) => {
     const material = materiaisAgricolas[entrada.idItem];
     const materialNome = material?.nomeComercial || material?.descricao || "";
+
+    // Busca por lote - se encontrar, mostrar pai e filho
+    const buscaPorLote = searchTerm
+      .toLowerCase()
+      .includes(entrada.lote.toLowerCase());
+    const loteNaBusca = entrada.lote
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+
     const matchesSearch =
       entrada.nota.toString().includes(searchTerm) ||
       materialNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entrada.lote.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      loteNaBusca ||
       entrada.localizacao.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+
+    // Filtro de status
+    const matchesStatus =
+      statusFilter === "todos" ||
+      (statusFilter === "ativos" && entrada.ativo) ||
+      (statusFilter === "inativos" && !entrada.ativo);
+
+    return matchesSearch && matchesStatus;
   });
 
   const filteredEntradas = getSortedAndFilteredData(
@@ -667,6 +900,139 @@ const Cargas = () => {
     filteredEntradasRaw,
     "primario"
   );
+
+  // Função para agrupar entradas por item
+  const agruparEntradasPorItem = (entradas: EntradaNotaFiscal[]) => {
+    const agrupadas: { [key: number]: EntradaNotaFiscal[] } = {};
+    entradas.forEach((entrada) => {
+      if (!agrupadas[entrada.idItem]) {
+        agrupadas[entrada.idItem] = [];
+      }
+      agrupadas[entrada.idItem].push(entrada);
+    });
+    return agrupadas;
+  };
+
+  // Função para verificar se um item tem alguma entrada ativa
+  const itemTemEntradaAtiva = (entradas: EntradaNotaFiscal[]): boolean => {
+    return entradas.some((entrada) => entrada.ativo);
+  };
+
+  // Função para verificar se busca corresponde a um lote específico
+  const buscaCorrespondeLote = (searchTerm: string): string | null => {
+    if (!searchTerm) return null;
+    const termoLower = searchTerm.toLowerCase();
+    // Verificar se algum lote corresponde exatamente ou parcialmente
+    const loteEncontrado = entradasEstoquePrimario.find((entrada) =>
+      entrada.lote.toLowerCase().includes(termoLower)
+    );
+    return loteEncontrado ? loteEncontrado.lote : null;
+  };
+
+  // Função para calcular saldo total por item
+  const calcularSaldoTotalPorItem = (entradas: EntradaNotaFiscal[]) => {
+    return entradas.reduce((total, entrada) => total + entrada.saldoAtual, 0);
+  };
+
+  // Função para calcular saldo total por item (Estoque Técnico/Fracionário)
+  const calcularSaldoTotalPorItemTecnicoFracionario = (
+    itens: EstoqueTecnicoFracionario[]
+  ) => {
+    return itens.reduce((total, item) => total + item.saldoDispon, 0);
+  };
+
+  // Função para agrupar itens técnicos/fracionários por item
+  const agruparItensPorItem = (itens: EstoqueTecnicoFracionario[]) => {
+    const agrupadas: { [key: number]: EstoqueTecnicoFracionario[] } = {};
+    itens.forEach((item) => {
+      if (!agrupadas[item.idItem]) {
+        agrupadas[item.idItem] = [];
+      }
+      agrupadas[item.idItem].push(item);
+    });
+    return agrupadas;
+  };
+
+  // Função para toggle de item expandido no estoque técnico
+  const toggleItemTecnicoExpansao = (idItem: number) => {
+    const novosExpandidos = new Set(expandedItemsTecnico);
+    if (novosExpandidos.has(idItem)) {
+      novosExpandidos.delete(idItem);
+    } else {
+      novosExpandidos.add(idItem);
+    }
+    setExpandedItemsTecnico(novosExpandidos);
+  };
+
+  // Função para toggle de item expandido no estoque fracionário
+  const toggleItemFracionarioExpansao = (idItem: number) => {
+    const novosExpandidos = new Set(expandedItemsFracionario);
+    if (novosExpandidos.has(idItem)) {
+      novosExpandidos.delete(idItem);
+    } else {
+      novosExpandidos.add(idItem);
+    }
+    setExpandedItemsFracionario(novosExpandidos);
+  };
+
+  // Função para toggle de item expandido no estoque primário
+  const toggleItemEstoqueExpansao = (idItem: number) => {
+    const novosExpandidos = new Set(expandedItems);
+    if (novosExpandidos.has(idItem)) {
+      novosExpandidos.delete(idItem);
+    } else {
+      novosExpandidos.add(idItem);
+    }
+    setExpandedItems(novosExpandidos);
+  };
+
+  // Obter entradas agrupadas por item
+  const entradasAgrupadas = agruparEntradasPorItem(filteredEntradas);
+
+  // Se busca por lote, mostrar apenas o item que contém esse lote
+  const loteBuscado = buscaCorrespondeLote(searchTerm);
+  let itensUnicos = Object.keys(entradasAgrupadas).map(Number);
+
+  if (loteBuscado) {
+    // Filtrar apenas itens que têm o lote buscado
+    itensUnicos = itensUnicos.filter((idItem) =>
+      entradasAgrupadas[idItem].some((entrada) =>
+        entrada.lote.toLowerCase().includes(loteBuscado.toLowerCase())
+      )
+    );
+  }
+
+  // Expandir automaticamente os itens que contêm o lote buscado
+  useEffect(() => {
+    if (!searchTerm) return;
+
+    const loteBuscadoLocal = buscaCorrespondeLote(searchTerm);
+    if (!loteBuscadoLocal) return;
+
+    // Recalcular entradas agrupadas e itens únicos
+    const entradasAgrupadasLocal = agruparEntradasPorItem(filteredEntradas);
+    const itensComLote = Object.keys(entradasAgrupadasLocal)
+      .map(Number)
+      .filter((idItem) =>
+        entradasAgrupadasLocal[idItem].some((entrada) =>
+          entrada.lote.toLowerCase().includes(loteBuscadoLocal.toLowerCase())
+        )
+      );
+
+    if (itensComLote.length > 0) {
+      setExpandedItems((prev) => {
+        const novosExpandidos = new Set(prev);
+        itensComLote.forEach((idItem) => {
+          novosExpandidos.add(idItem);
+        });
+        // Só atualizar se houver mudança
+        if (novosExpandidos.size !== prev.size) {
+          return novosExpandidos;
+        }
+        return prev;
+      });
+    }
+  }, [searchTerm, filteredEntradas.length]); // Depender do termo de busca e número de entradas
 
   const filteredEstoqueTecnicoRaw = estoqueTecnico.filter((item) => {
     const material = materiaisAgricolas[item.idItem];
@@ -689,6 +1055,10 @@ const Cargas = () => {
     filteredEstoqueTecnicoRaw,
     "tecnico"
   );
+
+  // Agrupar estoque técnico por item
+  const estoqueTecnicoAgrupado = agruparItensPorItem(filteredEstoqueTecnico);
+  const itensUnicosTecnico = Object.keys(estoqueTecnicoAgrupado).map(Number);
 
   const filteredEstoqueFracionarioRaw = estoqueFracionario.filter((item) => {
     const material = materiaisAgricolas[item.idItem];
@@ -714,6 +1084,14 @@ const Cargas = () => {
     "fracionario"
   );
 
+  // Agrupar estoque fracionário por item
+  const estoqueFracionarioAgrupado = agruparItensPorItem(
+    filteredEstoqueFracionario
+  );
+  const itensUnicosFracionario = Object.keys(estoqueFracionarioAgrupado).map(
+    Number
+  );
+
   const handleVerDetalhes = (entrada: EntradaNotaFiscal) => {
     setEntradaSelecionada(entrada);
     setDetalhesDialogOpen(true);
@@ -736,7 +1114,9 @@ const Cargas = () => {
 
   const handleMovimentarItem = (entrada: EntradaNotaFiscal) => {
     setEntradaMovimentando(entrada);
+    const entradaId = gerarIdEntrada(entrada);
     setMovimentacaoForm({
+      entradaId: entradaId,
       tipoMovimento: "",
       idLocDestino: "",
       qtde: "",
@@ -746,7 +1126,16 @@ const Cargas = () => {
   };
 
   const handleSalvarMovimentacao = () => {
-    if (!entradaMovimentando) return;
+    if (!movimentacaoForm.entradaId) {
+      toast.error("Selecione uma entrada para movimentar");
+      return;
+    }
+
+    const entradaSelecionada = obterEntradaPorId(movimentacaoForm.entradaId);
+    if (!entradaSelecionada) {
+      toast.error("Entrada não encontrada");
+      return;
+    }
 
     if (!movimentacaoForm.tipoMovimento || !movimentacaoForm.qtde) {
       toast.error("Preencha o tipo de movimentação e a quantidade");
@@ -764,7 +1153,7 @@ const Cargas = () => {
     }
 
     const quantidade = Number(movimentacaoForm.qtde);
-    if (quantidade > entradaMovimentando.saldoAtual) {
+    if (quantidade > entradaSelecionada.saldoAtual) {
       toast.error("Quantidade não pode ser maior que o saldo atual");
       return;
     }
@@ -774,27 +1163,37 @@ const Cargas = () => {
       return;
     }
 
-    // Atualizar saldo atual da entrada
-    const index = entradasEstoquePrimario.findIndex(
-      (e) =>
-        e.nota === entradaMovimentando.nota &&
-        e.idItem === entradaMovimentando.idItem &&
-        e.lote === entradaMovimentando.lote
-    );
-
-    if (index !== -1) {
-      const novasEntradas = [...entradasEstoquePrimario];
-      novasEntradas[index] = {
-        ...novasEntradas[index],
-        saldoAtual: novasEntradas[index].saldoAtual - quantidade,
-      };
-      setEntradasEstoquePrimario(novasEntradas);
+    // Verificar se saldo ficaria negativo
+    const saldoRestante = entradaSelecionada.saldoAtual - quantidade;
+    if (saldoRestante < 0) {
+      toast.error("Saldo não pode ficar negativo");
+      return;
     }
+
+    // Atualizar saldo atual da entrada
+    setEntradasEstoquePrimario((prev) =>
+      prev.map((e) => {
+        if (
+          e.nota === entradaSelecionada.nota &&
+          e.idItem === entradaSelecionada.idItem &&
+          e.lote === entradaSelecionada.lote
+        ) {
+          const novoSaldo = e.saldoAtual - quantidade;
+          return {
+            ...e,
+            saldoAtual: novoSaldo,
+            ativo: novoSaldo > 0, // Desativar automaticamente se saldo = 0
+          };
+        }
+        return e;
+      })
+    );
 
     toast.success("Movimentação realizada com sucesso!");
     setMovimentarDialogOpen(false);
     setEntradaMovimentando(null);
     setMovimentacaoForm({
+      entradaId: "",
       tipoMovimento: "",
       idLocDestino: "",
       qtde: "",
@@ -827,21 +1226,24 @@ const Cargas = () => {
   const handleSalvarEdicao = () => {
     if (!entradaEditando) return;
 
-    const index = entradasEstoquePrimario.findIndex(
-      (e) =>
-        e.nota === entradaEditando.nota &&
-        e.idItem === entradaEditando.idItem &&
-        e.lote === entradaEditando.lote
+    setEntradasEstoquePrimario((prev) =>
+      prev.map((e) => {
+        if (
+          e.nota === entradaEditando.nota &&
+          e.idItem === entradaEditando.idItem &&
+          e.lote === entradaEditando.lote
+        ) {
+          return {
+            ...entradaEditando,
+            ativo: entradaEditando.saldoAtual > 0, // Atualizar status baseado no saldo
+          };
+        }
+        return e;
+      })
     );
-
-    if (index !== -1) {
-      const novasEntradas = [...entradasEstoquePrimario];
-      novasEntradas[index] = entradaEditando;
-      setEntradasEstoquePrimario(novasEntradas);
-      toast.success("Entrada atualizada com sucesso!");
-      setEditarDialogOpen(false);
-      setEntradaEditando(null);
-    }
+    toast.success("Entrada atualizada com sucesso!");
+    setEditarDialogOpen(false);
+    setEntradaEditando(null);
   };
 
   // Função para adicionar novo item ao formulário
@@ -877,7 +1279,11 @@ const Cargas = () => {
   };
 
   // Função para atualizar um item específico
-  const atualizarItem = (id: string, campo: keyof ItemFormulario, valor: string) => {
+  const atualizarItem = (
+    id: string,
+    campo: keyof ItemFormulario,
+    valor: string
+  ) => {
     setItensFormulario(
       itensFormulario.map((item) =>
         item.id === id ? { ...item, [campo]: valor } : item
@@ -928,18 +1334,16 @@ const Cargas = () => {
           ? Number(item.saldoAtual)
           : Number(item.qtde),
         localizacao: loc?.codigo || "",
+        ativo: true, // Novas entradas sempre começam ativas
       };
     });
 
-    setEntradasEstoquePrimario([
-      ...entradasEstoquePrimario,
-      ...novasEntradas,
-    ]);
+    setEntradasEstoquePrimario([...entradasEstoquePrimario, ...novasEntradas]);
     toast.success(
       `${novasEntradas.length} entrada(s) registrada(s) com sucesso!`
     );
     setDialogOpen(false);
-    
+
     // Resetar formulário
     setDadosComunsNota({
       nota: "",
@@ -1144,6 +1548,16 @@ const Cargas = () => {
                     className="pl-10"
                   />
                 </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os status</SelectItem>
+                    <SelectItem value="ativos">Ativos</SelectItem>
+                    <SelectItem value="inativos">Inativos</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
@@ -1299,7 +1713,8 @@ const Cargas = () => {
 
                     <div className="space-y-6">
                       {itensFormulario.map((item, index) => {
-                        const material = materiaisAgricolas[Number(item.idItem)];
+                        const material =
+                          materiaisAgricolas[Number(item.idItem)];
                         const nomeProduto =
                           material?.nomeComercial ||
                           material?.descricao ||
@@ -1368,7 +1783,11 @@ const Cargas = () => {
                                       <Select
                                         value={item.idItem}
                                         onValueChange={(value) =>
-                                          atualizarItem(item.id, "idItem", value)
+                                          atualizarItem(
+                                            item.id,
+                                            "idItem",
+                                            value
+                                          )
                                         }
                                       >
                                         <SelectTrigger>
@@ -1398,7 +1817,11 @@ const Cargas = () => {
                                         id={`item-${item.id}-lote`}
                                         value={item.lote}
                                         onChange={(e) =>
-                                          atualizarItem(item.id, "lote", e.target.value)
+                                          atualizarItem(
+                                            item.id,
+                                            "lote",
+                                            e.target.value
+                                          )
                                         }
                                         placeholder="NR42123259600"
                                       />
@@ -1415,19 +1838,29 @@ const Cargas = () => {
                                         type="number"
                                         value={item.qtde}
                                         onChange={(e) =>
-                                          atualizarItem(item.id, "qtde", e.target.value)
+                                          atualizarItem(
+                                            item.id,
+                                            "qtde",
+                                            e.target.value
+                                          )
                                         }
                                         placeholder="0"
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label htmlFor={`item-${item.id}-unidade`}>
+                                      <Label
+                                        htmlFor={`item-${item.id}-unidade`}
+                                      >
                                         Unidade *
                                       </Label>
                                       <Select
                                         value={item.unidade}
                                         onValueChange={(value) =>
-                                          atualizarItem(item.id, "unidade", value)
+                                          atualizarItem(
+                                            item.id,
+                                            "unidade",
+                                            value
+                                          )
                                         }
                                       >
                                         <SelectTrigger>
@@ -1447,7 +1880,9 @@ const Cargas = () => {
                                       </Select>
                                     </div>
                                     <div className="space-y-2">
-                                      <Label htmlFor={`item-${item.id}-validade`}>
+                                      <Label
+                                        htmlFor={`item-${item.id}-validade`}
+                                      >
                                         Data de Validade
                                       </Label>
                                       <Input
@@ -1467,15 +1902,22 @@ const Cargas = () => {
 
                                   <div className="grid grid-cols-3 gap-4">
                                     <div className="space-y-2">
-                                      <Label htmlFor={`item-${item.id}-idTipoEmbalagem`}>
+                                      <Label
+                                        htmlFor={`item-${item.id}-idTipoEmbalagem`}
+                                      >
                                         Tipo de Embalagem
                                       </Label>
                                       <Select
                                         value={item.idTipoEmbalagem}
                                         onValueChange={(value) => {
-                                          atualizarItem(item.id, "idTipoEmbalagem", value);
+                                          atualizarItem(
+                                            item.id,
+                                            "idTipoEmbalagem",
+                                            value
+                                          );
                                           // Preencher capacidade automaticamente se disponível
-                                          const tipoEmb = tiposEmbalagem[Number(value)];
+                                          const tipoEmb =
+                                            tiposEmbalagem[Number(value)];
                                           if (tipoEmb && !item.capEmbalagem) {
                                             atualizarItem(
                                               item.id,
@@ -1500,7 +1942,9 @@ const Cargas = () => {
                                       </Select>
                                     </div>
                                     <div className="space-y-2">
-                                      <Label htmlFor={`item-${item.id}-qtdeEmbalagem`}>
+                                      <Label
+                                        htmlFor={`item-${item.id}-qtdeEmbalagem`}
+                                      >
                                         Quantidade de Embalagens
                                       </Label>
                                       <Input
@@ -1518,7 +1962,9 @@ const Cargas = () => {
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label htmlFor={`item-${item.id}-capEmbalagem`}>
+                                      <Label
+                                        htmlFor={`item-${item.id}-capEmbalagem`}
+                                      >
                                         Capacidade da Embalagem
                                       </Label>
                                       <Input
@@ -1539,7 +1985,9 @@ const Cargas = () => {
 
                                   <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                      <Label htmlFor={`item-${item.id}-saldoAtual`}>
+                                      <Label
+                                        htmlFor={`item-${item.id}-saldoAtual`}
+                                      >
                                         Saldo Atual
                                       </Label>
                                       <Input
@@ -1557,13 +2005,19 @@ const Cargas = () => {
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label htmlFor={`item-${item.id}-idLocalizacao`}>
+                                      <Label
+                                        htmlFor={`item-${item.id}-idLocalizacao`}
+                                      >
                                         Localização
                                       </Label>
                                       <Select
                                         value={item.idLocalizacao}
                                         onValueChange={(value) =>
-                                          atualizarItem(item.id, "idLocalizacao", value)
+                                          atualizarItem(
+                                            item.id,
+                                            "idLocalizacao",
+                                            value
+                                          )
                                         }
                                       >
                                         <SelectTrigger>
@@ -1572,7 +2026,8 @@ const Cargas = () => {
                                         <SelectContent>
                                           {Object.entries(localizacoes)
                                             .filter(
-                                              ([_, loc]) => loc.tipoEstoque === "PRIMÁRIO"
+                                              ([_, loc]) =>
+                                                loc.tipoEstoque === "PRIMÁRIO"
                                             )
                                             .map(([id, loc]) => (
                                               <SelectItem key={id} value={id}>
@@ -1624,7 +2079,8 @@ const Cargas = () => {
                     Cancelar
                   </Button>
                   <Button type="submit" onClick={handleIncluirCarga}>
-                    Registrar {itensFormulario.length > 1 ? "Entradas" : "Entrada"}
+                    Registrar{" "}
+                    {itensFormulario.length > 1 ? "Entradas" : "Entrada"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1637,146 +2093,242 @@ const Cargas = () => {
               <CardTitle>Estoque Primário</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <SortableHeader
-                        sortKey="nota"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
+              <div className="space-y-4">
+                {itensUnicos.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">
+                      Nenhum item encontrado
+                    </p>
+                    <p className="text-sm">
+                      {searchTerm
+                        ? "Tente ajustar os termos de busca"
+                        : "Comece adicionando uma entrada"}
+                    </p>
+                  </div>
+                ) : (
+                  itensUnicos.map((idItem) => {
+                    const entradasDoItem = entradasAgrupadas[idItem];
+                    const material = materiaisAgricolas[idItem];
+                    const categoria = material?.categoriaId
+                      ? categorias[material.categoriaId]
+                      : null;
+                    const saldoTotal =
+                      calcularSaldoTotalPorItem(entradasDoItem);
+                    const unidade = entradasDoItem[0]?.unidade || "";
+                    const isExpanded = expandedItems.has(idItem);
+
+                    // Verificar se o item tem entradas inativas
+                    const itemTemInativos = entradasDoItem.some(
+                      (e) => !e.ativo
+                    );
+                    const itemTemAtivos = entradasDoItem.some((e) => e.ativo);
+                    const isItemInativo = !itemTemAtivos && itemTemInativos;
+
+                    return (
+                      <div
+                        key={idItem}
+                        className={`border rounded-lg ${
+                          isItemInativo ? "opacity-60 grayscale" : ""
+                        }`}
                       >
-                        Nota
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="dataEntrada"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Data Entrada
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="idItem"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Item
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="qtde"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Quantidade
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="saldoAtual"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Saldo Atual
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="localizacao"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Localização
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="validade"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Validade
-                      </SortableHeader>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEntradas.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">
-                          <p className="text-muted-foreground">
-                            Nenhuma entrada encontrada
-                          </p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredEntradas.map((entrada, index) => {
-                        const material = materiaisAgricolas[entrada.idItem];
-                        return (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">
-                              {entrada.nota}
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {new Date(entrada.dataEntrada).toLocaleDateString(
-                                "pt-BR"
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">
-                                  {material?.nomeComercial ||
-                                    material?.descricao ||
-                                    "Item não encontrado"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {entrada.idItem}
-                                </p>
+                        {/* Linha do Item */}
+                        <div
+                          className={`p-4 border-b ${
+                            isItemInativo ? "bg-muted/30" : "bg-muted/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 flex-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  toggleItemEstoqueExpansao(idItem)
+                                }
+                                className="p-1 h-8 w-8"
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <div className="flex items-center gap-4 flex-1">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-1">
+                                    <h3 className="font-semibold text-lg">
+                                      {material?.nomeComercial ||
+                                        material?.descricao ||
+                                        "Item não encontrado"}
+                                    </h3>
+                                    {categoria && (
+                                      <Badge className="text-xs">
+                                        {categoria.descricaoResumida}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-1">
+                                    <span className="text-sm text-muted-foreground">
+                                      ID: {idItem}
+                                    </span>
+                                    <span className="text-sm font-medium">
+                                      Saldo Total: {saldoTotal} {unidade}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {entradasDoItem.length} entrada(s)
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="font-medium">
-                                {entrada.qtde} {entrada.unidade}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <span className="font-medium">
-                                {entrada.saldoAtual} {entrada.unidade}
-                              </span>
-                            </TableCell>
-                            <TableCell className="font-mono text-sm">
-                              {entrada.localizacao}
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {new Date(entrada.validade).toLocaleDateString(
-                                "pt-BR"
-                              )}
-                            </TableCell>
-                            <TableCell className="text-left">
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleVerDetalhes(entrada)}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditarEntrada(entrada)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleMovimentarItem(entrada)}
-                                  title="Movimentar item"
-                                >
-                                  <ArrowUpDown className="h-4 w-4" />
-                                </Button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  // Visualizar primeira entrada como representante
+                                  handleVerDetalhes(entradasDoItem[0]);
+                                }}
+                                title="Visualizar Item"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  // Editar primeira entrada como representante
+                                  handleEditarEntrada(entradasDoItem[0]);
+                                }}
+                                title="Editar Item"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  // Movimentar primeira entrada como representante
+                                  handleMovimentarItem(entradasDoItem[0]);
+                                }}
+                                title="Movimentar Item"
+                              >
+                                <ArrowUpDown className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Subgrid de Entradas */}
+                        {isExpanded && (
+                          <div className="p-4">
+                            {entradasDoItem.length > 0 ? (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm text-muted-foreground mb-3">
+                                  Entradas deste item:
+                                </h4>
+                                <div className="rounded-md border">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Fornecedor</TableHead>
+                                        <TableHead>Nota</TableHead>
+                                        <TableHead>Data de Entrada</TableHead>
+                                        <TableHead>Lote</TableHead>
+                                        <TableHead>Validade</TableHead>
+                                        <TableHead>
+                                          Quantidade de Entrada
+                                        </TableHead>
+                                        <TableHead>Saldo Atual</TableHead>
+                                        <TableHead>Localização</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {entradasDoItem.map((entrada, index) => {
+                                        // Verificar se esta entrada corresponde ao lote buscado
+                                        const correspondeLoteBuscado =
+                                          loteBuscado &&
+                                          entrada.lote
+                                            .toLowerCase()
+                                            .includes(
+                                              loteBuscado.toLowerCase()
+                                            );
+
+                                        return (
+                                          <TableRow
+                                            key={index}
+                                            className={`${
+                                              !entrada.ativo
+                                                ? "opacity-60 grayscale"
+                                                : ""
+                                            } ${
+                                              correspondeLoteBuscado
+                                                ? "bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-l-yellow-500"
+                                                : ""
+                                            }`}
+                                          >
+                                            <TableCell>
+                                              {fornecedores[
+                                                entrada.idFornecedor
+                                              ] ||
+                                                `Fornecedor ${entrada.idFornecedor}`}
+                                            </TableCell>
+                                            <TableCell className="font-medium">
+                                              {entrada.nota}
+                                            </TableCell>
+                                            <TableCell className="text-sm">
+                                              {new Date(
+                                                entrada.dataEntrada
+                                              ).toLocaleDateString("pt-BR")}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-sm">
+                                              {entrada.lote}
+                                            </TableCell>
+                                            <TableCell className="text-sm">
+                                              {new Date(
+                                                entrada.validade
+                                              ).toLocaleDateString("pt-BR")}
+                                            </TableCell>
+                                            <TableCell>
+                                              <span className="font-medium">
+                                                {entrada.qtde} {entrada.unidade}
+                                              </span>
+                                            </TableCell>
+                                            <TableCell>
+                                              {entrada.saldoAtual > 0 ? (
+                                                <span className="font-medium">
+                                                  {entrada.saldoAtual}{" "}
+                                                  {entrada.unidade}
+                                                </span>
+                                              ) : (
+                                                <span className="text-muted-foreground">
+                                                  -
+                                                </span>
+                                              )}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-sm">
+                                              {entrada.localizacao}
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
                               </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
+                            ) : (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p>Nenhuma entrada encontrada para este item</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </CardContent>
           </Card>
@@ -2060,141 +2612,194 @@ const Cargas = () => {
             </div>
           </div>
 
-          {/* Tabela de Estoque Técnico */}
+          {/* Grid Hierárquico de Estoque Técnico */}
           <Card>
             <CardHeader>
               <CardTitle>Estoque Técnico</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <SortableHeader
-                        sortKey="idItem"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Item
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="nLote"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Nº Lote
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="idLocalizacao"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Localização
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="saldoMovimentacao"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Saldo Movimentação
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="saldoDispon"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Saldo Disponível
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="unidade"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Unidade
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="dataUso"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Data de Uso
-                      </SortableHeader>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEstoqueTecnico.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">
-                          <p className="text-muted-foreground">
-                            Nenhum item encontrado
-                          </p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredEstoqueTecnico.map((item) => {
-                        const material = materiaisAgricolas[item.idItem];
-                        const loc = localizacoes[item.idLocalizacao];
-                        return (
-                          <TableRow key={item.idEstoque}>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">
-                                  {material?.nomeComercial ||
-                                    material?.descricao ||
-                                    "Item não encontrado"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.idItem}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-mono text-sm">
-                              {item.nLote}
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">
-                                  {loc?.codigo || "-"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {loc?.descricao || "-"}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="font-medium">
-                                {item.saldoMovimentacao} {item.unidade}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <span className="font-medium">
-                                {item.saldoDispon} {item.unidade}
-                              </span>
-                            </TableCell>
-                            <TableCell>{item.unidade}</TableCell>
-                            <TableCell className="text-sm">
-                              {item.dataUso
-                                ? new Date(item.dataUso).toLocaleDateString(
-                                    "pt-BR"
-                                  )
-                                : "-"}
-                            </TableCell>
-                            <TableCell className="text-left">
+              <div className="space-y-4">
+                {itensUnicosTecnico.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">
+                      Nenhum item encontrado
+                    </p>
+                    <p className="text-sm">
+                      {searchTermTecnico
+                        ? "Tente ajustar os termos de busca"
+                        : "Nenhum item no estoque técnico"}
+                    </p>
+                  </div>
+                ) : (
+                  itensUnicosTecnico.map((idItem) => {
+                    const itensDoItem = estoqueTecnicoAgrupado[idItem];
+                    const material = materiaisAgricolas[idItem];
+                    const categoria = material?.categoriaId
+                      ? categorias[material.categoriaId]
+                      : null;
+                    const saldoTotal =
+                      calcularSaldoTotalPorItemTecnicoFracionario(itensDoItem);
+                    const unidade = itensDoItem[0]?.unidade || "";
+                    const isExpanded = expandedItemsTecnico.has(idItem);
+
+                    return (
+                      <div key={idItem} className="border rounded-lg">
+                        {/* Linha do Item */}
+                        <div className="p-4 bg-muted/50 border-b">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 flex-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleVerDetalhesTecnico(item)}
+                                onClick={() =>
+                                  toggleItemTecnicoExpansao(idItem)
+                                }
+                                className="p-1 h-8 w-8"
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <div className="flex items-center gap-4 flex-1">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-1">
+                                    <h3 className="font-semibold text-lg">
+                                      {material?.nomeComercial ||
+                                        material?.descricao ||
+                                        "Item não encontrado"}
+                                    </h3>
+                                    {categoria && (
+                                      <Badge className="text-xs">
+                                        {categoria.descricaoResumida}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-1">
+                                    <span className="text-sm text-muted-foreground">
+                                      ID: {idItem}
+                                    </span>
+                                    <span className="text-sm font-medium">
+                                      Saldo Total: {saldoTotal} {unidade}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {itensDoItem.length} registro(s)
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleVerDetalhesTecnico(itensDoItem[0])
+                                }
+                                title="Visualizar Item"
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Subgrid de Itens */}
+                        {isExpanded && (
+                          <div className="p-4">
+                            {itensDoItem.length > 0 ? (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm text-muted-foreground mb-3">
+                                  Registros deste item:
+                                </h4>
+                                <div className="rounded-md border">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Nº Lote</TableHead>
+                                        <TableHead>Localização</TableHead>
+                                        <TableHead>
+                                          Saldo Movimentação
+                                        </TableHead>
+                                        <TableHead>Saldo Disponível</TableHead>
+                                        <TableHead>Unidade</TableHead>
+                                        <TableHead>Data de Uso</TableHead>
+                                        <TableHead>Ações</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {itensDoItem.map((item) => {
+                                        const loc =
+                                          localizacoes[item.idLocalizacao];
+                                        return (
+                                          <TableRow key={item.idEstoque}>
+                                            <TableCell className="font-mono text-sm">
+                                              {item.nLote}
+                                            </TableCell>
+                                            <TableCell>
+                                              <div>
+                                                <p className="font-medium">
+                                                  {loc?.codigo || "-"}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                  {loc?.descricao || "-"}
+                                                </p>
+                                              </div>
+                                            </TableCell>
+                                            <TableCell>
+                                              <span className="font-medium">
+                                                {item.saldoMovimentacao}{" "}
+                                                {item.unidade}
+                                              </span>
+                                            </TableCell>
+                                            <TableCell>
+                                              <span className="font-medium">
+                                                {item.saldoDispon}{" "}
+                                                {item.unidade}
+                                              </span>
+                                            </TableCell>
+                                            <TableCell>
+                                              {item.unidade}
+                                            </TableCell>
+                                            <TableCell className="text-sm">
+                                              {item.dataUso
+                                                ? new Date(
+                                                    item.dataUso
+                                                  ).toLocaleDateString("pt-BR")
+                                                : "-"}
+                                            </TableCell>
+                                            <TableCell className="text-left">
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() =>
+                                                  handleVerDetalhesTecnico(item)
+                                                }
+                                              >
+                                                <Eye className="h-4 w-4" />
+                                              </Button>
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p>Nenhum registro encontrado para este item</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </CardContent>
           </Card>
@@ -2276,143 +2881,196 @@ const Cargas = () => {
             </div>
           </div>
 
-          {/* Tabela de Estoque Fracionário */}
+          {/* Grid Hierárquico de Estoque Fracionário */}
           <Card>
             <CardHeader>
               <CardTitle>Estoque Fracionário</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <SortableHeader
-                        sortKey="idItem"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Item
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="nLote"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Nº Lote
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="idLocalizacao"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Localização
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="saldoMovimentacao"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Saldo Movimentação
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="saldoDispon"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Saldo Disponível
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="unidade"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Unidade
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="dataUso"
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                      >
-                        Data de Uso
-                      </SortableHeader>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEstoqueFracionario.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">
-                          <p className="text-muted-foreground">
-                            Nenhum item encontrado
-                          </p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredEstoqueFracionario.map((item) => {
-                        const material = materiaisAgricolas[item.idItem];
-                        const loc = localizacoes[item.idLocalizacao];
-                        return (
-                          <TableRow key={item.idEstoque}>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">
-                                  {material?.nomeComercial ||
-                                    material?.descricao ||
-                                    "Item não encontrado"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.idItem}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-mono text-sm">
-                              {item.nLote}
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">
-                                  {loc?.codigo || "-"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {loc?.descricao || "-"}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="font-medium">
-                                {item.saldoMovimentacao} {item.unidade}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <span className="font-medium">
-                                {item.saldoDispon} {item.unidade}
-                              </span>
-                            </TableCell>
-                            <TableCell>{item.unidade}</TableCell>
-                            <TableCell className="text-sm">
-                              {item.dataUso
-                                ? new Date(item.dataUso).toLocaleDateString(
-                                    "pt-BR"
-                                  )
-                                : "-"}
-                            </TableCell>
-                            <TableCell className="text-left">
+              <div className="space-y-4">
+                {itensUnicosFracionario.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">
+                      Nenhum item encontrado
+                    </p>
+                    <p className="text-sm">
+                      {searchTermFracionario
+                        ? "Tente ajustar os termos de busca"
+                        : "Nenhum item no estoque fracionário"}
+                    </p>
+                  </div>
+                ) : (
+                  itensUnicosFracionario.map((idItem) => {
+                    const itensDoItem = estoqueFracionarioAgrupado[idItem];
+                    const material = materiaisAgricolas[idItem];
+                    const categoria = material?.categoriaId
+                      ? categorias[material.categoriaId]
+                      : null;
+                    const saldoTotal =
+                      calcularSaldoTotalPorItemTecnicoFracionario(itensDoItem);
+                    const unidade = itensDoItem[0]?.unidade || "";
+                    const isExpanded = expandedItemsFracionario.has(idItem);
+
+                    return (
+                      <div key={idItem} className="border rounded-lg">
+                        {/* Linha do Item */}
+                        <div className="p-4 bg-muted/50 border-b">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 flex-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() =>
-                                  handleVerDetalhesFracionario(item)
+                                  toggleItemFracionarioExpansao(idItem)
                                 }
+                                className="p-1 h-8 w-8"
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <div className="flex items-center gap-4 flex-1">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-1">
+                                    <h3 className="font-semibold text-lg">
+                                      {material?.nomeComercial ||
+                                        material?.descricao ||
+                                        "Item não encontrado"}
+                                    </h3>
+                                    {categoria && (
+                                      <Badge className="text-xs">
+                                        {categoria.descricaoResumida}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-1">
+                                    <span className="text-sm text-muted-foreground">
+                                      ID: {idItem}
+                                    </span>
+                                    <span className="text-sm font-medium">
+                                      Saldo Total: {saldoTotal} {unidade}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {itensDoItem.length} registro(s)
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleVerDetalhesFracionario(itensDoItem[0])
+                                }
+                                title="Visualizar Item"
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Subgrid de Itens */}
+                        {isExpanded && (
+                          <div className="p-4">
+                            {itensDoItem.length > 0 ? (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm text-muted-foreground mb-3">
+                                  Registros deste item:
+                                </h4>
+                                <div className="rounded-md border">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Nº Lote</TableHead>
+                                        <TableHead>Localização</TableHead>
+                                        <TableHead>
+                                          Saldo Movimentação
+                                        </TableHead>
+                                        <TableHead>Saldo Disponível</TableHead>
+                                        <TableHead>Unidade</TableHead>
+                                        <TableHead>Data de Uso</TableHead>
+                                        <TableHead>Ações</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {itensDoItem.map((item) => {
+                                        const loc =
+                                          localizacoes[item.idLocalizacao];
+                                        return (
+                                          <TableRow key={item.idEstoque}>
+                                            <TableCell className="font-mono text-sm">
+                                              {item.nLote}
+                                            </TableCell>
+                                            <TableCell>
+                                              <div>
+                                                <p className="font-medium">
+                                                  {loc?.codigo || "-"}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                  {loc?.descricao || "-"}
+                                                </p>
+                                              </div>
+                                            </TableCell>
+                                            <TableCell>
+                                              <span className="font-medium">
+                                                {item.saldoMovimentacao}{" "}
+                                                {item.unidade}
+                                              </span>
+                                            </TableCell>
+                                            <TableCell>
+                                              <span className="font-medium">
+                                                {item.saldoDispon}{" "}
+                                                {item.unidade}
+                                              </span>
+                                            </TableCell>
+                                            <TableCell>
+                                              {item.unidade}
+                                            </TableCell>
+                                            <TableCell className="text-sm">
+                                              {item.dataUso
+                                                ? new Date(
+                                                    item.dataUso
+                                                  ).toLocaleDateString("pt-BR")
+                                                : "-"}
+                                            </TableCell>
+                                            <TableCell className="text-left">
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() =>
+                                                  handleVerDetalhesFracionario(
+                                                    item
+                                                  )
+                                                }
+                                              >
+                                                <Eye className="h-4 w-4" />
+                                              </Button>
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p>Nenhum registro encontrado para este item</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </CardContent>
           </Card>
@@ -2893,120 +3551,223 @@ const Cargas = () => {
         open={movimentarDialogOpen}
         onOpenChange={setMovimentarDialogOpen}
       >
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>Movimentar Item - Estoque Primário</DialogTitle>
             <DialogDescription>
-              Realize uma movimentação de estoque para este item
+              Selecione a entrada e realize uma movimentação de estoque
             </DialogDescription>
           </DialogHeader>
-          {entradaMovimentando && (
-            <div className="grid gap-4 py-4">
-              {/* Informações do Item */}
-              <div className="p-4 bg-muted rounded-lg space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold">Item</Label>
-                  <p className="text-sm font-medium">
-                    {materiaisAgricolas[entradaMovimentando.idItem]
-                      ?.nomeComercial ||
-                      materiaisAgricolas[entradaMovimentando.idItem]
-                        ?.descricao ||
-                      "Item não encontrado"}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold">Saldo Atual</Label>
-                  <p className="text-sm font-medium">
-                    {entradaMovimentando.saldoAtual}{" "}
-                    {entradaMovimentando.unidade}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold">Lote</Label>
-                  <p className="text-sm font-mono">
-                    {entradaMovimentando.lote}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="mov-tipo">Tipo de Movimentação *</Label>
-                <Select
-                  value={movimentacaoForm.tipoMovimento}
-                  onValueChange={(value) => {
-                    setMovimentacaoForm({
-                      ...movimentacaoForm,
-                      tipoMovimento: value,
-                      idLocDestino: "", // Resetar destino ao mudar tipo
-                    });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo de movimentação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tiposMovimentacoes.map((tipo, index) => (
-                      <SelectItem key={index} value={tipo.nome}>
-                        {tipo.nome} ({tipo.origem} → {tipo.destino})
+          <div className="grid gap-4 py-4">
+            {/* Select de Entrada */}
+            <div className="space-y-2">
+              <Label htmlFor="mov-entrada">Selecionar Entrada *</Label>
+              <Select
+                value={movimentacaoForm.entradaId}
+                onValueChange={(value) => {
+                  const entrada = obterEntradaPorId(value);
+                  setEntradaMovimentando(entrada);
+                  setMovimentacaoForm({
+                    ...movimentacaoForm,
+                    entradaId: value,
+                    qtde: "", // Resetar quantidade ao mudar entrada
+                  });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione Item + Nota + Lote + Validade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {entradasDisponiveisMovimentacao.map((entrada) => {
+                    const material = materiaisAgricolas[entrada.idItem];
+                    const nomeItem =
+                      material?.nomeComercial ||
+                      material?.descricao ||
+                      `Item ${entrada.idItem}`;
+                    const dataValidade = new Date(
+                      entrada.validade
+                    ).toLocaleDateString("pt-BR");
+                    const entradaId = gerarIdEntrada(entrada);
+                    return (
+                      <SelectItem key={entradaId} value={entradaId}>
+                        {nomeItem} | NF: {entrada.nota} | Lote: {entrada.lote} |
+                        Validade: {dataValidade}
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {movimentacaoForm.tipoMovimento &&
-                getLocalizacoesDestino(movimentacaoForm.tipoMovimento).length >
-                  0 && (
-                  <div className="space-y-2">
-                    <Label htmlFor="mov-destino">
-                      Localização de Destino *
+            {/* Resumo do Item Selecionado */}
+            {entradaMovimentando && (
+              <div className="p-4 bg-muted rounded-lg space-y-3">
+                <h4 className="font-semibold text-sm mb-3">
+                  Resumo da Entrada
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Nome do Item
                     </Label>
-                    <Select
-                      value={movimentacaoForm.idLocDestino}
-                      onValueChange={(value) =>
-                        setMovimentacaoForm({
-                          ...movimentacaoForm,
-                          idLocDestino: value,
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a localização de destino" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getLocalizacoesDestino(
-                          movimentacaoForm.tipoMovimento
-                        ).map((loc) => (
-                          <SelectItem key={loc.id} value={loc.id.toString()}>
-                            {loc.codigo} - {loc.descricao}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <p className="text-sm font-medium">
+                      {materiaisAgricolas[entradaMovimentando.idItem]
+                        ?.nomeComercial ||
+                        materiaisAgricolas[entradaMovimentando.idItem]
+                          ?.descricao ||
+                        "Item não encontrado"}
+                    </p>
                   </div>
-                )}
-
-              <div className="space-y-2">
-                <Label htmlFor="mov-qtde">Quantidade *</Label>
-                <Input
-                  id="mov-qtde"
-                  type="number"
-                  value={movimentacaoForm.qtde}
-                  onChange={(e) =>
-                    setMovimentacaoForm({
-                      ...movimentacaoForm,
-                      qtde: e.target.value,
-                    })
-                  }
-                  placeholder={`Máximo: ${entradaMovimentando.saldoAtual} ${entradaMovimentando.unidade}`}
-                  max={entradaMovimentando.saldoAtual}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Saldo disponível: {entradaMovimentando.saldoAtual}{" "}
-                  {entradaMovimentando.unidade}
-                </p>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Lote
+                    </Label>
+                    <p className="text-sm font-mono font-medium">
+                      {entradaMovimentando.lote}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Data de Validade
+                    </Label>
+                    <p className="text-sm font-medium">
+                      {new Date(
+                        entradaMovimentando.validade
+                      ).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Quantidade de Embalagens
+                    </Label>
+                    <p className="text-sm font-medium">
+                      {entradaMovimentando.qtdeEmbalagem}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Capacidade da Embalagem
+                    </Label>
+                    <p className="text-sm font-medium">
+                      {entradaMovimentando.capEmbalagem}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Saldo Atual
+                    </Label>
+                    <p className="text-sm font-medium">
+                      {entradaMovimentando.saldoAtual}{" "}
+                      {entradaMovimentando.unidade}
+                    </p>
+                  </div>
+                </div>
               </div>
+            )}
 
+            {entradaMovimentando && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="mov-tipo">Tipo de Movimentação *</Label>
+                  <Select
+                    value={movimentacaoForm.tipoMovimento}
+                    onValueChange={(value) => {
+                      setMovimentacaoForm({
+                        ...movimentacaoForm,
+                        tipoMovimento: value,
+                        idLocDestino: "", // Resetar destino ao mudar tipo
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de movimentação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposMovimentacoes.map((tipo, index) => (
+                        <SelectItem key={index} value={tipo.nome}>
+                          {tipo.nome} ({tipo.origem} → {tipo.destino})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Localização de Destino - Editável */}
+                {movimentacaoForm.tipoMovimento &&
+                  getLocalizacoesDestino(movimentacaoForm.tipoMovimento)
+                    .length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="mov-destino">
+                        Localização de Destino *
+                      </Label>
+                      <Select
+                        value={movimentacaoForm.idLocDestino}
+                        onValueChange={(value) =>
+                          setMovimentacaoForm({
+                            ...movimentacaoForm,
+                            idLocDestino: value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a localização de destino" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getLocalizacoesDestino(
+                            movimentacaoForm.tipoMovimento
+                          ).map((loc) => (
+                            <SelectItem key={loc.id} value={loc.id.toString()}>
+                              {loc.codigo} - {loc.descricao}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="mov-qtde">Quantidade *</Label>
+                  <Input
+                    id="mov-qtde"
+                    type="number"
+                    value={movimentacaoForm.qtde}
+                    onChange={(e) =>
+                      setMovimentacaoForm({
+                        ...movimentacaoForm,
+                        qtde: e.target.value,
+                      })
+                    }
+                    placeholder={`Máximo: ${entradaMovimentando.saldoAtual} ${entradaMovimentando.unidade}`}
+                    max={entradaMovimentando.saldoAtual}
+                    min={0}
+                  />
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      Saldo disponível: {entradaMovimentando.saldoAtual}{" "}
+                      {entradaMovimentando.unidade}
+                    </span>
+                    {movimentacaoForm.qtde && (
+                      <span
+                        className={`font-medium ${
+                          entradaMovimentando.saldoAtual -
+                            Number(movimentacaoForm.qtde) <
+                          0
+                            ? "text-destructive"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        Saldo restante:{" "}
+                        {entradaMovimentando.saldoAtual -
+                          Number(movimentacaoForm.qtde || 0)}{" "}
+                        {entradaMovimentando.unidade}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {entradaMovimentando && (
               <div className="space-y-2">
                 <Label htmlFor="mov-observacoes">Observações (opcional)</Label>
                 <Textarea
@@ -3022,8 +3783,8 @@ const Cargas = () => {
                   rows={3}
                 />
               </div>
-            </div>
-          )}
+            )}
+          </div>
           <DialogFooter>
             <Button
               variant="outline"
@@ -3031,6 +3792,7 @@ const Cargas = () => {
                 setMovimentarDialogOpen(false);
                 setEntradaMovimentando(null);
                 setMovimentacaoForm({
+                  entradaId: "",
                   tipoMovimento: "",
                   idLocDestino: "",
                   qtde: "",
@@ -3040,7 +3802,19 @@ const Cargas = () => {
             >
               Cancelar
             </Button>
-            <Button onClick={handleSalvarMovimentacao}>
+            <Button
+              onClick={handleSalvarMovimentacao}
+              disabled={
+                !entradaMovimentando ||
+                !movimentacaoForm.entradaId ||
+                !movimentacaoForm.tipoMovimento ||
+                !movimentacaoForm.qtde ||
+                (entradaMovimentando &&
+                  entradaMovimentando.saldoAtual -
+                    Number(movimentacaoForm.qtde || 0) <
+                    0)
+              }
+            >
               Confirmar Movimentação
             </Button>
           </DialogFooter>
