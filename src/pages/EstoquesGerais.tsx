@@ -281,13 +281,10 @@ type EstoqueTecnicoFracionario = {
   dataUso: string | null;
 };
 
-const Cargas = () => {
+const EstoquesGerais = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ativos"); // Por padrão mostrar apenas ativos
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [requisicaoDialogOpen, setRequisicaoDialogOpen] = useState(false);
-  const [xmlDialogOpen, setXmlDialogOpen] = useState(false);
-  const [csvDialogOpen, setCsvDialogOpen] = useState(false);
   const [detalhesDialogOpen, setDetalhesDialogOpen] = useState(false);
   const [editarDialogOpen, setEditarDialogOpen] = useState(false);
   const [movimentarDialogOpen, setMovimentarDialogOpen] = useState(false);
@@ -528,61 +525,6 @@ const Cargas = () => {
       ativo: true,
     },
   ]);
-
-  // Estado para dados comuns da nota fiscal
-  const [dadosComunsNota, setDadosComunsNota] = useState({
-    nota: "",
-    idFornecedor: "",
-    dataEntrada: "",
-  });
-
-  // Tipo para itens do formulário
-  type ItemFormulario = {
-    id: string; // ID único para identificar o item na lista
-    idItem: string;
-    lote: string;
-    qtde: string;
-    unidade: string;
-    validade: string;
-    idTipoEmbalagem: string; // ID do tipo de embalagem
-    qtdeEmbalagem: string;
-    capEmbalagem: string;
-    saldoAtual: string;
-    idLocalizacao: string; // ID da localização
-  };
-
-  // Estado para lista de itens do formulário
-  const [itensFormulario, setItensFormulario] = useState<ItemFormulario[]>([
-    {
-      id: Date.now().toString(),
-      idItem: "",
-      lote: "",
-      qtde: "",
-      unidade: "LITROS",
-      validade: "",
-      idTipoEmbalagem: "",
-      qtdeEmbalagem: "",
-      capEmbalagem: "",
-      saldoAtual: "",
-      idLocalizacao: "",
-    },
-  ]);
-
-  // Estado para controlar quais itens estão expandidos
-  const [itensExpandidos, setItensExpandidos] = useState<Set<string>>(
-    new Set([itensFormulario[0]?.id || ""])
-  );
-
-  // Função para alternar expansão de um item
-  const toggleItemExpansao = (id: string) => {
-    const novosExpandidos = new Set(itensExpandidos);
-    if (novosExpandidos.has(id)) {
-      novosExpandidos.delete(id);
-    } else {
-      novosExpandidos.add(id);
-    }
-    setItensExpandidos(novosExpandidos);
-  };
 
   const [novaRequisicao, setNovaRequisicao] = useState({
     hardware: "",
@@ -1246,129 +1188,6 @@ const Cargas = () => {
     setEntradaEditando(null);
   };
 
-  // Função para adicionar novo item ao formulário
-  const adicionarItem = () => {
-    const novoId = Date.now().toString();
-    setItensFormulario([
-      ...itensFormulario,
-      {
-        id: novoId,
-        idItem: "",
-        lote: "",
-        qtde: "",
-        unidade: "LITROS",
-        validade: "",
-        idTipoEmbalagem: "",
-        qtdeEmbalagem: "",
-        capEmbalagem: "",
-        saldoAtual: "",
-        idLocalizacao: "",
-      },
-    ]);
-    // Expandir o novo item automaticamente
-    setItensExpandidos(new Set([...itensExpandidos, novoId]));
-  };
-
-  // Função para remover item do formulário
-  const removerItem = (id: string) => {
-    if (itensFormulario.length > 1) {
-      setItensFormulario(itensFormulario.filter((item) => item.id !== id));
-    } else {
-      toast.error("É necessário ter pelo menos um item");
-    }
-  };
-
-  // Função para atualizar um item específico
-  const atualizarItem = (
-    id: string,
-    campo: keyof ItemFormulario,
-    valor: string
-  ) => {
-    setItensFormulario(
-      itensFormulario.map((item) =>
-        item.id === id ? { ...item, [campo]: valor } : item
-      )
-    );
-  };
-
-  const handleIncluirCarga = () => {
-    // Validar dados comuns
-    if (
-      !dadosComunsNota.nota ||
-      !dadosComunsNota.idFornecedor ||
-      !dadosComunsNota.dataEntrada
-    ) {
-      toast.error("Preencha os dados comuns da nota fiscal");
-      return;
-    }
-
-    // Validar itens
-    const itensValidos = itensFormulario.filter(
-      (item) => item.idItem && item.qtde && item.unidade
-    );
-
-    if (itensValidos.length === 0) {
-      toast.error("Adicione pelo menos um item válido");
-      return;
-    }
-
-    // Criar entradas para cada item
-    const novasEntradas: EntradaNotaFiscal[] = itensValidos.map((item) => {
-      const tipoEmb = tiposEmbalagem[Number(item.idTipoEmbalagem)];
-      const loc = localizacoes[Number(item.idLocalizacao)];
-      return {
-        nota: Number(dadosComunsNota.nota),
-        idFornecedor: Number(dadosComunsNota.idFornecedor),
-        dataEntrada: dadosComunsNota.dataEntrada,
-        idItem: Number(item.idItem),
-        lote: item.lote || "",
-        qtde: Number(item.qtde),
-        unidade: item.unidade,
-        validade: item.validade || "",
-        tipoEmbalagem: tipoEmb?.codigo || "",
-        qtdeEmbalagem: item.qtdeEmbalagem ? Number(item.qtdeEmbalagem) : 0,
-        capEmbalagem: item.capEmbalagem
-          ? Number(item.capEmbalagem)
-          : tipoEmb?.capacidade || 0,
-        saldoAtual: item.saldoAtual
-          ? Number(item.saldoAtual)
-          : Number(item.qtde),
-        localizacao: loc?.codigo || "",
-        ativo: true, // Novas entradas sempre começam ativas
-      };
-    });
-
-    setEntradasEstoquePrimario([...entradasEstoquePrimario, ...novasEntradas]);
-    toast.success(
-      `${novasEntradas.length} entrada(s) registrada(s) com sucesso!`
-    );
-    setDialogOpen(false);
-
-    // Resetar formulário
-    setDadosComunsNota({
-      nota: "",
-      idFornecedor: "",
-      dataEntrada: "",
-    });
-    const primeiroId = Date.now().toString();
-    setItensFormulario([
-      {
-        id: primeiroId,
-        idItem: "",
-        lote: "",
-        qtde: "",
-        unidade: "LITROS",
-        validade: "",
-        idTipoEmbalagem: "",
-        qtdeEmbalagem: "",
-        capEmbalagem: "",
-        saldoAtual: "",
-        idLocalizacao: "",
-      },
-    ]);
-    setItensExpandidos(new Set([primeiroId]));
-  };
-
   const handleCriarRequisicao = () => {
     if (
       !novaRequisicao.hardware ||
@@ -1388,16 +1207,6 @@ const Cargas = () => {
       prioridade: "media",
       observacoes: "",
     });
-  };
-
-  const handleImportarXML = () => {
-    toast.success("XML importado com sucesso!");
-    setXmlDialogOpen(false);
-  };
-
-  const handleImportarCSV = () => {
-    toast.success("CSV importado com sucesso!");
-    setCsvDialogOpen(false);
   };
 
   const handleExportar = (
@@ -1424,7 +1233,7 @@ const Cargas = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
-            Gerenciamento de Cargas
+            Controle de estoques gerais
           </h1>
           <p className="text-muted-foreground mt-1">
             Controle de estoque e movimentação de produtos
@@ -1568,27 +1377,6 @@ const Cargas = () => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex-1 sm:flex-none">
-                    <Upload className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Importar</span>
-                    <span className="sm:hidden">Importar</span>
-                    <ChevronDown className="h-4 w-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setXmlDialogOpen(true)}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar XML/NF
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setCsvDialogOpen(true)}>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Importar CSV
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex-1 sm:flex-none">
                     <Download className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Exportar</span>
                     <span className="sm:hidden">Exportar</span>
@@ -1611,480 +1399,6 @@ const Cargas = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto">
-                  <Plus className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Nova Entrada</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Registrar Nova Entrada</DialogTitle>
-                  <DialogDescription>
-                    Registre uma nova entrada de produto no estoque. Você pode
-                    adicionar múltiplos itens para a mesma nota fiscal.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-6 py-4">
-                  {/* Dados Comuns da Nota Fiscal */}
-                  <div className="space-y-4">
-                    <div className="border-b pb-3">
-                      <h3 className="text-lg font-semibold">
-                        Dados da Nota Fiscal
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Informações comuns para todos os itens
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="nota">Número da Nota *</Label>
-                        <Input
-                          id="nota"
-                          type="number"
-                          value={dadosComunsNota.nota}
-                          onChange={(e) =>
-                            setDadosComunsNota({
-                              ...dadosComunsNota,
-                              nota: e.target.value,
-                            })
-                          }
-                          placeholder="999999"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="idFornecedor">Fornecedor *</Label>
-                        <Select
-                          value={dadosComunsNota.idFornecedor}
-                          onValueChange={(value) =>
-                            setDadosComunsNota({
-                              ...dadosComunsNota,
-                              idFornecedor: value,
-                            })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">Fornecedor A</SelectItem>
-                            <SelectItem value="2">Fornecedor B</SelectItem>
-                            <SelectItem value="3">Fornecedor C</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dataEntrada">Data de Entrada *</Label>
-                        <Input
-                          id="dataEntrada"
-                          type="date"
-                          value={dadosComunsNota.dataEntrada}
-                          onChange={(e) =>
-                            setDadosComunsNota({
-                              ...dadosComunsNota,
-                              dataEntrada: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Lista de Itens */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b pb-3">
-                      <div>
-                        <h3 className="text-lg font-semibold">Itens da Nota</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Adicione os produtos desta nota fiscal
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={adicionarItem}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Adicionar Item
-                      </Button>
-                    </div>
-
-                    <div className="space-y-6">
-                      {itensFormulario.map((item, index) => {
-                        const material =
-                          materiaisAgricolas[Number(item.idItem)];
-                        const nomeProduto =
-                          material?.nomeComercial ||
-                          material?.descricao ||
-                          "Selecione um item";
-                        const isExpandido = itensExpandidos.has(item.id);
-
-                        return (
-                          <Card key={item.id} className="overflow-hidden">
-                            {/* Header do Item - Clicável para expandir/recolher */}
-                            <div
-                              className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                              onClick={() => toggleItemExpansao(item.id)}
-                            >
-                              <div className="flex items-center gap-3 flex-1">
-                                {isExpandido ? (
-                                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                )}
-                                <div className="flex-1">
-                                  <h4 className="font-semibold">
-                                    Item {index + 1}
-                                    {item.idItem && (
-                                      <span className="text-muted-foreground font-normal ml-2">
-                                        - {nomeProduto}
-                                      </span>
-                                    )}
-                                  </h4>
-                                  {!isExpandido && item.idItem && (
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      {item.qtde && (
-                                        <>
-                                          Qtd: {item.qtde} {item.unidade}
-                                          {item.lote && ` • Lote: ${item.lote}`}
-                                        </>
-                                      )}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              {itensFormulario.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    removerItem(item.id);
-                                  }}
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-
-                            {/* Conteúdo do Item - Mostrado apenas se expandido */}
-                            {isExpandido && (
-                              <div className="p-4 pt-0 border-t">
-                                <div className="grid gap-4">
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                      <Label htmlFor={`item-${item.id}-idItem`}>
-                                        Item *
-                                      </Label>
-                                      <Select
-                                        value={item.idItem}
-                                        onValueChange={(value) =>
-                                          atualizarItem(
-                                            item.id,
-                                            "idItem",
-                                            value
-                                          )
-                                        }
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Selecione o item" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="1005392">
-                                            U 46 BR (1005392)
-                                          </SelectItem>
-                                          <SelectItem value="1027638">
-                                            DEZ (1027638)
-                                          </SelectItem>
-                                          <SelectItem value="1027636">
-                                            MIRANT (1027636)
-                                          </SelectItem>
-                                          <SelectItem value="1003390">
-                                            FERTILIZANTE (1003390)
-                                          </SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor={`item-${item.id}-lote`}>
-                                        Número do Lote
-                                      </Label>
-                                      <Input
-                                        id={`item-${item.id}-lote`}
-                                        value={item.lote}
-                                        onChange={(e) =>
-                                          atualizarItem(
-                                            item.id,
-                                            "lote",
-                                            e.target.value
-                                          )
-                                        }
-                                        placeholder="NR42123259600"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-3 gap-4">
-                                    <div className="space-y-2">
-                                      <Label htmlFor={`item-${item.id}-qtde`}>
-                                        Quantidade *
-                                      </Label>
-                                      <Input
-                                        id={`item-${item.id}-qtde`}
-                                        type="number"
-                                        value={item.qtde}
-                                        onChange={(e) =>
-                                          atualizarItem(
-                                            item.id,
-                                            "qtde",
-                                            e.target.value
-                                          )
-                                        }
-                                        placeholder="0"
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label
-                                        htmlFor={`item-${item.id}-unidade`}
-                                      >
-                                        Unidade *
-                                      </Label>
-                                      <Select
-                                        value={item.unidade}
-                                        onValueChange={(value) =>
-                                          atualizarItem(
-                                            item.id,
-                                            "unidade",
-                                            value
-                                          )
-                                        }
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="LITROS">
-                                            Litros (LITROS)
-                                          </SelectItem>
-                                          <SelectItem value="KILOS">
-                                            Quilos (KILOS)
-                                          </SelectItem>
-                                          <SelectItem value="UNIDADES">
-                                            Unidades (UNIDADES)
-                                          </SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label
-                                        htmlFor={`item-${item.id}-validade`}
-                                      >
-                                        Data de Validade
-                                      </Label>
-                                      <Input
-                                        id={`item-${item.id}-validade`}
-                                        type="date"
-                                        value={item.validade}
-                                        onChange={(e) =>
-                                          atualizarItem(
-                                            item.id,
-                                            "validade",
-                                            e.target.value
-                                          )
-                                        }
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-3 gap-4">
-                                    <div className="space-y-2">
-                                      <Label
-                                        htmlFor={`item-${item.id}-idTipoEmbalagem`}
-                                      >
-                                        Tipo de Embalagem
-                                      </Label>
-                                      <Select
-                                        value={item.idTipoEmbalagem}
-                                        onValueChange={(value) => {
-                                          atualizarItem(
-                                            item.id,
-                                            "idTipoEmbalagem",
-                                            value
-                                          );
-                                          // Preencher capacidade automaticamente se disponível
-                                          const tipoEmb =
-                                            tiposEmbalagem[Number(value)];
-                                          if (tipoEmb && !item.capEmbalagem) {
-                                            atualizarItem(
-                                              item.id,
-                                              "capEmbalagem",
-                                              tipoEmb.capacidade.toString()
-                                            );
-                                          }
-                                        }}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Selecione o tipo" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {Object.entries(tiposEmbalagem).map(
-                                            ([id, emb]) => (
-                                              <SelectItem key={id} value={id}>
-                                                {emb.codigo} - {emb.descricao}
-                                              </SelectItem>
-                                            )
-                                          )}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label
-                                        htmlFor={`item-${item.id}-qtdeEmbalagem`}
-                                      >
-                                        Quantidade de Embalagens
-                                      </Label>
-                                      <Input
-                                        id={`item-${item.id}-qtdeEmbalagem`}
-                                        type="number"
-                                        value={item.qtdeEmbalagem}
-                                        onChange={(e) =>
-                                          atualizarItem(
-                                            item.id,
-                                            "qtdeEmbalagem",
-                                            e.target.value
-                                          )
-                                        }
-                                        placeholder="5"
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label
-                                        htmlFor={`item-${item.id}-capEmbalagem`}
-                                      >
-                                        Capacidade da Embalagem
-                                      </Label>
-                                      <Input
-                                        id={`item-${item.id}-capEmbalagem`}
-                                        type="number"
-                                        value={item.capEmbalagem}
-                                        onChange={(e) =>
-                                          atualizarItem(
-                                            item.id,
-                                            "capEmbalagem",
-                                            e.target.value
-                                          )
-                                        }
-                                        placeholder="1000"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                      <Label
-                                        htmlFor={`item-${item.id}-saldoAtual`}
-                                      >
-                                        Saldo Atual
-                                      </Label>
-                                      <Input
-                                        id={`item-${item.id}-saldoAtual`}
-                                        type="number"
-                                        value={item.saldoAtual}
-                                        onChange={(e) =>
-                                          atualizarItem(
-                                            item.id,
-                                            "saldoAtual",
-                                            e.target.value
-                                          )
-                                        }
-                                        placeholder="Deixe vazio para usar a quantidade"
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label
-                                        htmlFor={`item-${item.id}-idLocalizacao`}
-                                      >
-                                        Localização
-                                      </Label>
-                                      <Select
-                                        value={item.idLocalizacao}
-                                        onValueChange={(value) =>
-                                          atualizarItem(
-                                            item.id,
-                                            "idLocalizacao",
-                                            value
-                                          )
-                                        }
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Selecione a localização" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {Object.entries(localizacoes)
-                                            .filter(
-                                              ([_, loc]) =>
-                                                loc.tipoEstoque === "PRIMÁRIO"
-                                            )
-                                            .map(([id, loc]) => (
-                                              <SelectItem key={id} value={id}>
-                                                {loc.codigo} - {loc.descricao}
-                                              </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setDialogOpen(false);
-                      setDadosComunsNota({
-                        nota: "",
-                        idFornecedor: "",
-                        dataEntrada: "",
-                      });
-                      const primeiroId = Date.now().toString();
-                      setItensFormulario([
-                        {
-                          id: primeiroId,
-                          idItem: "",
-                          lote: "",
-                          qtde: "",
-                          unidade: "LITROS",
-                          validade: "",
-                          idTipoEmbalagem: "",
-                          qtdeEmbalagem: "",
-                          capEmbalagem: "",
-                          saldoAtual: "",
-                          idLocalizacao: "",
-                        },
-                      ]);
-                      setItensExpandidos(new Set([primeiroId]));
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit" onClick={handleIncluirCarga}>
-                    Registrar{" "}
-                    {itensFormulario.length > 1 ? "Entradas" : "Entrada"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </div>
 
           {/* Tabela de Entradas */}
@@ -2574,11 +1888,11 @@ const Cargas = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setXmlDialogOpen(true)}>
+                  <DropdownMenuItem disabled>
                     <Upload className="h-4 w-4 mr-2" />
                     Importar XML/NF
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setCsvDialogOpen(true)}>
+                  <DropdownMenuItem disabled>
                     <FileText className="h-4 w-4 mr-2" />
                     Importar CSV
                   </DropdownMenuItem>
@@ -2843,11 +2157,11 @@ const Cargas = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setXmlDialogOpen(true)}>
+                  <DropdownMenuItem disabled>
                     <Upload className="h-4 w-4 mr-2" />
                     Importar XML/NF
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setCsvDialogOpen(true)}>
+                  <DropdownMenuItem disabled>
                     <FileText className="h-4 w-4 mr-2" />
                     Importar CSV
                   </DropdownMenuItem>
@@ -3499,53 +2813,6 @@ const Cargas = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Dialogs de Importação */}
-      <Dialog open={xmlDialogOpen} onOpenChange={setXmlDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Importar XML/Nota Fiscal</DialogTitle>
-            <DialogDescription>
-              Importe entradas automaticamente via XML ou Nota Fiscal
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-              <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground mb-2">
-                Arraste e solte ou clique para selecionar
-              </p>
-              <Button variant="outline">Selecionar Arquivo</Button>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleImportarXML}>Importar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={csvDialogOpen} onOpenChange={setCsvDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Importar CSV</DialogTitle>
-            <DialogDescription>
-              Importe entradas automaticamente via arquivo CSV
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground mb-2">
-                Arraste e solte ou clique para selecionar
-              </p>
-              <Button variant="outline">Selecionar Arquivo</Button>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleImportarCSV}>Importar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Dialog de Movimentação - Estoque Primário */}
       <Dialog
         open={movimentarDialogOpen}
@@ -3935,4 +3202,4 @@ const Cargas = () => {
   );
 };
 
-export default Cargas;
+export default EstoquesGerais;

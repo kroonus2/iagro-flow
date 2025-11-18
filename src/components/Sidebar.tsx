@@ -20,6 +20,7 @@ import {
   HelpCircle,
   Wheat,
   ArrowUpDown,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -91,6 +92,7 @@ const menuItems: MenuItem[] = [
     title: "Serviços",
     icon: FlaskConical,
     subItems: [
+      { title: "Notas de Entrada", icon: FileText, path: "/notas-entrada" },
       { title: "Estoques Gerais", icon: Package, path: "/estoques-gerais" },
       { title: "Movimentações", icon: ArrowUpDown, path: "/movimentacoes" },
       { title: "Receitas", icon: FlaskConical, path: "/receitas" },

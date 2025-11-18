@@ -27,6 +27,7 @@ import InsumosAgricolas from "./pages/InsumosAgricolas";
 import CadastrosAuxiliares from "./pages/CadastrosAuxiliares";
 import GerenciamentoFazendas from "./pages/GerenciamentoFazendas";
 import Movimentacoes from "./pages/Movimentacoes";
+import NotasEntrada from "./pages/NotasEntrada";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,7 @@ const App = () => (
                 element={<CadastrosAuxiliares />}
               />
               <Route path="/estoques-gerais" element={<EstoquesGerais />} />
+              <Route path="/notas-entrada" element={<NotasEntrada />} />
               <Route path="/movimentacoes" element={<Movimentacoes />} />
               <Route
                 path="/importacao-receitas"
