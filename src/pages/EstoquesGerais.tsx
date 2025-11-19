@@ -29,6 +29,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -294,6 +304,12 @@ const EstoquesGerais = () => {
     useState<EntradaNotaFiscal | null>(null);
   const [entradaMovimentando, setEntradaMovimentando] =
     useState<EntradaNotaFiscal | null>(null);
+  const [idItemMovimentacao, setIdItemMovimentacao] = useState<number | null>(
+    null
+  );
+  const [mostrarAlertaVencimento, setMostrarAlertaVencimento] = useState(false);
+  const [entradaSelecionadaAlerta, setEntradaSelecionadaAlerta] =
+    useState<string>("");
   const [activeTab, setActiveTab] = useState("primario");
   const [searchTermTecnico, setSearchTermTecnico] = useState("");
   const [searchTermFracionario, setSearchTermFracionario] = useState("");
@@ -590,10 +606,17 @@ const EstoquesGerais = () => {
   };
 
   // Obter entradas disponíveis para movimentação (apenas ativas com saldo > 0)
+  // Filtrar por idItem se estiver movimentando um item específico
   const entradasDisponiveisMovimentacao = entradasEstoquePrimario
-    .filter((e) => e.ativo && e.saldoAtual > 0)
+    .filter((e) => {
+      const ativoComSaldo = e.ativo && e.saldoAtual > 0;
+      if (idItemMovimentacao !== null) {
+        return ativoComSaldo && e.idItem === idItemMovimentacao;
+      }
+      return ativoComSaldo;
+    })
     .sort((a, b) => {
-      // Ordenar por data de validade (mais velho primeiro)
+      // Ordenar por data de validade (mais próximo a vencer primeiro)
       const dataA = new Date(a.validade).getTime();
       const dataB = new Date(b.validade).getTime();
       return dataA - dataB;
@@ -1055,8 +1078,22 @@ const EstoquesGerais = () => {
   };
 
   const handleMovimentarItem = (entrada: EntradaNotaFiscal) => {
-    setEntradaMovimentando(entrada);
-    const entradaId = gerarIdEntrada(entrada);
+    // Armazenar o idItem para filtrar apenas entradas do mesmo item
+    setIdItemMovimentacao(entrada.idItem);
+
+    // Obter todas as entradas do mesmo item, ordenadas por validade
+    const entradasDoItem = entradasEstoquePrimario
+      .filter((e) => e.idItem === entrada.idItem && e.ativo && e.saldoAtual > 0)
+      .sort((a, b) => {
+        const dataA = new Date(a.validade).getTime();
+        const dataB = new Date(b.validade).getTime();
+        return dataA - dataB;
+      });
+
+    // Selecionar a primeira entrada (mais próxima a vencer) por padrão
+    const primeiraEntrada = entradasDoItem[0] || entrada;
+    setEntradaMovimentando(primeiraEntrada);
+    const entradaId = gerarIdEntrada(primeiraEntrada);
     setMovimentacaoForm({
       entradaId: entradaId,
       tipoMovimento: "",
@@ -1134,6 +1171,7 @@ const EstoquesGerais = () => {
     toast.success("Movimentação realizada com sucesso!");
     setMovimentarDialogOpen(false);
     setEntradaMovimentando(null);
+    setIdItemMovimentacao(null);
     setMovimentacaoForm({
       entradaId: "",
       tipoMovimento: "",
@@ -2818,7 +2856,7 @@ const EstoquesGerais = () => {
         open={movimentarDialogOpen}
         onOpenChange={setMovimentarDialogOpen}
       >
-        <DialogContent className="sm:max-w-[700px]">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Movimentar Item - Estoque Primário</DialogTitle>
             <DialogDescription>
@@ -2832,13 +2870,29 @@ const EstoquesGerais = () => {
               <Select
                 value={movimentacaoForm.entradaId}
                 onValueChange={(value) => {
-                  const entrada = obterEntradaPorId(value);
-                  setEntradaMovimentando(entrada);
-                  setMovimentacaoForm({
-                    ...movimentacaoForm,
-                    entradaId: value,
-                    qtde: "", // Resetar quantidade ao mudar entrada
-                  });
+                  // Verificar se não é a primeira entrada (mais próxima a vencer)
+                  const primeiraEntradaId = entradasDisponiveisMovimentacao[0]
+                    ? gerarIdEntrada(entradasDisponiveisMovimentacao[0])
+                    : null;
+
+                  if (
+                    primeiraEntradaId &&
+                    value !== primeiraEntradaId &&
+                    entradasDisponiveisMovimentacao.length > 1
+                  ) {
+                    // Mostrar alerta se não for a primeira entrada
+                    setEntradaSelecionadaAlerta(value);
+                    setMostrarAlertaVencimento(true);
+                  } else {
+                    // Selecionar diretamente se for a primeira ou única entrada
+                    const entrada = obterEntradaPorId(value);
+                    setEntradaMovimentando(entrada);
+                    setMovimentacaoForm({
+                      ...movimentacaoForm,
+                      entradaId: value,
+                      qtde: "", // Resetar quantidade ao mudar entrada
+                    });
+                  }
                 }}
               >
                 <SelectTrigger>
@@ -3031,6 +3085,122 @@ const EstoquesGerais = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Cálculo de Embalagens */}
+                {movimentacaoForm.qtde &&
+                  entradaMovimentando.capEmbalagem > 0 && (
+                    <Card>
+                      <CardContent className="p-4">
+                        <h4 className="font-semibold text-sm mb-3">
+                          Cálculo de Embalagens
+                        </h4>
+                        {(() => {
+                          const quantidadeSolicitada = Number(
+                            movimentacaoForm.qtde || 0
+                          );
+                          const capacidadeEmbalagem =
+                            entradaMovimentando.capEmbalagem;
+                          const embalagensTotais =
+                            entradaMovimentando.qtdeEmbalagem;
+                          const saldoAtual = entradaMovimentando.saldoAtual;
+
+                          // Calcular quantas embalagens a quantidade solicitada representa
+                          const embalagensMovimentadas = Math.ceil(
+                            quantidadeSolicitada / capacidadeEmbalagem
+                          );
+
+                          // Calcular quantidade total em embalagens (arredondado para cima)
+                          const quantidadeTotalEmbalagens =
+                            embalagensMovimentadas * capacidadeEmbalagem;
+
+                          // Calcular diferença (sobra)
+                          const diferenca =
+                            quantidadeTotalEmbalagens - quantidadeSolicitada;
+
+                          // Calcular embalagens restantes
+                          const saldoRestante =
+                            saldoAtual - quantidadeSolicitada;
+                          const embalagensRestantes = Math.floor(
+                            saldoRestante / capacidadeEmbalagem
+                          );
+                          const quantidadeRestanteEmbalagens =
+                            embalagensRestantes * capacidadeEmbalagem;
+                          const diferencaRestante =
+                            saldoRestante - quantidadeRestanteEmbalagens;
+
+                          return (
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <Label className="text-xs text-muted-foreground">
+                                  Quantidade Solicitada
+                                </Label>
+                                <p className="font-medium">
+                                  {quantidadeSolicitada.toLocaleString("pt-BR")}{" "}
+                                  {entradaMovimentando.unidade}
+                                </p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">
+                                  Embalagens a Movimentar
+                                </Label>
+                                <p className="font-medium">
+                                  {embalagensMovimentadas} unidade(s)
+                                </p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">
+                                  Total em Embalagens
+                                </Label>
+                                <p className="font-medium">
+                                  {quantidadeTotalEmbalagens.toLocaleString(
+                                    "pt-BR"
+                                  )}{" "}
+                                  {entradaMovimentando.unidade}
+                                </p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">
+                                  Diferença (Sobra)
+                                </Label>
+                                <p
+                                  className={`font-medium ${
+                                    diferenca > 0
+                                      ? "text-warning"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {diferenca > 0 ? "+" : ""}
+                                  {diferenca.toLocaleString("pt-BR")}{" "}
+                                  {entradaMovimentando.unidade}
+                                </p>
+                              </div>
+                              <div className="col-span-2 pt-2 border-t">
+                                <Label className="text-xs text-muted-foreground">
+                                  Embalagens Restantes
+                                </Label>
+                                <p className="font-medium">
+                                  {embalagensRestantes} unidade(s) ={" "}
+                                  {quantidadeRestanteEmbalagens.toLocaleString(
+                                    "pt-BR"
+                                  )}{" "}
+                                  {entradaMovimentando.unidade}
+                                  {diferencaRestante > 0 && (
+                                    <span className="text-muted-foreground ml-1">
+                                      (+{" "}
+                                      {diferencaRestante.toLocaleString(
+                                        "pt-BR"
+                                      )}{" "}
+                                      {entradaMovimentando.unidade} solto)
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  )}
               </>
             )}
 
@@ -3058,6 +3228,7 @@ const EstoquesGerais = () => {
               onClick={() => {
                 setMovimentarDialogOpen(false);
                 setEntradaMovimentando(null);
+                setIdItemMovimentacao(null);
                 setMovimentacaoForm({
                   entradaId: "",
                   tipoMovimento: "",
@@ -3087,6 +3258,41 @@ const EstoquesGerais = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* AlertDialog para avisar sobre vencimento */}
+      <AlertDialog
+        open={mostrarAlertaVencimento}
+        onOpenChange={setMostrarAlertaVencimento}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Atenção</AlertDialogTitle>
+            <AlertDialogDescription>
+              Existe um item mais próximo ao vencimento. Deseja prosseguir?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const entrada = obterEntradaPorId(entradaSelecionadaAlerta);
+                if (entrada) {
+                  setEntradaMovimentando(entrada);
+                  setMovimentacaoForm({
+                    ...movimentacaoForm,
+                    entradaId: entradaSelecionadaAlerta,
+                    qtde: "", // Resetar quantidade ao mudar entrada
+                  });
+                }
+                setMostrarAlertaVencimento(false);
+                setEntradaSelecionadaAlerta("");
+              }}
+            >
+              Prosseguir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Modal de Detalhes - Estoque Primário */}
       <Dialog open={detalhesDialogOpen} onOpenChange={setDetalhesDialogOpen}>
