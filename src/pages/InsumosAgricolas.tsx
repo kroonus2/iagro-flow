@@ -75,6 +75,22 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
+// Schema de validação para Classe
+const classeSchema = z.object({
+  identificacao: z
+    .string()
+    .min(1, "Identificação da classe é obrigatória")
+    .max(50, "Identificação deve ter no máximo 50 caracteres"),
+  codigoERP: z
+    .string()
+    .min(1, "Código ERP é obrigatório")
+    .max(50, "Código ERP deve ter no máximo 50 caracteres"),
+  nomeClasse: z
+    .string()
+    .min(1, "Nome da classe é obrigatório")
+    .max(200, "Nome da classe deve ter no máximo 200 caracteres"),
+});
+
 // Schema de validação para Categoria
 const categoriaSchema = z.object({
   codigo: z
@@ -89,7 +105,7 @@ const categoriaSchema = z.object({
     .string()
     .min(1, "Descrição completa é obrigatória")
     .max(500, "Descrição completa deve ter no máximo 500 caracteres"),
-  mt: z.string().min(1, "MT é obrigatório"),
+  classeId: z.number().min(1, "Classe é obrigatória").optional(),
 });
 
 // Schema de validação para Material Agrícola
@@ -115,16 +131,24 @@ const materialSchema = z.object({
     .min(1, "Nome comercial é obrigatório")
     .max(200, "Nome comercial deve ter no máximo 200 caracteres"),
   principioAtivo: z.string().optional(),
-  categoriaId: z.number().min(1, "Categoria é obrigatória").optional(),
+  categoriaId: z.number().min(1, "Grupo é obrigatório").optional(),
 });
 
 // Tipos
+type Classe = {
+  id: number;
+  identificacao: string;
+  codigoERP: string;
+  nomeClasse: string;
+  ativo: boolean;
+};
+
 type Categoria = {
   id: number;
   codigo: string;
   descricaoResumida: string;
   descricaoCompleta: string;
-  mt: string;
+  classeId: number;
   ativo: boolean;
 };
 
@@ -162,6 +186,13 @@ const InsumosAgricolas = () => {
   const [showCategoriaDeleteDialog, setShowCategoriaDeleteDialog] =
     useState(false);
   const [showImportCSVDialog, setShowImportCSVDialog] = useState(false);
+  const [showAddSelectionDialog, setShowAddSelectionDialog] = useState(false);
+  const [selectedClasse, setSelectedClasse] = useState<Classe | null>(null);
+  const [showClasseDialog, setShowClasseDialog] = useState(false);
+  const [showClasseEditDialog, setShowClasseEditDialog] = useState(false);
+  const [showClasseAddDialog, setShowClasseAddDialog] = useState(false);
+  const [showClasseDeleteDialog, setShowClasseDeleteDialog] = useState(false);
+  const [showManageClassesDialog, setShowManageClassesDialog] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<any[]>([]);
   const [isProcessingCSV, setIsProcessingCSV] = useState(false);
@@ -190,9 +221,44 @@ const InsumosAgricolas = () => {
       codigo: "",
       descricaoResumida: "",
       descricaoCompleta: "",
-      mt: "",
+      classeId: undefined,
     },
   });
+
+  // Formulário para cadastro/edição de classe
+  const classeForm = useForm<z.infer<typeof classeSchema>>({
+    resolver: zodResolver(classeSchema),
+    defaultValues: {
+      identificacao: "",
+      codigoERP: "",
+      nomeClasse: "",
+    },
+  });
+
+  // Dados simulados de classes
+  const [classes, setClasses] = useState<Classe[]>([
+    {
+      id: 1,
+      identificacao: "CLS-001",
+      codigoERP: "ERP-001",
+      nomeClasse: "Herbicidas",
+      ativo: true,
+    },
+    {
+      id: 2,
+      identificacao: "CLS-002",
+      codigoERP: "ERP-002",
+      nomeClasse: "Fertilizantes",
+      ativo: true,
+    },
+    {
+      id: 3,
+      identificacao: "CLS-003",
+      codigoERP: "ERP-003",
+      nomeClasse: "Inseticidas",
+      ativo: true,
+    },
+  ]);
 
   // Dados simulados de categorias
   const [categorias, setCategorias] = useState<Categoria[]>([
@@ -202,7 +268,7 @@ const InsumosAgricolas = () => {
       descricaoResumida: "Herbicida 2,4 D-DIMETILAM 806 G/L",
       descricaoCompleta:
         "HERBICIDA CONCENTRADO SOLUVEL; PRINCIPIO ATIVO 2,4-D-DIMETILAMINA 80,60% (806 G/L); EQUIVALENTE ACIDO 2,4-D 67% (670 G/L); CLASSIFICACAO TOXICOLOGICA CATEGORIA 4 (PRODUTO POUCO TOXICO) AZUL",
-      mt: "13",
+      classeId: 1,
       ativo: true,
     },
     {
@@ -211,7 +277,7 @@ const InsumosAgricolas = () => {
       descricaoResumida: "Fertilizante (Adubo)",
       descricaoCompleta:
         "FERTILIZANTE (ADUBO) GRANULADO; CONCENTRACAO NITROGENIO (N) 20%; FOSFORO (P) 05%; POTASSIO (K) ACIMA 20%; PRODUTO SUJEITO INSPECAO; ACOMPANHAR CERTIFICADO QUALIDADE",
-      mt: "6",
+      classeId: 2,
       ativo: true,
     },
     {
@@ -220,7 +286,7 @@ const InsumosAgricolas = () => {
       descricaoResumida: "Herbicida Tebuthiuron 500 G/L",
       descricaoCompleta:
         "HERBICIDA SUSPENSAO CONCENTRADA (SC); INGREDIENTE ATIVO TEBUTHIURON; CON CENTRACAO 500 G/L; CLASSIFICACAO TOXICOLOGICA CATEGORIA 4 (PRODUTO POUCO TOXICO) AZUL; CLASSIFICACAO AMBIENTAL CLAS",
-      mt: "7",
+      classeId: 1,
       ativo: true,
     },
     {
@@ -229,7 +295,7 @@ const InsumosAgricolas = () => {
       descricaoResumida: "Formicida Isca Sulfluramida",
       descricaoCompleta:
         "FORMICIDA ISCA GRANULADO; PRINCIPIO ATIVO SULFLURAMIDA; CONCENTRACAO (3 G/KG); CLASSE TOXICOLOGICA IV (POUCO TOXICO); PRODUTO SUJEITO INSPECAO; ACOMPANHAR CERTIFICADO QUALIDADE",
-      mt: "2",
+      classeId: 3,
       ativo: true,
     },
   ]);
@@ -552,6 +618,11 @@ const InsumosAgricolas = () => {
 
   const itemsPerPage = 10;
 
+  // Função para obter classe por ID
+  const getClasseById = (id: number) => {
+    return classes.find((classe) => classe.id === id);
+  };
+
   // Função para obter categoria por ID
   const getCategoriaById = (id: number) => {
     return categorias.find((cat) => cat.id === id);
@@ -567,7 +638,7 @@ const InsumosAgricolas = () => {
         codigo: "N/A",
         descricaoResumida: "Categoria não encontrada",
         descricaoCompleta: "",
-        mt: "",
+        classeId: 0,
         ativo: false,
       },
     }));
@@ -673,7 +744,12 @@ const InsumosAgricolas = () => {
 
   const handleEditCategoria = (categoria: Categoria) => {
     setSelectedCategoria(categoria);
-    categoriaForm.reset(categoria);
+    categoriaForm.reset({
+      codigo: categoria.codigo,
+      descricaoResumida: categoria.descricaoResumida,
+      descricaoCompleta: categoria.descricaoCompleta,
+      classeId: categoria.classeId,
+    });
     setShowCategoriaEditDialog(true);
   };
 
@@ -704,6 +780,66 @@ const InsumosAgricolas = () => {
     setShowCategoriaAddDialog(true);
   };
 
+  // Handler para abrir modal de seleção
+  const handleOpenAddSelection = () => {
+    setShowAddSelectionDialog(true);
+  };
+
+  // Handlers para seleção no modal
+  const handleSelectCreateItem = () => {
+    setShowAddSelectionDialog(false);
+    handleAddNewMaterial();
+  };
+
+  const handleSelectCreateGroup = () => {
+    setShowAddSelectionDialog(false);
+    handleAddNewCategoria();
+  };
+
+  // Handlers para classes
+  const handleViewClasse = (classe: Classe) => {
+    setSelectedClasse(classe);
+    setShowClasseDialog(true);
+  };
+
+  const handleEditClasse = (classe: Classe) => {
+    setSelectedClasse(classe);
+    classeForm.reset(classe);
+    setShowClasseEditDialog(true);
+  };
+
+  const handleDeleteClasse = (classe: Classe) => {
+    setSelectedClasse(classe);
+    setShowClasseDeleteDialog(true);
+  };
+
+  const confirmDeleteClasse = () => {
+    if (selectedClasse) {
+      setClasses((prev) =>
+        prev.map((c) =>
+          c.id === selectedClasse.id ? { ...c, ativo: false } : c
+        )
+      );
+      toast({
+        title: "Sucesso",
+        description: "Classe desativada com sucesso!",
+      });
+      setShowClasseDeleteDialog(false);
+      setSelectedClasse(null);
+    }
+  };
+
+  const handleAddNewClasse = () => {
+    setSelectedClasse(null);
+    classeForm.reset();
+    setShowClasseAddDialog(true);
+    setShowManageClassesDialog(false);
+  };
+
+  const handleOpenManageClasses = () => {
+    setShowManageClassesDialog(true);
+  };
+
   const handleImportCSV = () => {
     setShowImportCSVDialog(true);
   };
@@ -727,7 +863,7 @@ const InsumosAgricolas = () => {
       if (!values.categoriaId) {
         toast({
           title: "Erro",
-          description: "Selecione uma categoria para o material.",
+          description: "Selecione um grupo para o material.",
           variant: "destructive",
         });
         return;
@@ -781,11 +917,23 @@ const InsumosAgricolas = () => {
   // Funções do formulário de categoria
   const onSubmitCategoria = (values: z.infer<typeof categoriaSchema>) => {
     try {
+      // Validar se classeId foi selecionado
+      if (!values.classeId) {
+        toast({
+          title: "Erro",
+          description: "Selecione uma classe para o grupo.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (selectedCategoria) {
         // Editar categoria existente
         setCategorias((prev) =>
           prev.map((c) =>
-            c.id === selectedCategoria.id ? { ...c, ...values } : c
+            c.id === selectedCategoria.id
+              ? { ...c, ...values, classeId: values.classeId! }
+              : c
           )
         );
         toast({
@@ -800,7 +948,7 @@ const InsumosAgricolas = () => {
           codigo: values.codigo,
           descricaoResumida: values.descricaoResumida,
           descricaoCompleta: values.descricaoCompleta,
-          mt: values.mt,
+          classeId: values.classeId!,
           ativo: true,
         };
         setCategorias((prev) => [...prev, newCategoria]);
@@ -816,6 +964,48 @@ const InsumosAgricolas = () => {
       toast({
         title: "Erro",
         description: "Erro ao salvar categoria. Verifique os dados.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Funções do formulário de classe
+  const onSubmitClasse = (values: z.infer<typeof classeSchema>) => {
+    try {
+      if (selectedClasse) {
+        // Editar classe existente
+        setClasses((prev) =>
+          prev.map((c) =>
+            c.id === selectedClasse.id ? { ...c, ...values } : c
+          )
+        );
+        toast({
+          title: "Sucesso",
+          description: "Classe editada com sucesso!",
+        });
+        setShowClasseEditDialog(false);
+      } else {
+        // Adicionar nova classe
+        const newClasse: Classe = {
+          id: Math.max(...classes.map((c) => c.id), 0) + 1,
+          identificacao: values.identificacao,
+          codigoERP: values.codigoERP,
+          nomeClasse: values.nomeClasse,
+          ativo: true,
+        };
+        setClasses((prev) => [...prev, newClasse]);
+        toast({
+          title: "Sucesso",
+          description: "Classe cadastrada com sucesso!",
+        });
+        setShowClasseAddDialog(false);
+      }
+      classeForm.reset();
+      setSelectedClasse(null);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar classe. Verifique os dados.",
         variant: "destructive",
       });
     }
@@ -989,53 +1179,65 @@ const InsumosAgricolas = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Insumos Agrícolas
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Cadastro e gerenciamento de categorias e materiais agrícolas
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={handleAddNewCategoria} variant="outline">
-            <Folder className="h-4 w-4 mr-2" />
-            Adicionar Categoria
-          </Button>
-          <Button onClick={handleAddNewMaterial}>
-            <Package className="h-4 w-4 mr-2" />
-            Adicionar Material
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Importar
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={handleImportCSV}>
-                <FileText className="h-4 w-4 mr-2" />
-                Importar CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleImportXML}>
-                <FileType className="h-4 w-4 mr-2" />
-                Importar XML
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">
+          Gerenciamento de Itens Agrícolas
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Gerencie itens agrícolas e seus detalhes
+        </p>
       </div>
 
-      {/* Busca */}
+      {/* Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Folder className="h-8 w-8 text-blue-500 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-blue-500">
+              {categorias.filter((c) => c.ativo).length}
+            </p>
+            <p className="text-sm text-muted-foreground">Grupos de Itens</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Folder className="h-8 w-8 text-red-500 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-red-500">
+              {categorias.filter((c) => !c.ativo).length}
+            </p>
+            <p className="text-sm text-muted-foreground">Grupos de Itens Inativo(s)</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Package className="h-8 w-8 text-green-500 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-green-500">
+              {materiais.filter((m) => m.ativo).length}
+            </p>
+            <p className="text-sm text-muted-foreground">Itens Agrícolas</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Package className="h-8 w-8 text-red-500 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-red-500">
+              {materiais.filter((m) => !m.ativo).length}
+            </p>
+            <p className="text-sm text-muted-foreground">Itens Agrícolas Inativo(s)</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filtros */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Search className="h-5 w-5" />
-              Busca
+              Filtros de Pesquisa
             </div>
             <Button variant="outline" size="sm" onClick={clearFilters}>
               <X className="h-4 w-4 mr-2" />
@@ -1048,61 +1250,42 @@ const InsumosAgricolas = () => {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Busca geral (categorias, materiais, códigos, descrições, fabricantes...)"
+                placeholder="Buscar grupos e itens..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
+            <Select defaultValue="all">
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Todos os status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="active">Ativos</SelectItem>
+                <SelectItem value="inactive">Inativos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Package className="h-8 w-8 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold">
-              {materiais.filter((m) => m.ativo).length}
-            </p>
-            <p className="text-sm text-muted-foreground">Materiais Ativos</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Folder className="h-8 w-8 text-secondary mx-auto mb-2" />
-            <p className="text-2xl font-bold">
-              {categorias.filter((c) => c.ativo).length}
-            </p>
-            <p className="text-sm text-muted-foreground">Categorias Ativas</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="h-8 w-8 bg-blue-500 rounded-full mx-auto mb-2 flex items-center justify-center">
-              <span className="text-xs font-bold text-white">H</span>
-            </div>
-            <p className="text-2xl font-bold">
-              {materiais.filter((m) => m.categoriaId === 69 && m.ativo).length}
-            </p>
-            <p className="text-sm text-muted-foreground">Herbicidas 2,4-D</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="h-8 w-8 bg-green-500 rounded-full mx-auto mb-2 flex items-center justify-center">
-              <span className="text-xs font-bold text-white">F</span>
-            </div>
-            <p className="text-2xl font-bold">
-              {materiais.filter((m) => m.categoriaId === 617 && m.ativo).length}
-            </p>
-            <p className="text-sm text-muted-foreground">Fertilizantes</p>
-          </CardContent>
-        </Card>
+      {/* Botões de Ação */}
+      <div className="flex items-center justify-between">
+        <Button onClick={handleImportCSV} variant="outline">
+          <Upload className="h-4 w-4 mr-2" />
+          Importar CSV
+        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleOpenManageClasses} variant="outline">
+            <Folder className="h-4 w-4 mr-2" />
+            Gerenciar Classes
+          </Button>
+          <Button onClick={handleOpenAddSelection}>
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Material
+          </Button>
+        </div>
       </div>
 
       {/* Grid Hierárquico de Categorias e Materiais */}
@@ -1111,11 +1294,24 @@ const InsumosAgricolas = () => {
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Folder className="h-5 w-5" />
-              Categorias e Materiais Agrícolas
+              Grupos e Itens Agrícolas
             </div>
-            <span className="text-sm font-normal text-muted-foreground">
-              {filteredCategorias.length} categoria(s) encontrada(s)
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-normal text-muted-foreground">
+                {filteredCategorias.length} grupo(s) total - Página 1 de {Math.ceil(filteredCategorias.length / itemsPerPage)}
+              </span>
+              <Select defaultValue="10">
+                <SelectTrigger className="w-[80px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1149,16 +1345,22 @@ const InsumosAgricolas = () => {
                             {categoria.codigo}
                           </Badge>
                           <div className="flex-1">
-                            <h3 className="font-semibold text-lg">
-                              {categoria.descricaoResumida}
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-lg">
+                                {categoria.descricaoResumida}
+                              </h3>
+                              {getClasseById(categoria.classeId) && (
+                                <Badge 
+                                  className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-300 border-purple-300 dark:border-purple-700"
+                                >
+                                  {getClasseById(categoria.classeId)?.nomeClasse}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
                               {categoria.descricaoCompleta}
                             </p>
                             <div className="flex items-center gap-4 mt-1">
-                              <span className="text-xs text-muted-foreground">
-                                MT: {categoria.mt}
-                              </span>
                               <span className="text-xs text-muted-foreground">
                                 Materiais: {materiaisDaCategoria.length}
                               </span>
@@ -1304,6 +1506,58 @@ const InsumosAgricolas = () => {
 
       {/* Modais */}
 
+      {/* Modal de Seleção - Adicionar Material */}
+      <Dialog open={showAddSelectionDialog} onOpenChange={setShowAddSelectionDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adicionar Material</DialogTitle>
+            <DialogDescription>
+              Escolha o que deseja criar
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-4 py-4">
+            <Button
+              onClick={handleSelectCreateItem}
+              variant="outline"
+              className="h-auto p-6 flex flex-col items-start justify-start"
+            >
+              <div className="flex items-center gap-3 w-full">
+                <Package className="h-6 w-6 text-primary" />
+                <div className="text-left">
+                  <p className="font-semibold">Criar Item</p>
+                  <p className="text-sm text-muted-foreground">
+                    Adicionar um novo item agrícola
+                  </p>
+                </div>
+              </div>
+            </Button>
+            <Button
+              onClick={handleSelectCreateGroup}
+              variant="outline"
+              className="h-auto p-6 flex flex-col items-start justify-start"
+            >
+              <div className="flex items-center gap-3 w-full">
+                <Folder className="h-6 w-6 text-primary" />
+                <div className="text-left">
+                  <p className="font-semibold">Criar Grupo</p>
+                  <p className="text-sm text-muted-foreground">
+                    Adicionar um novo grupo de itens
+                  </p>
+                </div>
+              </div>
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAddSelectionDialog(false)}
+            >
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Modal de Visualização de Material */}
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
         <DialogContent className="max-w-2xl">
@@ -1354,7 +1608,7 @@ const InsumosAgricolas = () => {
                 </p>
               </div>
               <div>
-                <Label>Categoria</Label>
+                <Label>Grupo</Label>
                 <p className="text-sm font-medium">
                   {getCategoriaById(selectedMaterial.categoriaId)
                     ?.descricaoResumida || "N/A"}
@@ -1408,7 +1662,7 @@ const InsumosAgricolas = () => {
                   name="categoriaId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Categoria *</FormLabel>
+                      <FormLabel>Grupo *</FormLabel>
                       <Select
                         onValueChange={(value) =>
                           field.onChange(parseInt(value))
@@ -1417,7 +1671,7 @@ const InsumosAgricolas = () => {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma categoria" />
+                            <SelectValue placeholder="Selecione um grupo" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -1566,7 +1820,7 @@ const InsumosAgricolas = () => {
                   name="categoriaId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Categoria *</FormLabel>
+                      <FormLabel>Grupo *</FormLabel>
                       <Select
                         onValueChange={(value) =>
                           field.onChange(parseInt(value))
@@ -1575,7 +1829,7 @@ const InsumosAgricolas = () => {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma categoria" />
+                            <SelectValue placeholder="Selecione um grupo" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -1826,6 +2080,318 @@ const InsumosAgricolas = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Modais de Classe */}
+
+      {/* Modal de Gerenciamento de Classes */}
+      <Dialog
+        open={showManageClassesDialog}
+        onOpenChange={setShowManageClassesDialog}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Classes</DialogTitle>
+            <DialogDescription>
+              Gerencie as classes de itens agrícolas
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={handleAddNewClasse}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Classe
+              </Button>
+            </div>
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Identificação</TableHead>
+                    <TableHead>Código ERP</TableHead>
+                    <TableHead>Nome da Classe</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-left">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {classes
+                    .filter((classe) => classe.ativo)
+                    .map((classe) => (
+                      <TableRow key={classe.id}>
+                        <TableCell>{classe.identificacao}</TableCell>
+                        <TableCell>{classe.codigoERP}</TableCell>
+                        <TableCell>{classe.nomeClasse}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              classe.ativo ? "default" : "destructive"
+                            }
+                          >
+                            {classe.ativo ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="flex items-center justify-start gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                handleViewClasse(classe);
+                                setShowManageClassesDialog(false);
+                              }}
+                              title="Consultar Classe"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                handleEditClasse(classe);
+                                setShowManageClassesDialog(false);
+                              }}
+                              title="Editar Classe"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                handleDeleteClasse(classe);
+                                setShowManageClassesDialog(false);
+                              }}
+                              title="Desativar Classe"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  {classes.filter((classe) => classe.ativo).length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8">
+                        <p className="text-muted-foreground">
+                          Nenhuma classe encontrada
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowManageClassesDialog(false)}
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Visualização de Classe */}
+      <Dialog open={showClasseDialog} onOpenChange={setShowClasseDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Consultar Classe</DialogTitle>
+            <DialogDescription>
+              Visualização completa dos dados da classe
+            </DialogDescription>
+          </DialogHeader>
+          {selectedClasse && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>ID</Label>
+                <p className="text-sm font-medium">{selectedClasse.id}</p>
+              </div>
+              <div>
+                <Label>Identificação da Classe</Label>
+                <p className="text-sm font-medium">
+                  {selectedClasse.identificacao}
+                </p>
+              </div>
+              <div>
+                <Label>Código ERP</Label>
+                <p className="text-sm font-medium">
+                  {selectedClasse.codigoERP}
+                </p>
+              </div>
+              <div>
+                <Label>Nome da Classe</Label>
+                <p className="text-sm font-medium">
+                  {selectedClasse.nomeClasse}
+                </p>
+              </div>
+              <div>
+                <Label>Status</Label>
+                <Badge
+                  variant={selectedClasse.ativo ? "default" : "destructive"}
+                >
+                  {selectedClasse.ativo ? "Ativo" : "Inativo"}
+                </Badge>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edição de Classe */}
+      <Dialog
+        open={showClasseEditDialog}
+        onOpenChange={setShowClasseEditDialog}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Classe</DialogTitle>
+            <DialogDescription>
+              Edite as informações da classe selecionada
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...classeForm}>
+            <form
+              onSubmit={classeForm.handleSubmit(onSubmitClasse)}
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={classeForm.control}
+                  name="identificacao"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Identificação da Classe *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: CLS-001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={classeForm.control}
+                  name="codigoERP"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Código ERP *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: ERP-001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={classeForm.control}
+                  name="nomeClasse"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Nome da Classe *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Herbicidas" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowClasseEditDialog(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">Salvar Alterações</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Adicionar Classe */}
+      <Dialog
+        open={showClasseAddDialog}
+        onOpenChange={setShowClasseAddDialog}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Adicionar Nova Classe</DialogTitle>
+            <DialogDescription>
+              Preencha todas as informações obrigatórias da nova classe
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...classeForm}>
+            <form
+              onSubmit={classeForm.handleSubmit(onSubmitClasse)}
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={classeForm.control}
+                  name="identificacao"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Identificação da Classe *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: CLS-001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={classeForm.control}
+                  name="codigoERP"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Código ERP *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: ERP-001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={classeForm.control}
+                  name="nomeClasse"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Nome da Classe *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Herbicidas" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowClasseAddDialog(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">Cadastrar Classe</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
       {/* Modais de Categoria */}
 
       {/* Modal de Visualização de Categoria */}
@@ -1862,8 +2428,10 @@ const InsumosAgricolas = () => {
                 </p>
               </div>
               <div>
-                <Label>MT</Label>
-                <p className="text-sm font-medium">{selectedCategoria.mt}</p>
+                <Label>Classe</Label>
+                <p className="text-sm font-medium">
+                  {getClasseById(selectedCategoria.classeId)?.nomeClasse || "N/A"}
+                </p>
               </div>
               <div>
                 <Label>Status</Label>
@@ -1913,13 +2481,34 @@ const InsumosAgricolas = () => {
 
                 <FormField
                   control={categoriaForm.control}
-                  name="mt"
+                  name="classeId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>MT *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: MT-001" {...field} />
-                      </FormControl>
+                      <FormLabel>Classe *</FormLabel>
+                      <Select
+                        onValueChange={(value) =>
+                          field.onChange(parseInt(value))
+                        }
+                        value={field.value?.toString() || ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma classe" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {classes
+                            .filter((classe) => classe.ativo)
+                            .map((classe) => (
+                              <SelectItem
+                                key={classe.id}
+                                value={classe.id.toString()}
+                              >
+                                {classe.nomeClasse}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1929,7 +2518,7 @@ const InsumosAgricolas = () => {
                   control={categoriaForm.control}
                   name="descricaoResumida"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-2">
+                    <FormItem className="col-span-2">
                       <FormLabel>Descrição Resumida *</FormLabel>
                       <FormControl>
                         <Input placeholder="Ex: Herbicidas" {...field} />
@@ -2007,23 +2596,44 @@ const InsumosAgricolas = () => {
 
                 <FormField
                   control={categoriaForm.control}
-                  name="mt"
+                  name="classeId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>MT *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: MT-001" {...field} />
-                      </FormControl>
+                      <FormLabel>Classe *</FormLabel>
+                      <Select
+                        onValueChange={(value) =>
+                          field.onChange(parseInt(value))
+                        }
+                        value={field.value?.toString() || ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma classe" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {classes
+                            .filter((classe) => classe.ativo)
+                            .map((classe) => (
+                              <SelectItem
+                                key={classe.id}
+                                value={classe.id.toString()}
+                              >
+                                {classe.nomeClasse}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
-                  )}
+                  )} //TAYAR PASSOU POR AQUI
                 />
 
                 <FormField
                   control={categoriaForm.control}
                   name="descricaoResumida"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-2">
+                    <FormItem className="col-span-2">
                       <FormLabel>Descrição Resumida *</FormLabel>
                       <FormControl>
                         <Input placeholder="Ex: Herbicidas" {...field} />
@@ -2067,6 +2677,28 @@ const InsumosAgricolas = () => {
       </Dialog>
 
       {/* Alertas de Confirmação */}
+      <AlertDialog
+        open={showClasseDeleteDialog}
+        onOpenChange={setShowClasseDeleteDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Desativação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja desativar a classe "
+              {selectedClasse?.nomeClasse}"? Esta ação não pode ser
+              desfeita e a classe não aparecerá mais nas consultas ativas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteClasse}>
+              Confirmar Desativação
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
