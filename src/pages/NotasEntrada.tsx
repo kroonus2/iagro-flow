@@ -1282,12 +1282,6 @@ const NotasEntrada = () => {
                                 <span className="text-sm font-medium">
                                   {totalItens} item(ns)
                                 </span>
-                                <span className="text-sm font-medium">
-                                  Qtd. Total: {totalQuantidade}
-                                </span>
-                                <span className="text-sm font-medium">
-                                  Saldo Total: {totalSaldo}
-                                </span>
                               </div>
                             </div>
                           </div>
