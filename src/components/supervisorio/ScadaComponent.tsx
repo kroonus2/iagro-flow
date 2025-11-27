@@ -97,15 +97,16 @@ export const ScadaComponent = ({
   return (
     <div
       className={cn(
-        "absolute flex flex-col items-center gap-1 cursor-move select-none transition-all",
-        isSelected && "ring-2 ring-primary ring-offset-2",
+        "absolute flex flex-col items-center gap-1 cursor-move select-none transition-all z-10",
+        isSelected && "ring-2 ring-primary ring-offset-2 rounded-lg",
         isDragging && "opacity-50",
         isHovered && "scale-110"
       )}
       style={{
         left: position.x,
         top: position.y,
-        transform: 'translate(-50%, -50%)'
+        transform: 'translate(-50%, -50%)',
+        pointerEvents: 'auto'
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -114,13 +115,13 @@ export const ScadaComponent = ({
         onSelect?.();
       }}
     >
-      <div className={cn("w-12 h-12", getColor())}>
+      <div className={cn("w-12 h-12 drop-shadow-lg", getColor())}>
         {getIcon()}
       </div>
-      <div className="flex flex-col items-center gap-0 bg-background/90 px-2 py-1 rounded text-xs whitespace-nowrap">
-        <span className="font-medium">{label}</span>
+      <div className="flex flex-col items-center gap-0 bg-background/95 backdrop-blur-sm px-2 py-1 rounded shadow-lg text-xs whitespace-nowrap border border-border/50">
+        <span className="font-semibold">{label}</span>
         {plcVariable && (
-          <span className={cn("text-[10px]", getColor())}>
+          <span className={cn("text-[10px] font-medium", getColor())}>
             {getDisplayValue()}
           </span>
         )}

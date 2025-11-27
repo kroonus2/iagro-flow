@@ -67,16 +67,18 @@ export const ScadaCanvas = ({
   return (
     <div
       ref={canvasRef}
-      className="relative w-full h-full bg-muted/20 border-2 border-dashed border-border rounded-lg overflow-hidden"
+      className="relative w-full h-full bg-muted/20 border-2 border-border rounded-lg overflow-hidden"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onClick={handleCanvasClick}
       style={{
         backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined,
-        backgroundSize: 'cover',
+        backgroundSize: 'contain',
         backgroundPosition: 'center',
-        minHeight: '600px'
+        backgroundRepeat: 'no-repeat',
+        minHeight: '700px',
+        backgroundColor: backgroundImage ? '#2a2a2a' : undefined
       }}
     >
       {components.map(component => {
@@ -86,6 +88,7 @@ export const ScadaCanvas = ({
           <div
             key={component.id}
             onMouseDown={(e) => handleMouseDown(component.id, e)}
+            style={{ position: 'relative', zIndex: 10 }}
           >
             <ScadaComponent
               id={component.id}
@@ -102,7 +105,7 @@ export const ScadaCanvas = ({
       })}
       
       {components.length === 0 && !backgroundImage && (
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground pointer-events-none">
           <p>Arraste componentes aqui ou faça upload de uma imagem de fundo</p>
         </div>
       )}
