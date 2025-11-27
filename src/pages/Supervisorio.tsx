@@ -13,6 +13,7 @@ import { SupervisoryView, MockPLC, ComponentType, PLCVariable, ScadaComponent } 
 import { ScadaCanvas } from "@/components/supervisorio/ScadaCanvas";
 import { ComponentPalette } from "@/components/supervisorio/ComponentPalette";
 import { ComponentProperties } from "@/components/supervisorio/ComponentProperties";
+import scadaBackground from "@/assets/scada-background.webp";
 
 // Mock de PLCs e suas variáveis
 const mockPLCs: MockPLC[] = [
@@ -57,7 +58,65 @@ const Supervisorio = () => {
       id: "view1",
       name: "Vista Geral - CLP 01",
       plcId: "CLP001",
-      components: [],
+      backgroundImage: scadaBackground,
+      components: [
+        {
+          id: "comp1",
+          type: "thermometer",
+          position: { x: 650, y: 280 },
+          label: "Temp. Tanque",
+          plcVariable: "AI001"
+        },
+        {
+          id: "comp2",
+          type: "tank",
+          position: { x: 650, y: 330 },
+          label: "Nível Tanque",
+          plcVariable: "AI003"
+        },
+        {
+          id: "comp3",
+          type: "gauge",
+          position: { x: 500, y: 220 },
+          label: "Pressão",
+          plcVariable: "AI002"
+        },
+        {
+          id: "comp4",
+          type: "pump",
+          position: { x: 450, y: 350 },
+          label: "Bomba Principal",
+          plcVariable: "DO001"
+        },
+        {
+          id: "comp5",
+          type: "valve",
+          position: { x: 550, y: 280 },
+          label: "Válvula Entrada",
+          plcVariable: "DO002"
+        },
+        {
+          id: "comp6",
+          type: "indicator",
+          position: { x: 700, y: 260 },
+          label: "Nível Alto",
+          plcVariable: "DI001"
+        },
+        {
+          id: "comp7",
+          type: "gauge",
+          position: { x: 800, y: 350 },
+          label: "Vazão Saída",
+          plcVariable: "AI004"
+        },
+        {
+          id: "comp8",
+          type: "switch",
+          position: { x: 950, y: 280 },
+          label: "Motor Agitador",
+          plcVariable: "DO001"
+        }
+      ],
       createdAt: new Date(),
       updatedAt: new Date()
     }
