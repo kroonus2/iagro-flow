@@ -55,7 +55,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-// Tipos e dados compartilhados (mesmos de EstoquesGerais)
+// Tipos e dados compartilhados (mesmos de Estoques)
 type EntradaNotaFiscal = {
   nota: number;
   idFornecedor: number;

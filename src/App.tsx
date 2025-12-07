@@ -10,7 +10,7 @@ import Home from "./pages/Home";
 import DashboardGerencial from "./pages/DashboardGerencial";
 import DashboardOperacional from "./pages/DashboardOperacional";
 import ReceitasSmartCalda from "./pages/ReceitasSmartCalda";
-import EstoquesGerais from "./pages/EstoquesGerais";
+import Estoques from "./pages/Estoques";
 import OrdensProducao from "./pages/OrdensProducao";
 import Entregas from "./pages/Entregas";
 import Configuracoes from "./pages/Configuracoes";
@@ -76,7 +76,7 @@ const App = () => (
                 path="/cadastros-auxiliares"
                 element={<CadastrosAuxiliares />}
               />
-              <Route path="/estoques-gerais" element={<EstoquesGerais />} />
+              <Route path="/estoques" element={<Estoques />} />
               <Route path="/notas-entrada" element={<NotasEntrada />} />
               <Route path="/movimentacoes" element={<Movimentacoes />} />
               <Route

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,9 @@ import {
   Plus,
   Minus,
   Eye,
+  X,
+  Calendar as CalendarIcon,
+  Package,
 } from "lucide-react";
 import {
   Dialog,
@@ -37,31 +41,97 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
+import { cn } from "@/lib/utils";
 
 // Dados simulados de materiais agrícolas (vinculados ao InsumosAgricolas.tsx)
 // Em produção, isso viria de uma API ou contexto compartilhado
 const materiaisAgricolas: {
-  [key: number]: { codigo: string; descricao: string; nomeComercial: string };
+  [key: number]: {
+    codigo: string;
+    descricao: string;
+    nomeComercial: string;
+    categoriaId?: number;
+  };
 } = {
   1005392: {
     codigo: "1005392",
     descricao: "HERBICIDA NUFARM U 46 BR",
     nomeComercial: "U 46 BR",
+    categoriaId: 69,
   },
   1027638: {
     codigo: "1027638",
     descricao: "HERBICIDA UPL DEZ",
     nomeComercial: "DEZ",
+    categoriaId: 69,
   },
   1027636: {
     codigo: "1027636",
     descricao: "HERBICIDA IHARA MIRANT",
     nomeComercial: "MIRANT",
+    categoriaId: 69,
   },
   1003390: {
     codigo: "1003390",
     descricao: "FERTILIZANTE",
     nomeComercial: "FERTILIZANTE",
+    categoriaId: 617,
+  },
+};
+
+// Mapeamento de classes (baseado em InsumosAgricolas.tsx)
+const classes: {
+  [key: number]: { identificacao: string; nomeClasse: string };
+} = {
+  1: {
+    identificacao: "CLS-001",
+    nomeClasse: "Herbicidas",
+  },
+  2: {
+    identificacao: "CLS-002",
+    nomeClasse: "Fertilizantes",
+  },
+  3: {
+    identificacao: "CLS-003",
+    nomeClasse: "Inseticidas",
+  },
+};
+
+// Mapeamento de categorias (baseado em InsumosAgricolas.tsx)
+const categorias: {
+  [key: number]: {
+    codigo: string;
+    descricaoResumida: string;
+    classeId: number;
+  };
+} = {
+  69: {
+    codigo: "69",
+    descricaoResumida: "Herbicida 2,4 D-DIMETILAM 806 G/L",
+    classeId: 1,
+  },
+  617: {
+    codigo: "617",
+    descricaoResumida: "Fertilizante (Adubo)",
+    classeId: 2,
+  },
+  3001: {
+    codigo: "3001",
+    descricaoResumida: "Herbicida Tebuthiuron 500 G/L",
+    classeId: 1,
+  },
+  5027: {
+    codigo: "5027",
+    descricaoResumida: "Formicida Isca Sulfluramida",
+    classeId: 3,
   },
 };
 
@@ -88,6 +158,7 @@ const usuarios: {
 
 type Movimentacao = {
   data: string;
+  hora?: string; // Hora da movimentação (opcional)
   idItem: number;
   nLote: string;
   tipoMovimento: string;
@@ -96,12 +167,16 @@ type Movimentacao = {
   qtde: number;
   unidade: string;
   idUsuario: number;
+  notaEntrada?: number; // Nota de entrada associada (opcional)
+  observacoes?: string; // Observações registradas (opcional)
 };
 
 const Movimentacoes = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [tipoFilter, setTipoFilter] = useState("todos");
-  const [dataFilter, setDataFilter] = useState("");
+  const [origemFilter, setOrigemFilter] = useState("todas");
+  const [destinoFilter, setDestinoFilter] = useState("todos");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [tipoMovimentoFilter, setTipoMovimentoFilter] = useState("todos");
   const [tiposDialogOpen, setTiposDialogOpen] = useState(false);
   const [detalhesDialogOpen, setDetalhesDialogOpen] = useState(false);
   const [movimentacaoSelecionada, setMovimentacaoSelecionada] =
@@ -178,6 +253,7 @@ const Movimentacoes = () => {
   const movimentacoes = [
     {
       data: "2025-10-15",
+      hora: "14:30",
       idItem: 1005392,
       nLote: "NR42123259600",
       tipoMovimento: "PRODUÇÃO",
@@ -186,9 +262,12 @@ const Movimentacoes = () => {
       qtde: 1000,
       unidade: "L",
       idUsuario: 1,
+      notaEntrada: 999999,
+      observacoes: "Movimentação para produção de calda",
     },
     {
       data: "2025-10-16",
+      hora: "09:15",
       idItem: 1027638,
       nLote: "SY003-24-20-160",
       tipoMovimento: "PERDA TECNICO",
@@ -197,9 +276,11 @@ const Movimentacoes = () => {
       qtde: 100,
       unidade: "L",
       idUsuario: 1,
+      observacoes: "Perda por vazamento",
     },
     {
       data: "2025-10-17",
+      hora: "16:45",
       idItem: 1027636,
       nLote: "027-25-24-60",
       tipoMovimento: "FRACIONÁRIO",
@@ -211,6 +292,7 @@ const Movimentacoes = () => {
     },
     {
       data: "2025-10-18",
+      hora: "11:20",
       idItem: 1003390,
       nLote: "NR99999999999",
       tipoMovimento: "TECNICO-RESERVA",
@@ -222,6 +304,7 @@ const Movimentacoes = () => {
     },
     {
       data: "2025-10-20",
+      hora: "13:00",
       idItem: 1005392,
       nLote: "005-22-12000",
       tipoMovimento: "CALDA TÉCNICO",
@@ -233,6 +316,7 @@ const Movimentacoes = () => {
     },
     {
       data: "2025-10-22",
+      hora: "10:30",
       idItem: 1027638,
       nLote: "SY003-24-20-160",
       tipoMovimento: "PRODUÇÃO-FRACIONÁRIO",
@@ -241,9 +325,12 @@ const Movimentacoes = () => {
       qtde: 950,
       unidade: "L",
       idUsuario: 1,
+      notaEntrada: 1000123,
+      observacoes: "Movimentação para fracionamento",
     },
     {
       data: "2025-10-13",
+      hora: "08:00",
       idItem: 1005392,
       nLote: "NR42123259600",
       tipoMovimento: "PRODUÇÃO",
@@ -252,6 +339,7 @@ const Movimentacoes = () => {
       qtde: 67.25,
       unidade: "KG",
       idUsuario: 1,
+      notaEntrada: 999999,
     },
   ];
 
@@ -261,28 +349,93 @@ const Movimentacoes = () => {
     return tiposEntrada.includes(tipoMov) ? "entrada" : "saida";
   };
 
+  // Função para obter categoria por ID
+  const getCategoriaById = (id?: number) => {
+    if (!id) return null;
+    return categorias[id] || null;
+  };
+
+  // Função para obter classe por ID
+  const getClasseById = (id: number) => {
+    return classes[id] || null;
+  };
+
   const filteredMovimentacoes = movimentacoes.filter((mov) => {
     const material = materiaisAgricolas[mov.idItem];
     const materialNome = material?.nomeComercial || material?.descricao || "";
+    const materialCodigo = material?.codigo || "";
+    const categoria = material?.categoriaId
+      ? getCategoriaById(material.categoriaId)
+      : null;
+    const categoriaNome = categoria?.descricaoResumida || "";
+    const categoriaCodigo = categoria?.codigo || "";
+    const classe = categoria?.classeId
+      ? getClasseById(categoria.classeId)
+      : null;
+    const classeNome = classe?.nomeClasse || "";
+    const classeIdentificacao = classe?.identificacao || "";
+
+    const termoLower = searchTerm.toLowerCase();
+
+    // Buscar por código externo, nome do item, grupo, classe, lote ou localização
     const matchesSearch =
-      mov.idItem.toString().includes(searchTerm) ||
-      materialNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mov.nLote.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mov.tipoMovimento.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      !searchTerm ||
+      materialCodigo.toLowerCase().includes(termoLower) ||
+      materialNome.toLowerCase().includes(termoLower) ||
+      categoriaNome.toLowerCase().includes(termoLower) ||
+      categoriaCodigo.toLowerCase().includes(termoLower) ||
+      classeNome.toLowerCase().includes(termoLower) ||
+      classeIdentificacao.toLowerCase().includes(termoLower) ||
+      mov.nLote.toLowerCase().includes(termoLower) ||
       (localizacoes[mov.idLocOrigem] || "")
         .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
+        .includes(termoLower) ||
       (mov.idLocDestino &&
         (localizacoes[mov.idLocDestino] || "")
           .toLowerCase()
-          .includes(searchTerm.toLowerCase()));
+          .includes(termoLower));
 
-    const tipo = getTipoMovimentacao(mov.tipoMovimento);
-    const matchesTipo = tipoFilter === "todos" || tipo === tipoFilter;
-    const matchesData = !dataFilter || mov.data === dataFilter;
+    // Filtro de origem
+    const origemMov = localizacoes[mov.idLocOrigem] || "";
+    const matchesOrigem =
+      origemFilter === "todas" ||
+      origemMov.toUpperCase() === origemFilter.toUpperCase();
 
-    return matchesSearch && matchesTipo && matchesData;
+    // Filtro de destino
+    const destinoMov = mov.idLocDestino
+      ? localizacoes[mov.idLocDestino] || ""
+      : null;
+    const matchesDestino =
+      destinoFilter === "todos" ||
+      (destinoMov && destinoMov.toUpperCase() === destinoFilter.toUpperCase());
+
+    // Filtro de período
+    const dataMov = new Date(mov.data);
+    const matchesPeriodo =
+      (!dateRange?.from || dataMov >= dateRange.from) &&
+      (!dateRange?.to || dataMov <= dateRange.to);
+
+    // Filtro de tipo de movimentação
+    const matchesTipoMovimento =
+      tipoMovimentoFilter === "todos" ||
+      mov.tipoMovimento === tipoMovimentoFilter;
+
+    return (
+      matchesSearch &&
+      matchesOrigem &&
+      matchesDestino &&
+      matchesPeriodo &&
+      matchesTipoMovimento
+    );
   });
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setOrigemFilter("todas");
+    setDestinoFilter("todos");
+    setDateRange(undefined);
+    setTipoMovimentoFilter("todos");
+  };
 
   const handleVerDetalhes = (mov: Movimentacao) => {
     setMovimentacaoSelecionada(mov);
@@ -457,51 +610,7 @@ const Movimentacoes = () => {
             </DialogContent>
           </Dialog>
         </div>
-
-        <Button variant="outline" onClick={handleExportar}>
-          <Download className="h-4 w-4 mr-2" />
-          Exportar Relatório
-        </Button>
       </div>
-
-      {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Filtros de Pesquisa
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por ID item, produto, lote, tipo ou localização"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={tipoFilter} onValueChange={setTipoFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os tipos</SelectItem>
-                <SelectItem value="entrada">Entrada</SelectItem>
-                <SelectItem value="saida">Saída</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              type="date"
-              placeholder="Filtrar por data"
-              value={dataFilter}
-              onChange={(e) => setDataFilter(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -510,14 +619,18 @@ const Movimentacoes = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">
-                  Total de Movimentações
+                  Est. Primário
                 </p>
-                <p className="text-2xl font-bold">
-                  {filteredMovimentacoes.length}
+                <p className="text-2xl font-bold text-primary">
+                  {
+                    filteredMovimentacoes.filter(
+                      (m) => localizacoes[m.idLocOrigem] === "PRIMÁRIO"
+                    ).length
+                  }
                 </p>
               </div>
               <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Search className="h-6 w-6 text-primary" />
+                <Package className="h-6 w-6 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -527,17 +640,19 @@ const Movimentacoes = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Entradas</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-sm text-muted-foreground mb-1">
+                  Est. Técnico
+                </p>
+                <p className="text-2xl font-bold text-success">
                   {
                     filteredMovimentacoes.filter(
-                      (m) => getTipoMovimentacao(m.tipoMovimento) === "entrada"
+                      (m) => localizacoes[m.idLocOrigem] === "TÉCNICO"
                     ).length
                   }
                 </p>
               </div>
               <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <ArrowUp className="h-6 w-6 text-green-600" />
+                <Package className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -547,21 +662,153 @@ const Movimentacoes = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Saídas</p>
-                <p className="text-2xl font-bold text-red-600">
+                <p className="text-sm text-muted-foreground mb-1">
+                  Est. Fracionário
+                </p>
+                <p className="text-2xl font-bold text-warning">
                   {
                     filteredMovimentacoes.filter(
-                      (m) => getTipoMovimentacao(m.tipoMovimento) === "saida"
+                      (m) => localizacoes[m.idLocOrigem] === "FRACIONÁRIO"
                     ).length
                   }
                 </p>
               </div>
-              <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <ArrowDown className="h-6 w-6 text-red-600" />
+              <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <Package className="h-6 w-6 text-yellow-600" />
               </div>
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Filtros */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Filtros de Pesquisa
+            </div>
+            <Button variant="outline" size="sm" onClick={clearFilters}>
+              <X className="h-4 w-4 mr-2" />
+              Limpar filtros
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Campo de busca */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por código externo, nome do item, grupo, classe, lote ou localização"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Filtros em grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4">
+              <Select value={origemFilter} onValueChange={setOrigemFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">TODAS</SelectItem>
+                  <SelectItem value="PRIMÁRIO">PRIMÁRIO</SelectItem>
+                  <SelectItem value="TÉCNICO">TÉCNICO</SelectItem>
+                  <SelectItem value="FRACIONÁRIO">FRACIONÁRIO</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={destinoFilter} onValueChange={setDestinoFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Destino" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">TODOS</SelectItem>
+                  <SelectItem value="PRIMÁRIO">PRIMÁRIO</SelectItem>
+                  <SelectItem value="TÉCNICO">TÉCNICO</SelectItem>
+                  <SelectItem value="FRACIONÁRIO">FRACIONÁRIO</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* <Select
+                value={tipoMovimentoFilter}
+                onValueChange={setTipoMovimentoFilter}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo de Movimentação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">TODOS</SelectItem>
+                  {Array.from(
+                    new Set(tiposMovimentacoes.map((t) => t.nome))
+                  ).map((tipo) => (
+                    <SelectItem key={tipo} value={tipo}>
+                      {tipo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select> */}
+
+              <Popover>
+                <PopoverTrigger asChild className="w-full">
+                  <Button
+                    id="date"
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dateRange?.from &&
+                        !dateRange?.to &&
+                        "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "dd/MM/yyyy", {
+                            locale: ptBR,
+                          })}{" "}
+                          -{" "}
+                          {format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}
+                        </>
+                      ) : (
+                        format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })
+                      )
+                    ) : (
+                      <span>Período da movimentação</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-full p-0"
+                  align="start"
+                  sideOffset={4}
+                >
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Ações */}
+      <div className="flex justify-start">
+        <Button variant="outline" onClick={handleExportar}>
+          <Download className="h-4 w-4 mr-2" />
+          Exportar Relatório
+        </Button>
       </div>
 
       {/* Tabela de Movimentações */}
@@ -576,7 +823,7 @@ const Movimentacoes = () => {
                 <TableRow>
                   <TableHead>Data</TableHead>
                   <TableHead>Item</TableHead>
-                  <TableHead>Tipo Movimento</TableHead>
+                  <TableHead>Tipo de Movimentação</TableHead>
                   <TableHead>Origem</TableHead>
                   <TableHead>Destino</TableHead>
                   <TableHead>Quantidade</TableHead>
@@ -588,7 +835,8 @@ const Movimentacoes = () => {
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8">
                       <p className="text-muted-foreground">
-                        Nenhuma movimentação encontrada
+                        Nenhuma movimentação encontrada para os filtros
+                        informados.
                       </p>
                     </TableCell>
                   </TableRow>
@@ -674,78 +922,117 @@ const Movimentacoes = () => {
           </DialogHeader>
           {movimentacaoSelecionada && (
             <div className="grid grid-cols-2 gap-4 mt-4">
+              {/* Data/hora da movimentação */}
               <div>
-                <Label className="text-muted-foreground">Data</Label>
+                <Label className="text-muted-foreground">
+                  Data/hora da movimentação
+                </Label>
                 <p className="text-sm font-medium">
                   {new Date(movimentacaoSelecionada.data).toLocaleDateString(
                     "pt-BR"
                   )}
+                  {movimentacaoSelecionada.hora &&
+                    ` às ${movimentacaoSelecionada.hora}`}
                 </p>
               </div>
-              <div>
-                <Label className="text-muted-foreground">ID Item</Label>
-                <p className="text-sm font-medium">
-                  {movimentacaoSelecionada.idItem}
-                </p>
-              </div>
-              <div className="col-span-2">
-                <Label className="text-muted-foreground">Item</Label>
-                <p className="text-sm font-medium">
-                  {materiaisAgricolas[movimentacaoSelecionada.idItem]
-                    ?.nomeComercial ||
-                    materiaisAgricolas[movimentacaoSelecionada.idItem]
-                      ?.descricao ||
-                    "Item não encontrado"}
-                </p>
-              </div>
+
+              {/* Nota de entrada associada (se houver) */}
               <div>
                 <Label className="text-muted-foreground">
-                  Tipo de Movimento
+                  Nota de entrada associada
                 </Label>
                 <p className="text-sm font-medium">
-                  {movimentacaoSelecionada.tipoMovimento}
-                </p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Quantidade</Label>
-                <p className="text-sm font-medium">
-                  {movimentacaoSelecionada.qtde}{" "}
-                  {movimentacaoSelecionada.unidade}
-                </p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Origem (ID)</Label>
-                <p className="text-sm font-medium">
-                  {movimentacaoSelecionada.idLocOrigem} -{" "}
-                  {localizacoes[movimentacaoSelecionada.idLocOrigem] ||
-                    "Não identificado"}
-                </p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Destino (ID)</Label>
-                <p className="text-sm font-medium">
-                  {movimentacaoSelecionada.idLocDestino
-                    ? `${movimentacaoSelecionada.idLocDestino} - ${
-                        localizacoes[movimentacaoSelecionada.idLocDestino] ||
-                        "Não identificado"
-                      }`
+                  {movimentacaoSelecionada.notaEntrada
+                    ? movimentacaoSelecionada.notaEntrada
                     : "-"}
                 </p>
               </div>
+
+              {/* Item (Nome e Código Externo) */}
               <div className="col-span-2">
-                <Label className="text-muted-foreground">Número do Lote</Label>
-                <p className="text-sm font-medium font-mono">
-                  {movimentacaoSelecionada.nLote}
-                </p>
+                <Label className="text-muted-foreground">Item</Label>
+                <div>
+                  <p className="text-sm font-medium">
+                    {materiaisAgricolas[movimentacaoSelecionada.idItem]
+                      ?.nomeComercial ||
+                      materiaisAgricolas[movimentacaoSelecionada.idItem]
+                        ?.descricao ||
+                      "Item não encontrado"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Código Externo:{" "}
+                    {materiaisAgricolas[movimentacaoSelecionada.idItem]
+                      ?.codigo || "-"}
+                  </p>
+                </div>
               </div>
+
+              {/* Unidade */}
               <div>
                 <Label className="text-muted-foreground">Unidade</Label>
                 <p className="text-sm font-medium">
                   {movimentacaoSelecionada.unidade}
                 </p>
               </div>
-              <div className="col-span-2">
-                <Label className="text-muted-foreground">Usuário</Label>
+
+              {/* Quantidade movimentada + unidade */}
+              <div>
+                <Label className="text-muted-foreground">
+                  Quantidade movimentada
+                </Label>
+                <p className="text-sm font-medium">
+                  {movimentacaoSelecionada.qtde}{" "}
+                  {movimentacaoSelecionada.unidade}
+                </p>
+              </div>
+
+              {/* Número do Lote */}
+              <div>
+                <Label className="text-muted-foreground">Número do Lote</Label>
+                <p className="text-sm font-medium font-mono">
+                  {movimentacaoSelecionada.nLote}
+                </p>
+              </div>
+
+              {/* Tipo de Movimentação */}
+              <div>
+                <Label className="text-muted-foreground">
+                  Tipo de Movimentação
+                </Label>
+                <p className="text-sm font-medium">
+                  {movimentacaoSelecionada.tipoMovimento}
+                </p>
+              </div>
+
+              {/* Estoque de Origem */}
+              <div>
+                <Label className="text-muted-foreground">
+                  Estoque de Origem
+                </Label>
+                <p className="text-sm font-medium">
+                  {localizacoes[movimentacaoSelecionada.idLocOrigem] ||
+                    "Não identificado"}
+                </p>
+              </div>
+
+              {/* Estoque de Destino (se aplicável) */}
+              <div>
+                <Label className="text-muted-foreground">
+                  Estoque de Destino
+                </Label>
+                <p className="text-sm font-medium">
+                  {movimentacaoSelecionada.idLocDestino
+                    ? localizacoes[movimentacaoSelecionada.idLocDestino] ||
+                      "Não identificado"
+                    : "-"}
+                </p>
+              </div>
+
+              {/* Usuário que realizou a movimentação */}
+              <div>
+                <Label className="text-muted-foreground">
+                  Usuário que realizou a movimentação
+                </Label>
                 <div>
                   <p className="text-sm font-medium">
                     {usuarios[movimentacaoSelecionada.idUsuario]?.nome ||
@@ -755,6 +1042,16 @@ const Movimentacoes = () => {
                     {usuarios[movimentacaoSelecionada.idUsuario]?.email || "-"}
                   </p>
                 </div>
+              </div>
+
+              {/* Observações registradas na operação */}
+              <div className="col-span-2">
+                <Label className="text-muted-foreground">
+                  Observações registradas na operação
+                </Label>
+                <p className="text-sm font-medium whitespace-pre-wrap">
+                  {movimentacaoSelecionada.observacoes || "-"}
+                </p>
               </div>
             </div>
           )}

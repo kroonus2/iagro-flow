@@ -10,7 +10,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -62,7 +61,6 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
-  Edit,
   Download,
   ArrowUpDown,
   Trash2,
@@ -152,25 +150,51 @@ const materiaisAgricolas: {
   },
 };
 
+// Mapeamento de classes (baseado em InsumosAgricolas.tsx)
+const classes: {
+  [key: number]: { identificacao: string; nomeClasse: string };
+} = {
+  1: {
+    identificacao: "CLS-001",
+    nomeClasse: "Herbicidas",
+  },
+  2: {
+    identificacao: "CLS-002",
+    nomeClasse: "Fertilizantes",
+  },
+  3: {
+    identificacao: "CLS-003",
+    nomeClasse: "Inseticidas",
+  },
+};
+
 // Mapeamento de categorias (baseado em InsumosAgricolas.tsx)
 const categorias: {
-  [key: number]: { codigo: string; descricaoResumida: string };
+  [key: number]: {
+    codigo: string;
+    descricaoResumida: string;
+    classeId: number;
+  };
 } = {
   69: {
     codigo: "69",
     descricaoResumida: "Herbicida 2,4 D-DIMETILAM 806 G/L",
+    classeId: 1,
   },
   617: {
     codigo: "617",
     descricaoResumida: "Fertilizante (Adubo)",
+    classeId: 2,
   },
   3001: {
     codigo: "3001",
     descricaoResumida: "Herbicida Tebuthiuron 500 G/L",
+    classeId: 1,
   },
   5027: {
     codigo: "5027",
     descricaoResumida: "Formicida Isca Sulfluramida",
+    classeId: 3,
   },
 };
 
@@ -291,16 +315,19 @@ type EstoqueTecnicoFracionario = {
   dataUso: string | null;
 };
 
-const EstoquesGerais = () => {
+const Estoques = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ativos"); // Por padrão mostrar apenas ativos
   const [requisicaoDialogOpen, setRequisicaoDialogOpen] = useState(false);
   const [detalhesDialogOpen, setDetalhesDialogOpen] = useState(false);
-  const [editarDialogOpen, setEditarDialogOpen] = useState(false);
   const [movimentarDialogOpen, setMovimentarDialogOpen] = useState(false);
+  const [tipoEstoqueMovimentando, setTipoEstoqueMovimentando] = useState<
+    "primario" | "tecnico" | "fracionario"
+  >("primario");
+  const [
+    itemMovimentandoTecnicoFracionario,
+    setItemMovimentandoTecnicoFracionario,
+  ] = useState<EstoqueTecnicoFracionario | null>(null);
   const [entradaSelecionada, setEntradaSelecionada] =
-    useState<EntradaNotaFiscal | null>(null);
-  const [entradaEditando, setEntradaEditando] =
     useState<EntradaNotaFiscal | null>(null);
   const [entradaMovimentando, setEntradaMovimentando] =
     useState<EntradaNotaFiscal | null>(null);
@@ -575,6 +602,24 @@ const EstoquesGerais = () => {
     },
   ];
 
+  // Tipos de movimentações entre Técnico e Fracionário
+  const tiposMovimentacoesTecnicoFracionario = [
+    {
+      nome: "TÉCNICO-FRACIONÁRIO",
+      origem: "TÉCNICO",
+      destino: "FRACIONÁRIO",
+      acao: "SUBTRAIR",
+      tipo: "saida",
+    },
+    {
+      nome: "FRACIONÁRIO-TÉCNICO",
+      origem: "FRACIONÁRIO",
+      destino: "TÉCNICO",
+      acao: "SUBTRAIR",
+      tipo: "saida",
+    },
+  ];
+
   const [movimentacaoForm, setMovimentacaoForm] = useState({
     entradaId: "", // ID único da entrada (nota + idItem + lote)
     tipoMovimento: "",
@@ -706,6 +751,86 @@ const EstoquesGerais = () => {
       dataAlerta: "2024-01-20",
       prioridade: "media",
     },
+    {
+      id: 3,
+      tipo: "estoque_baixo",
+      produto: "HERBICIDA SELECT",
+      mensagem: "Estoque crítico - reabastecer urgente",
+      dataAlerta: "2024-01-22",
+      prioridade: "alta",
+    },
+    {
+      id: 4,
+      tipo: "vencimento",
+      produto: "ADUBO NPK 10-10-10",
+      mensagem: "Produto vence em 15 dias",
+      dataAlerta: "2024-01-19",
+      prioridade: "alta",
+    },
+    {
+      id: 5,
+      tipo: "estoque_baixo",
+      produto: "INSETICIDA BIOLÓGICO",
+      mensagem: "Estoque abaixo do ponto de pedido",
+      dataAlerta: "2024-01-18",
+      prioridade: "media",
+    },
+    {
+      id: 6,
+      tipo: "vencimento",
+      produto: "FUNGICIDA SISTÊMICO",
+      mensagem: "Produto vence em 45 dias",
+      dataAlerta: "2024-01-17",
+      prioridade: "baixa",
+    },
+    {
+      id: 7,
+      tipo: "estoque_baixo",
+      produto: "CORRETIVO DE SOLO",
+      mensagem: "Estoque mínimo atingido",
+      dataAlerta: "2024-01-23",
+      prioridade: "media",
+    },
+    {
+      id: 8,
+      tipo: "vencimento",
+      produto: "BIOESTIMULANTE",
+      mensagem: "Produto vence em 7 dias",
+      dataAlerta: "2024-01-24",
+      prioridade: "alta",
+    },
+    {
+      id: 9,
+      tipo: "estoque_baixo",
+      produto: "MICRONUTRIENTES",
+      mensagem: "Estoque abaixo do mínimo",
+      dataAlerta: "2024-01-16",
+      prioridade: "media",
+    },
+    {
+      id: 10,
+      tipo: "vencimento",
+      produto: "ADITIVO PARA CALDA",
+      mensagem: "Produto vence em 20 dias",
+      dataAlerta: "2024-01-15",
+      prioridade: "baixa",
+    },
+    {
+      id: 11,
+      tipo: "estoque_baixo",
+      produto: "DEFENSIVO AGRÍCOLA",
+      mensagem: "Estoque crítico",
+      dataAlerta: "2024-01-25",
+      prioridade: "alta",
+    },
+    {
+      id: 12,
+      tipo: "vencimento",
+      produto: "FERTILIZANTE LÍQUIDO",
+      mensagem: "Produto vence em 10 dias",
+      dataAlerta: "2024-01-14",
+      prioridade: "alta",
+    },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -834,30 +959,39 @@ const EstoquesGerais = () => {
 
   // Usar entradas do estado diretamente (status já é atualizado nas operações)
   const filteredEntradasRaw = entradasEstoquePrimario.filter((entrada) => {
+    if (!searchTerm) return entrada.ativo; // Por padrão mostrar apenas ativos
+
     const material = materiaisAgricolas[entrada.idItem];
     const materialNome = material?.nomeComercial || material?.descricao || "";
+    const materialCodigo = material?.codigo || "";
+    const categoria = material?.categoriaId
+      ? categorias[material.categoriaId]
+      : null;
+    const categoriaNome = categoria?.descricaoResumida || "";
+    const categoriaCodigo = categoria?.codigo || "";
+    const classe = categoria?.classeId ? classes[categoria.classeId] : null;
+    const classeNome = classe?.nomeClasse || "";
+    const classeIdentificacao = classe?.identificacao || "";
 
-    // Busca por lote - se encontrar, mostrar pai e filho
-    const buscaPorLote = searchTerm
-      .toLowerCase()
-      .includes(entrada.lote.toLowerCase());
-    const loteNaBusca = entrada.lote
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+    const termoLower = searchTerm.toLowerCase();
 
-    const matchesSearch =
-      entrada.nota.toString().includes(searchTerm) ||
-      materialNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      loteNaBusca ||
-      entrada.localizacao.toLowerCase().includes(searchTerm.toLowerCase());
+    // Buscar por classe
+    const matchesClasse =
+      classeNome.toLowerCase().includes(termoLower) ||
+      classeIdentificacao.toLowerCase().includes(termoLower);
 
-    // Filtro de status
-    const matchesStatus =
-      statusFilter === "todos" ||
-      (statusFilter === "ativos" && entrada.ativo) ||
-      (statusFilter === "inativos" && !entrada.ativo);
+    // Buscar por grupo/categoria
+    const matchesGrupo =
+      categoriaNome.toLowerCase().includes(termoLower) ||
+      categoriaCodigo.toLowerCase().includes(termoLower);
 
-    return matchesSearch && matchesStatus;
+    // Buscar por item
+    const matchesItem =
+      materialNome.toLowerCase().includes(termoLower) ||
+      materialCodigo.toLowerCase().includes(termoLower) ||
+      entrada.idItem.toString().includes(searchTerm);
+
+    return (matchesClasse || matchesGrupo || matchesItem) && entrada.ativo;
   });
 
   const filteredEntradas = getSortedAndFilteredData(
@@ -1000,19 +1134,39 @@ const EstoquesGerais = () => {
   }, [searchTerm, filteredEntradas.length]); // Depender do termo de busca e número de entradas
 
   const filteredEstoqueTecnicoRaw = estoqueTecnico.filter((item) => {
+    if (!searchTermTecnico) return true;
+
     const material = materiaisAgricolas[item.idItem];
     const materialNome = material?.nomeComercial || material?.descricao || "";
-    const loc = localizacoes[item.idLocalizacao];
-    const matchesSearch =
-      materialNome.toLowerCase().includes(searchTermTecnico.toLowerCase()) ||
-      item.nLote.toLowerCase().includes(searchTermTecnico.toLowerCase()) ||
-      (loc?.codigo || "")
-        .toLowerCase()
-        .includes(searchTermTecnico.toLowerCase()) ||
-      (loc?.descricao || "")
-        .toLowerCase()
-        .includes(searchTermTecnico.toLowerCase());
-    return matchesSearch;
+    const materialCodigo = material?.codigo || "";
+    const categoria = material?.categoriaId
+      ? categorias[material.categoriaId]
+      : null;
+    const categoriaNome = categoria?.descricaoResumida || "";
+    const categoriaCodigo = categoria?.codigo || "";
+    const classe = categoria?.classeId ? classes[categoria.classeId] : null;
+    const classeNome = classe?.nomeClasse || "";
+    const classeIdentificacao = classe?.identificacao || "";
+
+    const termoLower = searchTermTecnico.toLowerCase();
+
+    // Buscar por classe
+    const matchesClasse =
+      classeNome.toLowerCase().includes(termoLower) ||
+      classeIdentificacao.toLowerCase().includes(termoLower);
+
+    // Buscar por grupo/categoria
+    const matchesGrupo =
+      categoriaNome.toLowerCase().includes(termoLower) ||
+      categoriaCodigo.toLowerCase().includes(termoLower);
+
+    // Buscar por item
+    const matchesItem =
+      materialNome.toLowerCase().includes(termoLower) ||
+      materialCodigo.toLowerCase().includes(termoLower) ||
+      item.idItem.toString().includes(searchTermTecnico);
+
+    return matchesClasse || matchesGrupo || matchesItem;
   });
 
   const filteredEstoqueTecnico = getSortedAndFilteredData(
@@ -1026,21 +1180,39 @@ const EstoquesGerais = () => {
   const itensUnicosTecnico = Object.keys(estoqueTecnicoAgrupado).map(Number);
 
   const filteredEstoqueFracionarioRaw = estoqueFracionario.filter((item) => {
+    if (!searchTermFracionario) return true;
+
     const material = materiaisAgricolas[item.idItem];
     const materialNome = material?.nomeComercial || material?.descricao || "";
-    const loc = localizacoes[item.idLocalizacao];
-    const matchesSearch =
-      materialNome
-        .toLowerCase()
-        .includes(searchTermFracionario.toLowerCase()) ||
-      item.nLote.toLowerCase().includes(searchTermFracionario.toLowerCase()) ||
-      (loc?.codigo || "")
-        .toLowerCase()
-        .includes(searchTermFracionario.toLowerCase()) ||
-      (loc?.descricao || "")
-        .toLowerCase()
-        .includes(searchTermFracionario.toLowerCase());
-    return matchesSearch;
+    const materialCodigo = material?.codigo || "";
+    const categoria = material?.categoriaId
+      ? categorias[material.categoriaId]
+      : null;
+    const categoriaNome = categoria?.descricaoResumida || "";
+    const categoriaCodigo = categoria?.codigo || "";
+    const classe = categoria?.classeId ? classes[categoria.classeId] : null;
+    const classeNome = classe?.nomeClasse || "";
+    const classeIdentificacao = classe?.identificacao || "";
+
+    const termoLower = searchTermFracionario.toLowerCase();
+
+    // Buscar por classe
+    const matchesClasse =
+      classeNome.toLowerCase().includes(termoLower) ||
+      classeIdentificacao.toLowerCase().includes(termoLower);
+
+    // Buscar por grupo/categoria
+    const matchesGrupo =
+      categoriaNome.toLowerCase().includes(termoLower) ||
+      categoriaCodigo.toLowerCase().includes(termoLower);
+
+    // Buscar por item
+    const matchesItem =
+      materialNome.toLowerCase().includes(termoLower) ||
+      materialCodigo.toLowerCase().includes(termoLower) ||
+      item.idItem.toString().includes(searchTermFracionario);
+
+    return matchesClasse || matchesGrupo || matchesItem;
   });
 
   const filteredEstoqueFracionario = getSortedAndFilteredData(
@@ -1072,12 +1244,8 @@ const EstoquesGerais = () => {
     setDetalhesFracionarioDialogOpen(true);
   };
 
-  const handleEditarEntrada = (entrada: EntradaNotaFiscal) => {
-    setEntradaEditando(entrada);
-    setEditarDialogOpen(true);
-  };
-
   const handleMovimentarItem = (entrada: EntradaNotaFiscal) => {
+    setTipoEstoqueMovimentando("primario");
     // Armazenar o idItem para filtrar apenas entradas do mesmo item
     setIdItemMovimentacao(entrada.idItem);
 
@@ -1104,74 +1272,221 @@ const EstoquesGerais = () => {
     setMovimentarDialogOpen(true);
   };
 
+  const handleMovimentarItemTecnico = (item: EstoqueTecnicoFracionario) => {
+    setTipoEstoqueMovimentando("tecnico");
+    setItemMovimentandoTecnicoFracionario(item);
+    setMovimentacaoForm({
+      entradaId: "",
+      tipoMovimento: "",
+      idLocDestino: "",
+      qtde: "",
+      observacoes: "",
+    });
+    setMovimentarDialogOpen(true);
+  };
+
+  const handleMovimentarItemFracionario = (item: EstoqueTecnicoFracionario) => {
+    setTipoEstoqueMovimentando("fracionario");
+    setItemMovimentandoTecnicoFracionario(item);
+    setMovimentacaoForm({
+      entradaId: "",
+      tipoMovimento: "",
+      idLocDestino: "",
+      qtde: "",
+      observacoes: "",
+    });
+    setMovimentarDialogOpen(true);
+  };
+
   const handleSalvarMovimentacao = () => {
-    if (!movimentacaoForm.entradaId) {
-      toast.error("Selecione uma entrada para movimentar");
-      return;
-    }
+    // Movimentação de estoque primário
+    if (tipoEstoqueMovimentando === "primario") {
+      if (!movimentacaoForm.entradaId) {
+        toast.error("Selecione uma entrada para movimentar");
+        return;
+      }
 
-    const entradaSelecionada = obterEntradaPorId(movimentacaoForm.entradaId);
-    if (!entradaSelecionada) {
-      toast.error("Entrada não encontrada");
-      return;
-    }
+      const entradaSelecionada = obterEntradaPorId(movimentacaoForm.entradaId);
+      if (!entradaSelecionada) {
+        toast.error("Entrada não encontrada");
+        return;
+      }
 
-    if (!movimentacaoForm.tipoMovimento || !movimentacaoForm.qtde) {
-      toast.error("Preencha o tipo de movimentação e a quantidade");
-      return;
-    }
+      if (!movimentacaoForm.tipoMovimento || !movimentacaoForm.qtde) {
+        toast.error("Preencha o tipo de movimentação e a quantidade");
+        return;
+      }
 
-    // Verificar se precisa de localização de destino
-    const tipoMov = tiposMovimentacoes.find(
-      (t) => t.nome === movimentacaoForm.tipoMovimento
-    );
-    const locsDestino = getLocalizacoesDestino(movimentacaoForm.tipoMovimento);
-    if (locsDestino.length > 0 && !movimentacaoForm.idLocDestino) {
-      toast.error("Selecione a localização de destino");
-      return;
-    }
+      // Verificar se precisa de localização de destino
+      const tipoMov = tiposMovimentacoes.find(
+        (t) => t.nome === movimentacaoForm.tipoMovimento
+      );
+      const locsDestino = getLocalizacoesDestino(
+        movimentacaoForm.tipoMovimento
+      );
+      if (locsDestino.length > 0 && !movimentacaoForm.idLocDestino) {
+        toast.error("Selecione a localização de destino");
+        return;
+      }
 
-    const quantidade = Number(movimentacaoForm.qtde);
-    if (quantidade > entradaSelecionada.saldoAtual) {
-      toast.error("Quantidade não pode ser maior que o saldo atual");
-      return;
-    }
+      const quantidade = Number(movimentacaoForm.qtde);
+      if (quantidade > entradaSelecionada.saldoAtual) {
+        toast.error("Quantidade não pode ser maior que o saldo atual");
+        return;
+      }
 
-    if (quantidade <= 0) {
-      toast.error("Quantidade deve ser maior que zero");
-      return;
-    }
+      if (quantidade <= 0) {
+        toast.error("Quantidade deve ser maior que zero");
+        return;
+      }
 
-    // Verificar se saldo ficaria negativo
-    const saldoRestante = entradaSelecionada.saldoAtual - quantidade;
-    if (saldoRestante < 0) {
-      toast.error("Saldo não pode ficar negativo");
-      return;
-    }
+      // Verificar se saldo ficaria negativo
+      const saldoRestante = entradaSelecionada.saldoAtual - quantidade;
+      if (saldoRestante < 0) {
+        toast.error("Saldo não pode ficar negativo");
+        return;
+      }
 
-    // Atualizar saldo atual da entrada
-    setEntradasEstoquePrimario((prev) =>
-      prev.map((e) => {
-        if (
-          e.nota === entradaSelecionada.nota &&
-          e.idItem === entradaSelecionada.idItem &&
-          e.lote === entradaSelecionada.lote
-        ) {
-          const novoSaldo = e.saldoAtual - quantidade;
-          return {
-            ...e,
-            saldoAtual: novoSaldo,
-            ativo: novoSaldo > 0, // Desativar automaticamente se saldo = 0
-          };
-        }
-        return e;
-      })
-    );
+      // Atualizar saldo atual da entrada
+      setEntradasEstoquePrimario((prev) =>
+        prev.map((e) => {
+          if (
+            e.nota === entradaSelecionada.nota &&
+            e.idItem === entradaSelecionada.idItem &&
+            e.lote === entradaSelecionada.lote
+          ) {
+            const novoSaldo = e.saldoAtual - quantidade;
+            return {
+              ...e,
+              saldoAtual: novoSaldo,
+              ativo: novoSaldo > 0, // Desativar automaticamente se saldo = 0
+            };
+          }
+          return e;
+        })
+      );
+    }
+    // Movimentação entre técnico e fracionário
+    else if (
+      tipoEstoqueMovimentando === "tecnico" ||
+      tipoEstoqueMovimentando === "fracionario"
+    ) {
+      if (!itemMovimentandoTecnicoFracionario) {
+        toast.error("Item não encontrado");
+        return;
+      }
+
+      if (!movimentacaoForm.tipoMovimento || !movimentacaoForm.qtde) {
+        toast.error("Preencha o tipo de movimentação e a quantidade");
+        return;
+      }
+
+      // Verificar se precisa de localização de destino
+      const tipoMov = tiposMovimentacoesTecnicoFracionario.find(
+        (t) => t.nome === movimentacaoForm.tipoMovimento
+      );
+      if (!tipoMov) {
+        toast.error("Tipo de movimentação inválido");
+        return;
+      }
+
+      const locsDestino = getLocalizacoesDestinoTecnicoFracionario(
+        movimentacaoForm.tipoMovimento
+      );
+      if (locsDestino.length > 0 && !movimentacaoForm.idLocDestino) {
+        toast.error("Selecione a localização de destino");
+        return;
+      }
+
+      const quantidade = Number(movimentacaoForm.qtde);
+      const saldoDisponivel = itemMovimentandoTecnicoFracionario.saldoDispon;
+
+      if (quantidade > saldoDisponivel) {
+        toast.error("Quantidade não pode ser maior que o saldo disponível");
+        return;
+      }
+
+      if (quantidade <= 0) {
+        toast.error("Quantidade deve ser maior que zero");
+        return;
+      }
+
+      // Atualizar estoque técnico ou fracionário
+      if (tipoEstoqueMovimentando === "tecnico") {
+        // Remover do técnico e adicionar ao fracionário
+        setEstoqueTecnico((prev) =>
+          prev.map((item) => {
+            if (
+              item.idEstoque === itemMovimentandoTecnicoFracionario.idEstoque
+            ) {
+              return {
+                ...item,
+                saldoDispon: item.saldoDispon - quantidade,
+              };
+            }
+            return item;
+          })
+        );
+
+        // Adicionar ao fracionário
+        const novaIdEstoque =
+          Math.max(...estoqueFracionario.map((e) => e.idEstoque), 0) + 1;
+        const novaLocalizacao = Number(movimentacaoForm.idLocDestino);
+        setEstoqueFracionario((prev) => [
+          ...prev,
+          {
+            idEstoque: novaIdEstoque,
+            idItem: itemMovimentandoTecnicoFracionario.idItem,
+            nLote: itemMovimentandoTecnicoFracionario.nLote,
+            idLocalizacao: novaLocalizacao,
+            saldoMovimentacao: quantidade,
+            unidade: itemMovimentandoTecnicoFracionario.unidade,
+            saldoDispon: quantidade,
+            dataUso: null,
+          },
+        ]);
+      } else {
+        // Remover do fracionário e adicionar ao técnico
+        setEstoqueFracionario((prev) =>
+          prev.map((item) => {
+            if (
+              item.idEstoque === itemMovimentandoTecnicoFracionario.idEstoque
+            ) {
+              return {
+                ...item,
+                saldoDispon: item.saldoDispon - quantidade,
+              };
+            }
+            return item;
+          })
+        );
+
+        // Adicionar ao técnico
+        const novaIdEstoque =
+          Math.max(...estoqueTecnico.map((e) => e.idEstoque), 0) + 1;
+        const novaLocalizacao = Number(movimentacaoForm.idLocDestino);
+        setEstoqueTecnico((prev) => [
+          ...prev,
+          {
+            idEstoque: novaIdEstoque,
+            idItem: itemMovimentandoTecnicoFracionario.idItem,
+            nLote: itemMovimentandoTecnicoFracionario.nLote,
+            idLocalizacao: novaLocalizacao,
+            saldoMovimentacao: quantidade,
+            unidade: itemMovimentandoTecnicoFracionario.unidade,
+            saldoDispon: quantidade,
+            dataUso: null,
+          },
+        ]);
+      }
+    }
 
     toast.success("Movimentação realizada com sucesso!");
     setMovimentarDialogOpen(false);
     setEntradaMovimentando(null);
+    setItemMovimentandoTecnicoFracionario(null);
     setIdItemMovimentacao(null);
+    setTipoEstoqueMovimentando("primario");
     setMovimentacaoForm({
       entradaId: "",
       tipoMovimento: "",
@@ -1203,27 +1518,25 @@ const EstoquesGerais = () => {
     return [];
   };
 
-  const handleSalvarEdicao = () => {
-    if (!entradaEditando) return;
-
-    setEntradasEstoquePrimario((prev) =>
-      prev.map((e) => {
-        if (
-          e.nota === entradaEditando.nota &&
-          e.idItem === entradaEditando.idItem &&
-          e.lote === entradaEditando.lote
-        ) {
-          return {
-            ...entradaEditando,
-            ativo: entradaEditando.saldoAtual > 0, // Atualizar status baseado no saldo
-          };
-        }
-        return e;
-      })
+  // Obter localizações de destino para movimentações entre técnico e fracionário
+  const getLocalizacoesDestinoTecnicoFracionario = (tipoMovimento: string) => {
+    const tipoMov = tiposMovimentacoesTecnicoFracionario.find(
+      (t) => t.nome === tipoMovimento
     );
-    toast.success("Entrada atualizada com sucesso!");
-    setEditarDialogOpen(false);
-    setEntradaEditando(null);
+    if (!tipoMov) return [];
+
+    if (tipoMov.destino === "TÉCNICO" || tipoMov.destino === "SMARTCALDA") {
+      // Localizações TÉCNICO (SMARTCALDA)
+      return Object.entries(localizacoes)
+        .filter(([_, loc]) => loc.tipoEstoque === "SMARTCALDA")
+        .map(([id, loc]) => ({ id: Number(id), ...loc }));
+    } else if (tipoMov.destino === "FRACIONÁRIO") {
+      // Localizações FRACIONÁRIO
+      return Object.entries(localizacoes)
+        .filter(([_, loc]) => loc.tipoEstoque === "FRACIONÁRIO")
+        .map(([id, loc]) => ({ id: Number(id), ...loc }));
+    }
+    return [];
   };
 
   const handleCriarRequisicao = () => {
@@ -1271,7 +1584,7 @@ const EstoquesGerais = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
-            Controle de estoques gerais
+            Controle de estoques
           </h1>
           <p className="text-muted-foreground mt-1">
             Controle de estoque e movimentação de produtos
@@ -1280,88 +1593,100 @@ const EstoquesGerais = () => {
       </div>
 
       {/* Alertas Ativos */}
-      {alertasAtivos.length > 0 && (
-        <Card className="border-warning bg-warning/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-warning">
-              <AlertTriangle className="h-5 w-5" />
-              Alertas Ativos ({alertasAtivos.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {alertasAtivos.map((alerta) => (
-                <div
-                  key={alerta.id}
-                  className="flex items-center justify-between p-3 bg-background rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="h-4 w-4 text-warning" />
-                    <div>
-                      <p className="font-medium">{alerta.produto}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {alerta.mensagem}
-                      </p>
+      {alertasAtivos.length > 0 &&
+        (() => {
+          // Ordenar alertas por prioridade (alta > media > baixa) e depois por data (mais recente primeiro)
+          const alertasOrdenados = [...alertasAtivos].sort((a, b) => {
+            const prioridadeOrder = { alta: 3, media: 2, baixa: 1 };
+            const prioridadeDiff =
+              (prioridadeOrder[b.prioridade as keyof typeof prioridadeOrder] ||
+                0) -
+              (prioridadeOrder[a.prioridade as keyof typeof prioridadeOrder] ||
+                0);
+
+            if (prioridadeDiff !== 0) return prioridadeDiff;
+
+            // Se mesma prioridade, ordenar por data (mais recente primeiro)
+            return (
+              new Date(b.dataAlerta).getTime() -
+              new Date(a.dataAlerta).getTime()
+            );
+          });
+
+          return (
+            <Card className="border-warning bg-warning/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-warning">
+                  <AlertTriangle className="h-5 w-5" />
+                  Alertas Ativos ({alertasAtivos.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                  {alertasOrdenados.map((alerta) => (
+                    <div
+                      key={alerta.id}
+                      className="flex flex-col p-2.5 bg-background rounded-lg border border-border hover:border-warning/50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <AlertCircle className="h-3.5 w-3.5 text-warning flex-shrink-0" />
+                          <Badge
+                            variant={getPrioridadeBadge(alerta.prioridade)}
+                            className="text-xs h-5"
+                          >
+                            {alerta.prioridade}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="font-medium text-sm truncate mb-0.5"
+                          title={alerta.produto}
+                        >
+                          {alerta.produto}
+                        </p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {alerta.mensagem}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <Badge variant={getPrioridadeBadge(alerta.prioridade)}>
-                    {alerta.prioridade}
-                  </Badge>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Package className="h-8 w-8 text-success mx-auto mb-2" />
-            <p className="text-2xl font-bold text-success">
-              {entradasEstoquePrimario.length}
-            </p>
-            <p className="text-sm text-muted-foreground">Entradas</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <TrendingDown className="h-8 w-8 text-warning mx-auto mb-2" />
-            <p className="text-2xl font-bold text-warning">
-              {entradasEstoquePrimario.reduce(
-                (acc, e) => acc + e.saldoAtual,
-                0
-              )}
-            </p>
-            <p className="text-sm text-muted-foreground">Saldo Total</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-2" />
-            <p className="text-2xl font-bold text-destructive">
-              {
-                entradasEstoquePrimario.filter(
-                  (e) =>
-                    new Date(e.validade) <
-                    new Date(new Date().setDate(new Date().getDate() + 30))
-                ).length
-              }
-            </p>
-            <p className="text-sm text-muted-foreground">Vencendo</p>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-6 text-center">
             <Package className="h-8 w-8 text-primary mx-auto mb-2" />
             <p className="text-2xl font-bold text-primary">
               {new Set(entradasEstoquePrimario.map((e) => e.idItem)).size}
             </p>
-            <p className="text-sm text-muted-foreground">Itens Únicos</p>
+            <p className="text-sm text-muted-foreground">Est. Primário</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Package className="h-8 w-8 text-success mx-auto mb-2" />
+            <p className="text-2xl font-bold text-success">
+              {new Set(estoqueTecnico.map((e) => e.idItem)).size}
+            </p>
+            <p className="text-sm text-muted-foreground">Est. Técnico</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Package className="h-8 w-8 text-warning mx-auto mb-2" />
+            <p className="text-2xl font-bold text-warning">
+              {new Set(estoqueFracionario.map((e) => e.idItem)).size}
+            </p>
+            <p className="text-sm text-muted-foreground">Est. Fracionário</p>
           </CardContent>
         </Card>
       </div>
@@ -1389,22 +1714,12 @@ const EstoquesGerais = () => {
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar por nota, item, lote ou localização"
+                    placeholder="Buscar por classe, grupo ou item"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
                   />
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos os status</SelectItem>
-                    <SelectItem value="ativos">Ativos</SelectItem>
-                    <SelectItem value="inativos">Inativos</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </CardContent>
           </Card>
@@ -1465,6 +1780,9 @@ const EstoquesGerais = () => {
                     const categoria = material?.categoriaId
                       ? categorias[material.categoriaId]
                       : null;
+                    const classe = categoria?.classeId
+                      ? classes[categoria.classeId]
+                      : null;
                     const saldoTotal =
                       calcularSaldoTotalPorItem(entradasDoItem);
                     const unidade = entradasDoItem[0]?.unidade || "";
@@ -1514,6 +1832,11 @@ const EstoquesGerais = () => {
                                         material?.descricao ||
                                         "Item não encontrado"}
                                     </h3>
+                                    {classe && (
+                                      <Badge className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-300 border-purple-300 dark:border-purple-700">
+                                        {classe.nomeClasse}
+                                      </Badge>
+                                    )}
                                     {categoria && (
                                       <Badge className="text-xs">
                                         {categoria.descricaoResumida}
@@ -1521,9 +1844,6 @@ const EstoquesGerais = () => {
                                     )}
                                   </div>
                                   <div className="flex items-center gap-4 mt-1">
-                                    <span className="text-sm text-muted-foreground">
-                                      ID: {idItem}
-                                    </span>
                                     <span className="text-sm font-medium">
                                       Saldo Total: {saldoTotal} {unidade}
                                     </span>
@@ -1545,17 +1865,6 @@ const EstoquesGerais = () => {
                                 title="Visualizar Item"
                               >
                                 <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  // Editar primeira entrada como representante
-                                  handleEditarEntrada(entradasDoItem[0]);
-                                }}
-                                title="Editar Item"
-                              >
-                                <Edit className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -1903,7 +2212,7 @@ const EstoquesGerais = () => {
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar por item, lote ou localização"
+                    placeholder="Buscar por classe, grupo ou item"
                     value={searchTermTecnico}
                     onChange={(e) => setSearchTermTecnico(e.target.value)}
                     className="pl-10"
@@ -1916,27 +2225,6 @@ const EstoquesGerais = () => {
           {/* Botões de Ação */}
           <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:justify-between sm:items-center">
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex-1 sm:flex-none">
-                    <Upload className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Importar</span>
-                    <span className="sm:hidden">Importar</span>
-                    <ChevronDown className="h-4 w-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem disabled>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar XML/NF
-                  </DropdownMenuItem>
-                  <DropdownMenuItem disabled>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Importar CSV
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex-1 sm:flex-none">
@@ -1990,6 +2278,9 @@ const EstoquesGerais = () => {
                     const categoria = material?.categoriaId
                       ? categorias[material.categoriaId]
                       : null;
+                    const classe = categoria?.classeId
+                      ? classes[categoria.classeId]
+                      : null;
                     const saldoTotal =
                       calcularSaldoTotalPorItemTecnicoFracionario(itensDoItem);
                     const unidade = itensDoItem[0]?.unidade || "";
@@ -2023,6 +2314,11 @@ const EstoquesGerais = () => {
                                         material?.descricao ||
                                         "Item não encontrado"}
                                     </h3>
+                                    {classe && (
+                                      <Badge className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-300 border-purple-300 dark:border-purple-700">
+                                        {classe.nomeClasse}
+                                      </Badge>
+                                    )}
                                     {categoria && (
                                       <Badge className="text-xs">
                                         {categoria.descricaoResumida}
@@ -2053,6 +2349,16 @@ const EstoquesGerais = () => {
                                 title="Visualizar Item"
                               >
                                 <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  handleMovimentarItemTecnico(itensDoItem[0]);
+                                }}
+                                title="Movimentar Item"
+                              >
+                                <ArrowUpDown className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>
@@ -2172,7 +2478,7 @@ const EstoquesGerais = () => {
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar por item, lote ou localização"
+                    placeholder="Buscar por classe, grupo ou item"
                     value={searchTermFracionario}
                     onChange={(e) => setSearchTermFracionario(e.target.value)}
                     className="pl-10"
@@ -2185,27 +2491,6 @@ const EstoquesGerais = () => {
           {/* Botões de Ação */}
           <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:justify-between sm:items-center">
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex-1 sm:flex-none">
-                    <Upload className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Importar</span>
-                    <span className="sm:hidden">Importar</span>
-                    <ChevronDown className="h-4 w-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem disabled>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar XML/NF
-                  </DropdownMenuItem>
-                  <DropdownMenuItem disabled>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Importar CSV
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex-1 sm:flex-none">
@@ -2259,6 +2544,9 @@ const EstoquesGerais = () => {
                     const categoria = material?.categoriaId
                       ? categorias[material.categoriaId]
                       : null;
+                    const classe = categoria?.classeId
+                      ? classes[categoria.classeId]
+                      : null;
                     const saldoTotal =
                       calcularSaldoTotalPorItemTecnicoFracionario(itensDoItem);
                     const unidade = itensDoItem[0]?.unidade || "";
@@ -2292,6 +2580,11 @@ const EstoquesGerais = () => {
                                         material?.descricao ||
                                         "Item não encontrado"}
                                     </h3>
+                                    {classe && (
+                                      <Badge className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-300 border-purple-300 dark:border-purple-700">
+                                        {classe.nomeClasse}
+                                      </Badge>
+                                    )}
                                     {categoria && (
                                       <Badge className="text-xs">
                                         {categoria.descricaoResumida}
@@ -2322,6 +2615,18 @@ const EstoquesGerais = () => {
                                 title="Visualizar Item"
                               >
                                 <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  handleMovimentarItemFracionario(
+                                    itensDoItem[0]
+                                  );
+                                }}
+                                title="Movimentar Item"
+                              >
+                                <ArrowUpDown className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>
@@ -2428,254 +2733,6 @@ const EstoquesGerais = () => {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Modal de Edição - Estoque Primário */}
-      <Dialog open={editarDialogOpen} onOpenChange={setEditarDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Entrada - Estoque Primário</DialogTitle>
-            <DialogDescription>
-              Edite as informações da entrada de produto no estoque.
-            </DialogDescription>
-          </DialogHeader>
-          {entradaEditando && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-nota">Número da Nota *</Label>
-                  <Input
-                    id="edit-nota"
-                    type="number"
-                    value={entradaEditando.nota}
-                    onChange={(e) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        nota: Number(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-idFornecedor">Fornecedor *</Label>
-                  <Select
-                    value={entradaEditando.idFornecedor.toString()}
-                    onValueChange={(value) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        idFornecedor: Number(value),
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Fornecedor A</SelectItem>
-                      <SelectItem value="2">Fornecedor B</SelectItem>
-                      <SelectItem value="3">Fornecedor C</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-dataEntrada">Data de Entrada *</Label>
-                  <Input
-                    id="edit-dataEntrada"
-                    type="date"
-                    value={entradaEditando.dataEntrada}
-                    onChange={(e) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        dataEntrada: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-idItem">Item *</Label>
-                  <Select
-                    value={entradaEditando.idItem.toString()}
-                    onValueChange={(value) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        idItem: Number(value),
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1005392">U 46 BR (1005392)</SelectItem>
-                      <SelectItem value="1027638">DEZ (1027638)</SelectItem>
-                      <SelectItem value="1027636">MIRANT (1027636)</SelectItem>
-                      <SelectItem value="1003390">
-                        FERTILIZANTE (1003390)
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-lote">Número do Lote</Label>
-                  <Input
-                    id="edit-lote"
-                    value={entradaEditando.lote}
-                    onChange={(e) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        lote: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-qtde">Quantidade *</Label>
-                  <Input
-                    id="edit-qtde"
-                    type="number"
-                    value={entradaEditando.qtde}
-                    onChange={(e) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        qtde: Number(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-unidade">Unidade *</Label>
-                  <Select
-                    value={entradaEditando.unidade}
-                    onValueChange={(value) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        unidade: value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="LITROS">Litros (LITROS)</SelectItem>
-                      <SelectItem value="KILOS">Quilos (KILOS)</SelectItem>
-                      <SelectItem value="UNIDADES">
-                        Unidades (UNIDADES)
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-validade">Data de Validade</Label>
-                  <Input
-                    id="edit-validade"
-                    type="date"
-                    value={entradaEditando.validade}
-                    onChange={(e) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        validade: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-tipoEmbalagem">Tipo de Embalagem</Label>
-                  <Input
-                    id="edit-tipoEmbalagem"
-                    value={entradaEditando.tipoEmbalagem}
-                    onChange={(e) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        tipoEmbalagem: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-qtdeEmbalagem">
-                    Quantidade de Embalagens
-                  </Label>
-                  <Input
-                    id="edit-qtdeEmbalagem"
-                    type="number"
-                    value={entradaEditando.qtdeEmbalagem}
-                    onChange={(e) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        qtdeEmbalagem: Number(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-capEmbalagem">
-                    Capacidade da Embalagem
-                  </Label>
-                  <Input
-                    id="edit-capEmbalagem"
-                    type="number"
-                    value={entradaEditando.capEmbalagem}
-                    onChange={(e) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        capEmbalagem: Number(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-saldoAtual">Saldo Atual</Label>
-                  <Input
-                    id="edit-saldoAtual"
-                    type="number"
-                    value={entradaEditando.saldoAtual}
-                    onChange={(e) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        saldoAtual: Number(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-localizacao">Localização</Label>
-                  <Input
-                    id="edit-localizacao"
-                    value={entradaEditando.localizacao}
-                    onChange={(e) =>
-                      setEntradaEditando({
-                        ...entradaEditando,
-                        localizacao: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEditarDialogOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button onClick={handleSalvarEdicao}>Salvar Alterações</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Modal de Detalhes - Estoque Técnico */}
       <Dialog
@@ -2851,77 +2908,88 @@ const EstoquesGerais = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Movimentação - Estoque Primário */}
+      {/* Dialog de Movimentação */}
       <Dialog
         open={movimentarDialogOpen}
         onOpenChange={setMovimentarDialogOpen}
       >
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Movimentar Item - Estoque Primário</DialogTitle>
+            <DialogTitle>
+              Movimentar Item -{" "}
+              {tipoEstoqueMovimentando === "primario"
+                ? "Estoque Primário"
+                : tipoEstoqueMovimentando === "tecnico"
+                ? "Estoque Técnico"
+                : "Estoque Fracionário"}
+            </DialogTitle>
             <DialogDescription>
-              Selecione a entrada e realize uma movimentação de estoque
+              {tipoEstoqueMovimentando === "primario"
+                ? "Selecione a entrada e realize uma movimentação de estoque"
+                : "Realize uma movimentação entre estoques técnico e fracionário"}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            {/* Select de Entrada */}
-            <div className="space-y-2">
-              <Label htmlFor="mov-entrada">Selecionar Entrada *</Label>
-              <Select
-                value={movimentacaoForm.entradaId}
-                onValueChange={(value) => {
-                  // Verificar se não é a primeira entrada (mais próxima a vencer)
-                  const primeiraEntradaId = entradasDisponiveisMovimentacao[0]
-                    ? gerarIdEntrada(entradasDisponiveisMovimentacao[0])
-                    : null;
+            {/* Select de Entrada - Apenas para estoque primário */}
+            {tipoEstoqueMovimentando === "primario" && (
+              <div className="space-y-2">
+                <Label htmlFor="mov-entrada">Selecionar Entrada *</Label>
+                <Select
+                  value={movimentacaoForm.entradaId}
+                  onValueChange={(value) => {
+                    // Verificar se não é a primeira entrada (mais próxima a vencer)
+                    const primeiraEntradaId = entradasDisponiveisMovimentacao[0]
+                      ? gerarIdEntrada(entradasDisponiveisMovimentacao[0])
+                      : null;
 
-                  if (
-                    primeiraEntradaId &&
-                    value !== primeiraEntradaId &&
-                    entradasDisponiveisMovimentacao.length > 1
-                  ) {
-                    // Mostrar alerta se não for a primeira entrada
-                    setEntradaSelecionadaAlerta(value);
-                    setMostrarAlertaVencimento(true);
-                  } else {
-                    // Selecionar diretamente se for a primeira ou única entrada
-                    const entrada = obterEntradaPorId(value);
-                    setEntradaMovimentando(entrada);
-                    setMovimentacaoForm({
-                      ...movimentacaoForm,
-                      entradaId: value,
-                      qtde: "", // Resetar quantidade ao mudar entrada
-                    });
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione Item + Nota + Lote + Validade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {entradasDisponiveisMovimentacao.map((entrada) => {
-                    const material = materiaisAgricolas[entrada.idItem];
-                    const nomeItem =
-                      material?.nomeComercial ||
-                      material?.descricao ||
-                      `Item ${entrada.idItem}`;
-                    const dataValidade = new Date(
-                      entrada.validade
-                    ).toLocaleDateString("pt-BR");
-                    const entradaId = gerarIdEntrada(entrada);
-                    return (
-                      <SelectItem key={entradaId} value={entradaId}>
-                        {nomeItem} | NF: {entrada.nota} | Lote: {entrada.lote} |
-                        Validade: {dataValidade}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
+                    if (
+                      primeiraEntradaId &&
+                      value !== primeiraEntradaId &&
+                      entradasDisponiveisMovimentacao.length > 1
+                    ) {
+                      // Mostrar alerta se não for a primeira entrada
+                      setEntradaSelecionadaAlerta(value);
+                      setMostrarAlertaVencimento(true);
+                    } else {
+                      // Selecionar diretamente se for a primeira ou única entrada
+                      const entrada = obterEntradaPorId(value);
+                      setEntradaMovimentando(entrada);
+                      setMovimentacaoForm({
+                        ...movimentacaoForm,
+                        entradaId: value,
+                        qtde: "", // Resetar quantidade ao mudar entrada
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione Item + Nota + Lote + Validade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {entradasDisponiveisMovimentacao.map((entrada) => {
+                      const material = materiaisAgricolas[entrada.idItem];
+                      const nomeItem =
+                        material?.nomeComercial ||
+                        material?.descricao ||
+                        `Item ${entrada.idItem}`;
+                      const dataValidade = new Date(
+                        entrada.validade
+                      ).toLocaleDateString("pt-BR");
+                      const entradaId = gerarIdEntrada(entrada);
+                      return (
+                        <SelectItem key={entradaId} value={entradaId}>
+                          {nomeItem} | NF: {entrada.nota} | Lote: {entrada.lote}{" "}
+                          | Validade: {dataValidade}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-            {/* Resumo do Item Selecionado */}
-            {entradaMovimentando && (
+            {/* Resumo do Item Selecionado - Estoque Primário */}
+            {tipoEstoqueMovimentando === "primario" && entradaMovimentando && (
               <div className="p-4 bg-muted rounded-lg space-y-3">
                 <h4 className="font-semibold text-sm mb-3">
                   Resumo da Entrada
@@ -2986,7 +3054,62 @@ const EstoquesGerais = () => {
               </div>
             )}
 
-            {entradaMovimentando && (
+            {/* Resumo do Item - Técnico/Fracionário */}
+            {(tipoEstoqueMovimentando === "tecnico" ||
+              tipoEstoqueMovimentando === "fracionario") &&
+              itemMovimentandoTecnicoFracionario && (
+                <div className="p-4 bg-muted rounded-lg space-y-3">
+                  <h4 className="font-semibold text-sm mb-3">Resumo do Item</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">
+                        Nome do Item
+                      </Label>
+                      <p className="text-sm font-medium">
+                        {materiaisAgricolas[
+                          itemMovimentandoTecnicoFracionario.idItem
+                        ]?.nomeComercial ||
+                          materiaisAgricolas[
+                            itemMovimentandoTecnicoFracionario.idItem
+                          ]?.descricao ||
+                          "Item não encontrado"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">
+                        Lote
+                      </Label>
+                      <p className="text-sm font-mono font-medium">
+                        {itemMovimentandoTecnicoFracionario.nLote}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">
+                        Saldo Disponível
+                      </Label>
+                      <p className="text-sm font-medium">
+                        {itemMovimentandoTecnicoFracionario.saldoDispon}{" "}
+                        {itemMovimentandoTecnicoFracionario.unidade}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">
+                        Localização Atual
+                      </Label>
+                      <p className="text-sm font-medium">
+                        {localizacoes[
+                          itemMovimentandoTecnicoFracionario.idLocalizacao
+                        ]?.codigo || "-"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {/* Tipo de Movimentação */}
+            {((tipoEstoqueMovimentando === "primario" && entradaMovimentando) ||
+              (tipoEstoqueMovimentando !== "primario" &&
+                itemMovimentandoTecnicoFracionario)) && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="mov-tipo">Tipo de Movimentação *</Label>
@@ -3004,19 +3127,31 @@ const EstoquesGerais = () => {
                       <SelectValue placeholder="Selecione o tipo de movimentação" />
                     </SelectTrigger>
                     <SelectContent>
-                      {tiposMovimentacoes.map((tipo, index) => (
-                        <SelectItem key={index} value={tipo.nome}>
-                          {tipo.nome} ({tipo.origem} → {tipo.destino})
-                        </SelectItem>
-                      ))}
+                      {tipoEstoqueMovimentando === "primario"
+                        ? tiposMovimentacoes.map((tipo, index) => (
+                            <SelectItem key={index} value={tipo.nome}>
+                              {tipo.nome} ({tipo.origem} → {tipo.destino})
+                            </SelectItem>
+                          ))
+                        : tiposMovimentacoesTecnicoFracionario.map(
+                            (tipo, index) => (
+                              <SelectItem key={index} value={tipo.nome}>
+                                {tipo.nome} ({tipo.origem} → {tipo.destino})
+                              </SelectItem>
+                            )
+                          )}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Localização de Destino - Editável */}
+                {/* Localização de Destino */}
                 {movimentacaoForm.tipoMovimento &&
-                  getLocalizacoesDestino(movimentacaoForm.tipoMovimento)
-                    .length > 0 && (
+                  (tipoEstoqueMovimentando === "primario"
+                    ? getLocalizacoesDestino(movimentacaoForm.tipoMovimento)
+                    : getLocalizacoesDestinoTecnicoFracionario(
+                        movimentacaoForm.tipoMovimento
+                      )
+                  ).length > 0 && (
                     <div className="space-y-2">
                       <Label htmlFor="mov-destino">
                         Localização de Destino *
@@ -3034,8 +3169,13 @@ const EstoquesGerais = () => {
                           <SelectValue placeholder="Selecione a localização de destino" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getLocalizacoesDestino(
-                            movimentacaoForm.tipoMovimento
+                          {(tipoEstoqueMovimentando === "primario"
+                            ? getLocalizacoesDestino(
+                                movimentacaoForm.tipoMovimento
+                              )
+                            : getLocalizacoesDestinoTecnicoFracionario(
+                                movimentacaoForm.tipoMovimento
+                              )
                           ).map((loc) => (
                             <SelectItem key={loc.id} value={loc.id.toString()}>
                               {loc.codigo} - {loc.descricao}
@@ -3408,4 +3548,4 @@ const EstoquesGerais = () => {
   );
 };
 
-export default EstoquesGerais;
+export default Estoques;

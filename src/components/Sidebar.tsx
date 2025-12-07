@@ -40,7 +40,7 @@ const menuItems: MenuItem[] = [
     path: "/home",
   },
   {
-    title: "Gestão",
+    title: "Gestões",
     icon: BarChart3,
     subItems: [
       {
@@ -53,47 +53,47 @@ const menuItems: MenuItem[] = [
         icon: Activity,
         path: "/dashboard-operacional",
       },
-    ],
+    ].sort((a, b) => a.title.localeCompare(b.title)),
   },
   {
-    title: "Cadastros",
+    title: "Gerenciamentos",
     icon: Package,
     subItems: [
       {
-        title: "Gerenciar Usuários",
+        title: "Usuários",
         icon: UserCheck,
         path: "/gerenciamento-usuarios",
       },
       {
-        title: "Gerenciar Unidades",
+        title: "Unidades",
         icon: Building2,
         path: "/gerenciamento-unidades",
       },
       {
-        title: "Gerenciar Smart Caldas",
+        title: "Smart Caldas",
         icon: FlaskConical,
         path: "/gerenciamento-smart-caldas",
       },
       {
-        title: "Gerenciar Fazendas",
+        title: "Fazendas",
         icon: Wheat,
         path: "/gerenciamento-fazendas",
       },
       {
-        title: "Cadastros Auxiliares",
+        title: "Auxiliares",
         icon: Database,
         path: "/cadastros-auxiliares",
       },
       { title: "Fornecedores", icon: Store, path: "/fornecedores" },
       { title: "Insumos Agrícolas", icon: Package, path: "/insumos-agricolas" },
-    ],
+    ].sort((a, b) => a.title.localeCompare(b.title)),
   },
   {
     title: "Serviços",
     icon: FlaskConical,
     subItems: [
       { title: "Notas de Entrada", icon: FileText, path: "/notas-entrada" },
-      { title: "Estoques Gerais", icon: Package, path: "/estoques-gerais" },
+      { title: "Estoques", icon: Package, path: "/estoques" },
       { title: "Movimentações", icon: ArrowUpDown, path: "/movimentacoes" },
       { title: "Receitas", icon: FlaskConical, path: "/receitas" },
       {
@@ -102,7 +102,7 @@ const menuItems: MenuItem[] = [
         path: "/importacao-receitas",
       },
       { title: "Ordens de Produção", icon: Activity, path: "/ordens-producao" },
-    ],
+    ].sort((a, b) => a.title.localeCompare(b.title)),
   },
   {
     title: "Romaneios",
@@ -128,8 +128,8 @@ interface SidebarProps {
 
 const Sidebar = ({ onClose }: SidebarProps) => {
   const [expandedItems, setExpandedItems] = useState<string[]>([
-    "Gestão",
-    "Cadastros",
+    "Gestões",
+    "Gerenciamentos",
     "Serviços",
   ]);
   const location = useLocation();
