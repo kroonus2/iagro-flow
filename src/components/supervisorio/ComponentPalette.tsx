@@ -1,20 +1,39 @@
 import { ComponentType } from "@/types/supervisorio";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Thermometer, 
-  Droplet, 
-  Wind, 
-  Gauge, 
-  Power, 
+import {
+  Thermometer,
+  Droplet,
+  Wind,
+  Gauge,
+  Power,
   Fan,
   Circle,
-  ToggleLeft
+  ToggleLeft,
+  ArrowRightLeft,
 } from "lucide-react";
 
 interface ComponentPaletteProps {
   onAddComponent: (type: ComponentType) => void;
 }
+
+const TextLabelIcon = () => (
+  <div className="w-6 h-6 flex items-center justify-center border border-current rounded-sm text-[10px] font-mono">
+    Txt
+  </div>
+);
+
+const TextInputIcon = () => (
+  <div className="w-6 h-6 flex items-center justify-center border border-dashed border-current rounded-sm text-[10px] font-mono">
+    I/O
+  </div>
+);
+
+const CommandButtonIcon = () => (
+  <div className="w-6 h-6 flex items-center justify-center rounded-full border-2 border-current text-[10px] font-semibold">
+    Btn
+  </div>
+);
 
 const componentTypes: { type: ComponentType; icon: any; label: string }[] = [
   { type: "thermometer", icon: Thermometer, label: "Termômetro" },
@@ -26,6 +45,10 @@ const componentTypes: { type: ComponentType; icon: any; label: string }[] = [
   { type: "valve", icon: Circle, label: "Válvula" },
   { type: "switch", icon: ToggleLeft, label: "Chave" },
   { type: "indicator", icon: Circle, label: "Indicador" },
+  { type: "line", icon: ArrowRightLeft, label: "Encanamento/Fio" },
+  { type: "button", icon: CommandButtonIcon, label: "Botão" },
+  { type: "textLabel", icon: TextLabelIcon, label: "Texto" },
+  { type: "textInput", icon: TextInputIcon, label: "Caixa de Texto" },
 ];
 
 export const ComponentPalette = ({ onAddComponent }: ComponentPaletteProps) => {

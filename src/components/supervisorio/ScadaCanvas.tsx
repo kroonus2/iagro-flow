@@ -22,6 +22,9 @@ export const ScadaCanvas = ({
   const canvasRef = useRef<HTMLDivElement>(null);
   const [draggedComponent, setDraggedComponent] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [origin, setOrigin] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleMouseDown = useCallback((componentId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -34,18 +37,32 @@ export const ScadaCanvas = ({
     const rect = canvasRef.current?.getBoundingClientRect();
     if (rect) {
       setDragOffset({
-        x: e.clientX - rect.left - component.position.x,
-        y: e.clientY - rect.top - component.position.y
+        x: e.clientX - rect.left - (component.position.x + origin.x),
+        y: e.clientY - rect.top - (component.position.y + origin.y)
       });
     }
-  }, [components, onSelectComponent]);
+  }, [components, onSelectComponent, origin.x, origin.y]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isPanning && panStartRef.current) {
+      const deltaX = e.clientX - panStartRef.current.x;
+      const deltaY = e.clientY - panStartRef.current.y;
+      setOrigin(prev => ({
+        x: prev.x + deltaX,
+        y: prev.y + deltaY
+      }));
+      panStartRef.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
+
     if (!draggedComponent || !canvasRef.current) return;
 
     const rect = canvasRef.current.getBoundingClientRect();
-    const newX = e.clientX - rect.left - dragOffset.x;
-    const newY = e.clientY - rect.top - dragOffset.y;
+    const canvasMouseX = e.clientX - rect.left;
+    const canvasMouseY = e.clientY - rect.top;
+
+    const newX = canvasMouseX - dragOffset.x - origin.x;
+    const newY = canvasMouseY - dragOffset.y - origin.y;
 
     onComponentsChange(
       components.map(c => 
@@ -54,20 +71,30 @@ export const ScadaCanvas = ({
           : c
       )
     );
-  }, [draggedComponent, dragOffset, components, onComponentsChange]);
+  }, [draggedComponent, dragOffset, components, onComponentsChange, isPanning, origin.x, origin.y]);
 
   const handleMouseUp = useCallback(() => {
     setDraggedComponent(null);
+    setIsPanning(false);
+    panStartRef.current = null;
   }, []);
 
   const handleCanvasClick = useCallback(() => {
     onSelectComponent(undefined);
   }, [onSelectComponent]);
 
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
+    // Inicia pan se clicar no fundo (não em um componente)
+    if (e.button !== 0) return;
+    setIsPanning(true);
+    panStartRef.current = { x: e.clientX, y: e.clientY };
+  }, []);
+
   return (
     <div
       ref={canvasRef}
       className="relative w-full h-full bg-muted/20 border-2 border-border rounded-lg overflow-hidden"
+      onMouseDown={handleCanvasMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
@@ -93,8 +120,12 @@ export const ScadaCanvas = ({
             <ScadaComponent
               id={component.id}
               type={component.type}
-              position={component.position}
+              position={{
+                x: component.position.x + origin.x,
+                y: component.position.y + origin.y,
+              }}
               label={component.label}
+              config={component.config}
               plcVariable={plcVariable}
               isSelected={selectedComponentId === component.id}
               isDragging={draggedComponent === component.id}
