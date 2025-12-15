@@ -96,12 +96,12 @@ const menuItems: MenuItem[] = [
       { title: "Estoques", icon: Package, path: "/estoques" },
       { title: "Movimentações", icon: ArrowUpDown, path: "/movimentacoes" },
       { title: "Receitas", icon: FlaskConical, path: "/receitas" },
-      {
-        title: "Importar Receitas",
-        icon: Download,
-        path: "/importacao-receitas",
-      },
-      { title: "Ordens de Produção", icon: Activity, path: "/ordens-producao" },
+      // {
+      //   title: "Importar Receitas",
+      //   icon: Download,
+      //   path: "/importacao-receitas",
+      // },
+      { title: "Ordens de Serviços", icon: Activity, path: "/ordens-servicos" },
     ].sort((a, b) => a.title.localeCompare(b.title)),
   },
   {

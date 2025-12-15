@@ -11,7 +11,7 @@ import DashboardGerencial from "./pages/DashboardGerencial";
 import DashboardOperacional from "./pages/DashboardOperacional";
 import ReceitasSmartCalda from "./pages/ReceitasSmartCalda";
 import Estoques from "./pages/Estoques";
-import OrdensProducao from "./pages/OrdensProducao";
+import OrdensServicos from "./pages/OrdensServicos";
 import Entregas from "./pages/Entregas";
 import Configuracoes from "./pages/Configuracoes";
 import Supervisorios from "./pages/Supervisorios";
@@ -83,7 +83,7 @@ const App = () => (
                 path="/importacao-receitas"
                 element={<ImportacaoReceitas />}
               />
-              <Route path="/ordens-producao" element={<OrdensProducao />} />
+              <Route path="/ordens-servicos" element={<OrdensServicos />} />
               <Route path="/entregas" element={<Entregas />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
               <Route path="/supervisorio" element={<Supervisorios />} />
