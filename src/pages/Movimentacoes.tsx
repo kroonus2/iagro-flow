@@ -429,6 +429,16 @@ const Movimentacoes = () => {
     );
   });
 
+  const hasActiveFilters = () => {
+    return (
+      searchTerm !== "" ||
+      origemFilter !== "todas" ||
+      destinoFilter !== "todos" ||
+      dateRange !== undefined ||
+      tipoMovimentoFilter !== "todos"
+    );
+  };
+
   const clearFilters = () => {
     setSearchTerm("");
     setOrigemFilter("todas");
@@ -684,15 +694,9 @@ const Movimentacoes = () => {
       {/* Filtros */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Filtros de Pesquisa
-            </div>
-            <Button variant="outline" size="sm" onClick={clearFilters}>
-              <X className="h-4 w-4 mr-2" />
-              Limpar filtros
-            </Button>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            Filtros de Pesquisa
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -715,7 +719,7 @@ const Movimentacoes = () => {
                   <SelectValue placeholder="Origem" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todas">TODAS</SelectItem>
+                  <SelectItem value="todas">TODAS AS ORIGENS</SelectItem>
                   <SelectItem value="PRIMÁRIO">PRIMÁRIO</SelectItem>
                   <SelectItem value="TÉCNICO">TÉCNICO</SelectItem>
                   <SelectItem value="FRACIONÁRIO">FRACIONÁRIO</SelectItem>
@@ -727,7 +731,7 @@ const Movimentacoes = () => {
                   <SelectValue placeholder="Destino" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">TODOS</SelectItem>
+                  <SelectItem value="todos">TODOS OS DESTINOS</SelectItem>
                   <SelectItem value="PRIMÁRIO">PRIMÁRIO</SelectItem>
                   <SelectItem value="TÉCNICO">TÉCNICO</SelectItem>
                   <SelectItem value="FRACIONÁRIO">FRACIONÁRIO</SelectItem>
@@ -801,6 +805,19 @@ const Movimentacoes = () => {
             </div>
           </div>
         </CardContent>
+        {hasActiveFilters() && (
+          <div className="px-6 pb-6 flex justify-end">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={clearFilters}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Limpar filtros
+            </Button>
+          </div>
+        )}
       </Card>
 
       {/* Ações */}
