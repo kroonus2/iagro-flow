@@ -43,6 +43,9 @@ import {
   ChevronDown,
   ChevronRight,
   X,
+  ArrowUp,
+  ArrowDown,
+  GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -68,6 +71,7 @@ interface Responsavel {
 interface Fazenda {
   id: string;
   descricao: string;
+  status?: "Ativo" | "Inativo";
   talhoes: Talhao[];
 }
 
@@ -91,12 +95,43 @@ interface Insumo {
 interface InsumoSelecionado {
   idEstoque: number;
   idItem: number;
-  quantidade: number;
+  doseHA: number; // Dose/Ha do insumo
 }
 
 interface TalhaoSelecionado {
   fazendaId: string;
   talhaoId: string;
+}
+
+interface Caminhao {
+  id: string;
+  placa: string;
+  patrimonio: string;
+  volume: string;
+  modelo: string;
+  marca: string;
+  ano: string;
+  status: "Ativo" | "Inativo";
+}
+
+interface Bulk {
+  id: string;
+  nome: string;
+  tipo: "IBC" | "SILO" | "FRACIONADO";
+  capacidade: number;
+  smartCaldaId: number;
+  smartCaldaNome: string;
+  localizacao: string;
+}
+
+interface CaminhaoSelecionado {
+  caminhaoId: string;
+  ordem: number;
+}
+
+interface BulkSelecionado {
+  bulkId: string;
+  ordem: number;
 }
 
 interface OrdemServico {
@@ -105,14 +140,13 @@ interface OrdemServico {
   centroCustoId: string;
   operacaoId: string;
   dataGeracao: string;
-  producaoTotal: string;
   observacoes: string;
   responsavelId: string;
-  secao: string;
+  fazendaId: string; // Fazenda selecionada (seção)
+  secao: string; // Mesmo que fazenda
   talhoes: TalhaoSelecionado[];
-  producao: string;
   insumos: InsumoSelecionado[];
-  doseHA: string;
+  caldaHA: string; // Calda/Ha
   status: "aguardando" | "em_producao" | "pausada" | "concluida" | "cancelada";
   progresso: number;
   iniciado?: string | null;
@@ -124,6 +158,17 @@ const OrdensServicos = () => {
   const [statusFilter, setStatusFilter] = useState("todos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [expandedOrdens, setExpandedOrdens] = useState<Set<string>>(new Set());
+  const [dialogIniciarOpen, setDialogIniciarOpen] = useState(false);
+  const [ordemIniciando, setOrdemIniciando] = useState<string | null>(null);
+  const [etapaAtual, setEtapaAtual] = useState(1);
+  const [caminhoesSelecionados, setCaminhoesSelecionados] = useState<
+    CaminhaoSelecionado[]
+  >([]);
+  const [bulksSelecionados, setBulksSelecionados] = useState<BulkSelecionado[]>(
+    []
+  );
+  const [buscaCaminhoes, setBuscaCaminhoes] = useState("");
+  const [buscaBulks, setBuscaBulks] = useState("");
 
   // Dados simulados - Centros de Custo
   const centrosCusto: CentroCusto[] = [
@@ -226,6 +271,136 @@ const OrdensServicos = () => {
     },
   ];
 
+  // Dados simulados - Caminhões (baseado em CadastrosAuxiliares.tsx)
+  const caminhoes: Caminhao[] = [
+    {
+      id: "1",
+      placa: "GNN-1010",
+      patrimonio: "999999",
+      volume: "13000",
+      modelo: "F32",
+      marca: "Volvo",
+      ano: "2023",
+      status: "Ativo",
+    },
+    {
+      id: "2",
+      placa: "ABC-1234",
+      patrimonio: "888888",
+      volume: "15000",
+      modelo: "FH16",
+      marca: "Volvo",
+      ano: "2022",
+      status: "Ativo",
+    },
+    {
+      id: "3",
+      placa: "DEF-5678",
+      patrimonio: "777777",
+      volume: "12000",
+      modelo: "Actros",
+      marca: "Mercedes-Benz",
+      ano: "2024",
+      status: "Ativo",
+    },
+    {
+      id: "4",
+      placa: "GHI-9012",
+      patrimonio: "666666",
+      volume: "14000",
+      modelo: "Scania R",
+      marca: "Scania",
+      ano: "2023",
+      status: "Ativo",
+    },
+    {
+      id: "5",
+      placa: "JKL-3456",
+      patrimonio: "555555",
+      volume: "11000",
+      modelo: "Constellation",
+      marca: "Volkswagen",
+      ano: "2021",
+      status: "Ativo",
+    },
+  ];
+
+  // Dados simulados - BULKS (baseado em GestaoSmartCaldas.tsx)
+  const bulks: Bulk[] = [
+    {
+      id: "1",
+      nome: "IBC-001",
+      tipo: "IBC",
+      capacidade: 300,
+      smartCaldaId: 1,
+      smartCaldaNome: "Smart Calda #001",
+      localizacao: "Estufa A - Setor 1",
+    },
+    {
+      id: "2",
+      nome: "IBC-002",
+      tipo: "IBC",
+      capacidade: 250,
+      smartCaldaId: 1,
+      smartCaldaNome: "Smart Calda #001",
+      localizacao: "Estufa A - Setor 1",
+    },
+    {
+      id: "3",
+      nome: "SILO-001",
+      tipo: "SILO",
+      capacidade: 500,
+      smartCaldaId: 1,
+      smartCaldaNome: "Smart Calda #001",
+      localizacao: "Estufa A - Setor 1",
+    },
+    {
+      id: "4",
+      nome: "SILO-002",
+      tipo: "SILO",
+      capacidade: 300,
+      smartCaldaId: 1,
+      smartCaldaNome: "Smart Calda #001",
+      localizacao: "Estufa A - Setor 1",
+    },
+    {
+      id: "5",
+      nome: "FRAC-001",
+      tipo: "FRACIONADO",
+      capacidade: 100,
+      smartCaldaId: 1,
+      smartCaldaNome: "Smart Calda #001",
+      localizacao: "Estufa A - Setor 1",
+    },
+    {
+      id: "6",
+      nome: "FRAC-002",
+      tipo: "FRACIONADO",
+      capacidade: 100,
+      smartCaldaId: 1,
+      smartCaldaNome: "Smart Calda #001",
+      localizacao: "Estufa A - Setor 1",
+    },
+    {
+      id: "7",
+      nome: "IBC-001",
+      tipo: "IBC",
+      capacidade: 200,
+      smartCaldaId: 2,
+      smartCaldaNome: "Smart Calda #002",
+      localizacao: "Estufa B - Setor 2",
+    },
+    {
+      id: "8",
+      nome: "SILO-001",
+      tipo: "SILO",
+      capacidade: 400,
+      smartCaldaId: 2,
+      smartCaldaNome: "Smart Calda #002",
+      localizacao: "Estufa B - Setor 2",
+    },
+  ];
+
   // Dados simulados - Insumos (Estoque Técnico e Fracionário)
   const insumos: Insumo[] = [
     {
@@ -311,14 +486,13 @@ const OrdensServicos = () => {
     centroCustoId: "",
     operacaoId: "",
     dataGeracao: "",
-    producaoTotal: "",
     observacoes: "",
     responsavelId: "",
+    fazendaId: "",
     secao: "",
     talhoesSelecionados: [] as TalhaoSelecionado[],
-    producao: "",
     insumosSelecionados: [] as InsumoSelecionado[],
-    doseHA: "",
+    caldaHA: "",
   });
 
   // Estados para seleção múltipla
@@ -326,7 +500,7 @@ const OrdensServicos = () => {
     new Set()
   );
   const [insumosSelecionados, setInsumosSelecionados] = useState<
-    Map<number, number>
+    Map<number, { idItem: number; doseHA: number }>
   >(new Map());
 
   // Estados para busca/filtro
@@ -344,14 +518,13 @@ const OrdensServicos = () => {
       centroCustoId: "1",
       operacaoId: "1",
       dataGeracao: "2024-01-20",
-      producaoTotal: "1000",
       observacoes: "Serviços normal, sem intercorrências",
       responsavelId: "1",
+      fazendaId: "1",
       secao: "Seção A",
       talhoes: [{ fazendaId: "1", talhaoId: "1" }],
-      producao: "800",
-      insumos: [{ idEstoque: 1, idItem: 1005392, quantidade: 50 }],
-      doseHA: "2.5",
+      insumos: [{ idEstoque: 1, idItem: 1005392, doseHA: 0.12 }],
+      caldaHA: "2.5",
       status: "em_producao",
       progresso: 75,
       iniciado: "2024-01-20 08:00",
@@ -363,14 +536,13 @@ const OrdensServicos = () => {
       centroCustoId: "2",
       operacaoId: "2",
       dataGeracao: "2024-01-21",
-      producaoTotal: "1500",
       observacoes: "Aguardando liberação de matéria-prima",
       responsavelId: "2",
+      fazendaId: "2",
       secao: "Seção B",
       talhoes: [{ fazendaId: "2", talhaoId: "4" }],
-      producao: "0",
       insumos: [],
-      doseHA: "3.0",
+      caldaHA: "3.0",
       status: "aguardando",
       progresso: 0,
       iniciado: null,
@@ -454,15 +626,19 @@ const OrdensServicos = () => {
     if (newMap.has(idEstoque)) {
       newMap.delete(idEstoque);
     } else {
-      newMap.set(idEstoque, 0);
+      newMap.set(idEstoque, { idItem, doseHA: 0 });
     }
     setInsumosSelecionados(newMap);
   };
 
-  const handleQuantidadeInsumo = (idEstoque: number, quantidade: number) => {
+  const handleDoseHAInsumo = (
+    idEstoque: number,
+    idItem: number,
+    doseHA: number
+  ) => {
     const newMap = new Map(insumosSelecionados);
     if (newMap.has(idEstoque)) {
-      newMap.set(idEstoque, quantidade);
+      newMap.set(idEstoque, { idItem, doseHA });
       setInsumosSelecionados(newMap);
     }
   };
@@ -487,14 +663,17 @@ const OrdensServicos = () => {
 
     const insumos: InsumoSelecionado[] = Array.from(
       insumosSelecionados.entries()
-    ).map(([idEstoque, quantidade]) => {
-      const insumo = insumos.find((i) => i.idEstoque === idEstoque);
+    ).map(([idEstoque, dados]) => {
       return {
         idEstoque,
-        idItem: insumo?.idItem || 0,
-        quantidade,
+        idItem: dados.idItem,
+        doseHA: dados.doseHA,
       };
     });
+
+    const fazendaSelecionada = fazendas.find(
+      (f) => f.id === novaOrdem.fazendaId
+    );
 
     const novaOS: OrdemServico = {
       id: `OS${Date.now()}`,
@@ -502,14 +681,13 @@ const OrdensServicos = () => {
       centroCustoId: novaOrdem.centroCustoId,
       operacaoId: novaOrdem.operacaoId,
       dataGeracao: novaOrdem.dataGeracao,
-      producaoTotal: novaOrdem.producaoTotal,
       observacoes: novaOrdem.observacoes,
       responsavelId: novaOrdem.responsavelId,
-      secao: novaOrdem.secao,
+      fazendaId: novaOrdem.fazendaId,
+      secao: novaOrdem.secao || fazendaSelecionada?.descricao || "",
       talhoes,
-      producao: novaOrdem.producao,
       insumos,
-      doseHA: novaOrdem.doseHA,
+      caldaHA: novaOrdem.caldaHA,
       status: "aguardando",
       progresso: 0,
       iniciado: null,
@@ -524,14 +702,13 @@ const OrdensServicos = () => {
       centroCustoId: "",
       operacaoId: "",
       dataGeracao: "",
-      producaoTotal: "",
       observacoes: "",
       responsavelId: "",
+      fazendaId: "",
       secao: "",
       talhoesSelecionados: [],
-      producao: "",
       insumosSelecionados: [],
-      doseHA: "",
+      caldaHA: "",
     });
     setTalhoesSelecionados(new Set());
     setInsumosSelecionados(new Map());
@@ -541,8 +718,159 @@ const OrdensServicos = () => {
   };
 
   const handleIniciarOrdem = (id: string) => {
-    toast.success(`Ordem ${id} iniciada!`);
+    setOrdemIniciando(id);
+    setCaminhoesSelecionados([]);
+    setBulksSelecionados([]);
+    setBuscaCaminhoes("");
+    setBuscaBulks("");
+    setEtapaAtual(1);
+    setDialogIniciarOpen(true);
   };
+
+  const handleProximaEtapa = () => {
+    if (etapaAtual === 1) {
+      if (bulksSelecionados.length === 0) {
+        toast.error("Selecione pelo menos um BULK");
+        return;
+      }
+      setEtapaAtual(2);
+    } else if (etapaAtual === 2) {
+      if (caminhoesSelecionados.length === 0) {
+        toast.error("Selecione pelo menos um caminhão");
+        return;
+      }
+      setEtapaAtual(3);
+    }
+  };
+
+  const handleEtapaAnterior = () => {
+    if (etapaAtual > 1) {
+      setEtapaAtual(etapaAtual - 1);
+    }
+  };
+
+  const handleFecharModal = () => {
+    setDialogIniciarOpen(false);
+    setOrdemIniciando(null);
+    setEtapaAtual(1);
+    setCaminhoesSelecionados([]);
+    setBulksSelecionados([]);
+    setBuscaCaminhoes("");
+    setBuscaBulks("");
+  };
+
+  const handleConfirmarIniciar = () => {
+    if (caminhoesSelecionados.length === 0) {
+      toast.error("Selecione pelo menos um caminhão");
+      return;
+    }
+    if (bulksSelecionados.length === 0) {
+      toast.error("Selecione pelo menos um BULK");
+      return;
+    }
+
+    // Aqui você pode salvar os parâmetros de iniciação
+    toast.success(
+      `Ordem ${ordemIniciando} iniciada com ${caminhoesSelecionados.length} caminhão(ões) e ${bulksSelecionados.length} BULK(s)!`
+    );
+    setDialogIniciarOpen(false);
+    setOrdemIniciando(null);
+  };
+
+  const handleToggleCaminhao = (caminhaoId: string) => {
+    const index = caminhoesSelecionados.findIndex(
+      (c) => c.caminhaoId === caminhaoId
+    );
+    if (index >= 0) {
+      // Remove o caminhão e reordena
+      const novos = caminhoesSelecionados
+        .filter((c) => c.caminhaoId !== caminhaoId)
+        .map((c, i) => ({ ...c, ordem: i + 1 }));
+      setCaminhoesSelecionados(novos);
+    } else {
+      // Adiciona o caminhão
+      const novaOrdem = caminhoesSelecionados.length + 1;
+      setCaminhoesSelecionados([
+        ...caminhoesSelecionados,
+        { caminhaoId, ordem: novaOrdem },
+      ]);
+    }
+  };
+
+  const handleMoverCaminhao = (index: number, direcao: "up" | "down") => {
+    const novos = [...caminhoesSelecionados];
+    if (direcao === "up" && index > 0) {
+      [novos[index - 1], novos[index]] = [novos[index], novos[index - 1]];
+      novos.forEach((c, i) => (c.ordem = i + 1));
+      setCaminhoesSelecionados(novos);
+    } else if (direcao === "down" && index < novos.length - 1) {
+      [novos[index], novos[index + 1]] = [novos[index + 1], novos[index]];
+      novos.forEach((c, i) => (c.ordem = i + 1));
+      setCaminhoesSelecionados(novos);
+    }
+  };
+
+  const handleToggleBulk = (bulkId: string) => {
+    const index = bulksSelecionados.findIndex((b) => b.bulkId === bulkId);
+    if (index >= 0) {
+      // Remove o bulk e reordena
+      const novos = bulksSelecionados
+        .filter((b) => b.bulkId !== bulkId)
+        .map((b, i) => ({ ...b, ordem: i + 1 }));
+      setBulksSelecionados(novos);
+    } else {
+      // Adiciona o bulk
+      const novaOrdem = bulksSelecionados.length + 1;
+      setBulksSelecionados([
+        ...bulksSelecionados,
+        { bulkId, ordem: novaOrdem },
+      ]);
+    }
+  };
+
+  const handleMoverBulk = (index: number, direcao: "up" | "down") => {
+    const novos = [...bulksSelecionados];
+    if (direcao === "up" && index > 0) {
+      [novos[index - 1], novos[index]] = [novos[index], novos[index - 1]];
+      novos.forEach((b, i) => (b.ordem = i + 1));
+      setBulksSelecionados(novos);
+    } else if (direcao === "down" && index < novos.length - 1) {
+      [novos[index], novos[index + 1]] = [novos[index + 1], novos[index]];
+      novos.forEach((b, i) => (b.ordem = i + 1));
+      setBulksSelecionados(novos);
+    }
+  };
+
+  // Filtrar caminhões
+  const caminhoesFiltrados = useMemo(() => {
+    const termoLower = buscaCaminhoes.toLowerCase().trim();
+    if (!termoLower) {
+      return caminhoes.filter((c) => c.status === "Ativo");
+    }
+    return caminhoes.filter(
+      (c) =>
+        c.status === "Ativo" &&
+        (c.placa.toLowerCase().includes(termoLower) ||
+          c.patrimonio.toLowerCase().includes(termoLower) ||
+          c.modelo.toLowerCase().includes(termoLower) ||
+          c.marca.toLowerCase().includes(termoLower))
+    );
+  }, [buscaCaminhoes, caminhoes]);
+
+  // Filtrar bulks
+  const bulksFiltrados = useMemo(() => {
+    const termoLower = buscaBulks.toLowerCase().trim();
+    if (!termoLower) {
+      return bulks;
+    }
+    return bulks.filter(
+      (b) =>
+        b.nome.toLowerCase().includes(termoLower) ||
+        b.smartCaldaNome.toLowerCase().includes(termoLower) ||
+        b.localizacao.toLowerCase().includes(termoLower) ||
+        b.tipo.toLowerCase().includes(termoLower)
+    );
+  }, [buscaBulks, bulks]);
 
   const handlePausarOrdem = (id: string) => {
     toast.warning(`Ordem ${id} pausada!`);
@@ -587,45 +915,46 @@ const OrdensServicos = () => {
     setExpandedOrdens(novosExpandidos);
   };
 
-  // Filtrar talhões com busca (otimizado com useMemo)
+  // Filtrar talhões com busca (otimizado com useMemo) - apenas da fazenda selecionada
   const talhoesFiltrados = useMemo(() => {
     const termoLower = buscaTalhoes.toLowerCase().trim();
-    if (!termoLower) {
-      return fazendas.flatMap((fazenda) =>
-        fazenda.talhoes
-          .filter((t) => t.tipo === "Talhão" && t.status === "Ativo")
-          .map((talhao) => ({
-            fazenda,
-            talhao,
-            key: `${fazenda.id}-${talhao.id}`,
-          }))
-      );
+    const fazendaSelecionada = fazendas.find(
+      (f) => f.id === novaOrdem.fazendaId
+    );
+
+    // Se não houver fazenda selecionada, não mostrar talhões
+    if (!fazendaSelecionada) {
+      return [];
     }
 
-    return fazendas
-      .flatMap((fazenda) =>
-        fazenda.talhoes
-          .filter((t) => t.tipo === "Talhão" && t.status === "Ativo")
-          .map((talhao) => ({
-            fazenda,
-            talhao,
-            key: `${fazenda.id}-${talhao.id}`,
-          }))
-      )
-      .filter((item) => {
-        const fazendaNome = item.fazenda.descricao.toLowerCase();
-        const talhaoObs = item.talhao.observacoes?.toLowerCase() || "";
-        const talhaoArea = item.talhao.area.toLowerCase();
-        const talhaoId = item.talhao.id.toLowerCase();
+    const talhoesDaFazenda = fazendaSelecionada.talhoes
+      .filter((t) => t.tipo === "Talhão" && t.status === "Ativo")
+      .map((talhao) => ({
+        fazenda: fazendaSelecionada,
+        talhao,
+        key: `${fazendaSelecionada.id}-${talhao.id}`,
+      }));
 
-        return (
-          fazendaNome.includes(termoLower) ||
-          talhaoObs.includes(termoLower) ||
-          talhaoArea.includes(termoLower) ||
-          talhaoId.includes(termoLower)
-        );
-      });
-  }, [buscaTalhoes, fazendas]);
+    // Se não houver termo de busca, retornar todos os talhões da fazenda
+    if (!termoLower) {
+      return talhoesDaFazenda;
+    }
+
+    // Filtrar por termo de busca
+    return talhoesDaFazenda.filter((item) => {
+      const fazendaNome = item.fazenda.descricao.toLowerCase();
+      const talhaoObs = item.talhao.observacoes?.toLowerCase() || "";
+      const talhaoArea = item.talhao.area.toLowerCase();
+      const talhaoId = item.talhao.id.toLowerCase();
+
+      return (
+        fazendaNome.includes(termoLower) ||
+        talhaoObs.includes(termoLower) ||
+        talhaoArea.includes(termoLower) ||
+        talhaoId.includes(termoLower)
+      );
+    });
+  }, [buscaTalhoes, fazendas, novaOrdem.fazendaId]);
 
   // Filtrar insumos com busca (otimizado com useMemo)
   const insumosFiltrados = useMemo(() => {
@@ -917,32 +1246,51 @@ const OrdensServicos = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="secao">Seção</Label>
-                    <Input
-                      id="secao"
-                      value={novaOrdem.secao}
-                      onChange={(e) =>
-                        setNovaOrdem({ ...novaOrdem, secao: e.target.value })
-                      }
-                      placeholder="Ex: Seção A"
-                    />
+                    <Label htmlFor="fazenda">Seção (Fazenda) *</Label>
+                    <Select
+                      value={novaOrdem.fazendaId}
+                      onValueChange={(value) => {
+                        const fazenda = fazendas.find((f) => f.id === value);
+                        setNovaOrdem({
+                          ...novaOrdem,
+                          fazendaId: value,
+                          secao: fazenda?.descricao || "",
+                        });
+                        // Limpar talhões selecionados ao trocar fazenda
+                        setTalhoesSelecionados(new Set());
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a fazenda" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fazendas
+                          .filter((f) => !f.status || f.status === "Ativo")
+                          .map((f) => (
+                            <SelectItem key={f.id} value={f.id}>
+                              {f.descricao}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Seção é a mesma coisa que fazenda
+                    </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="producaoTotal">Produção Total</Label>
+                    <Label htmlFor="caldaHA">Calda/Ha</Label>
                     <Input
-                      id="producaoTotal"
+                      id="caldaHA"
                       type="number"
-                      value={novaOrdem.producaoTotal}
+                      step="0.01"
+                      value={novaOrdem.caldaHA}
                       onChange={(e) =>
-                        setNovaOrdem({
-                          ...novaOrdem,
-                          producaoTotal: e.target.value,
-                        })
+                        setNovaOrdem({ ...novaOrdem, caldaHA: e.target.value })
                       }
-                      placeholder="0"
+                      placeholder="0.00"
                     />
                   </div>
                   <div className="space-y-2">
@@ -950,25 +1298,31 @@ const OrdensServicos = () => {
                     <Input
                       id="producao"
                       type="number"
-                      value={novaOrdem.producao}
-                      onChange={(e) =>
-                        setNovaOrdem({ ...novaOrdem, producao: e.target.value })
-                      }
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="doseHA">Dose/HA</Label>
-                    <Input
-                      id="doseHA"
-                      type="number"
                       step="0.01"
-                      value={novaOrdem.doseHA}
-                      onChange={(e) =>
-                        setNovaOrdem({ ...novaOrdem, doseHA: e.target.value })
-                      }
+                      value={(() => {
+                        // Calcular soma das áreas dos talhões selecionados
+                        const somaAreas = Array.from(
+                          talhoesSelecionados
+                        ).reduce((sum, key) => {
+                          const [fazendaId, talhaoId] = key.split("-");
+                          const fazenda = fazendas.find(
+                            (f) => f.id === fazendaId
+                          );
+                          const talhao = fazenda?.talhoes.find(
+                            (t) => t.id === talhaoId
+                          );
+                          return sum + (Number(talhao?.area) || 0);
+                        }, 0);
+                        return somaAreas.toFixed(2);
+                      })()}
+                      readOnly
+                      disabled
+                      className="bg-muted cursor-not-allowed"
                       placeholder="0.00"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Soma das áreas dos talhões selecionados
+                    </p>
                   </div>
                 </div>
 
@@ -1086,8 +1440,12 @@ const OrdensServicos = () => {
                         const isSelected = insumosSelecionados.has(
                           insumo.idEstoque
                         );
-                        const quantidade =
-                          insumosSelecionados.get(insumo.idEstoque) || 0;
+                        const dadosInsumo = insumosSelecionados.get(
+                          insumo.idEstoque
+                        ) || {
+                          idItem: insumo.idItem,
+                          doseHA: 0,
+                        };
 
                         return (
                           <div
@@ -1131,21 +1489,22 @@ const OrdensServicos = () => {
                               <div className="flex items-center gap-2 ml-2">
                                 <Input
                                   type="number"
-                                  placeholder="Qtd"
-                                  value={quantidade}
+                                  placeholder="Dose/Ha"
+                                  value={dadosInsumo.doseHA}
                                   onChange={(e) =>
-                                    handleQuantidadeInsumo(
+                                    handleDoseHAInsumo(
                                       insumo.idEstoque,
+                                      insumo.idItem,
                                       parseFloat(e.target.value) || 0
                                     )
                                   }
                                   className="w-24"
                                   min={0}
-                                  max={insumo.saldoDispon}
+                                  step="0.01"
                                   onClick={(e) => e.stopPropagation()}
                                 />
                                 <span className="text-sm text-muted-foreground whitespace-nowrap">
-                                  {insumo.unidade}
+                                  Dose/Ha
                                 </span>
                               </div>
                             )}
@@ -1386,66 +1745,10 @@ const OrdensServicos = () => {
                           </div>
                           <div>
                             <Label className="text-muted-foreground">
-                              Produção
+                              Calda/Ha
                             </Label>
                             <p className="text-sm font-medium">
-                              {ordem.producao || "-"}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground">
-                              Dose/HA
-                            </Label>
-                            <p className="text-sm font-medium">
-                              {ordem.doseHA || "-"}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground">
-                              Produção Total (Calculado)
-                            </Label>
-                            <p className="text-sm font-medium">
-                              {ordem.producao &&
-                              ordem.doseHA &&
-                              !isNaN(Number(ordem.producao)) &&
-                              !isNaN(Number(ordem.doseHA))
-                                ? (
-                                    Number(ordem.producao) *
-                                    Number(ordem.doseHA)
-                                  ).toFixed(2)
-                                : "-"}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground">
-                              Média Quantidade/HA
-                            </Label>
-                            <p className="text-sm font-medium">
-                              {(() => {
-                                if (
-                                  !ordem.producao ||
-                                  !ordem.talhoes ||
-                                  ordem.talhoes.length === 0
-                                ) {
-                                  return "-";
-                                }
-                                const totalArea = ordem.talhoes.reduce(
-                                  (sum, talhao) => {
-                                    const fazenda = fazendas.find(
-                                      (f) => f.id === talhao.fazendaId
-                                    );
-                                    const talhaoObj = fazenda?.talhoes.find(
-                                      (t) => t.id === talhao.talhaoId
-                                    );
-                                    return sum + (Number(talhaoObj?.area) || 0);
-                                  },
-                                  0
-                                );
-                                if (totalArea === 0) return "-";
-                                const producaoNum = Number(ordem.producao);
-                                if (isNaN(producaoNum)) return "-";
-                                return (producaoNum / totalArea).toFixed(2);
-                              })()}
+                              {ordem.caldaHA || "-"}
                             </p>
                           </div>
                           <div>
@@ -1584,8 +1887,35 @@ const OrdensServicos = () => {
                                     </div>
                                     <div className="text-right ml-4">
                                       <p className="text-sm font-medium">
-                                        {insumo.quantidade}{" "}
+                                        {(() => {
+                                          // Calcular quantidade total do insumo
+                                          const areaTotal =
+                                            ordem.talhoes.reduce(
+                                              (sum, talhao) => {
+                                                const fazenda = fazendas.find(
+                                                  (f) =>
+                                                    f.id === talhao.fazendaId
+                                                );
+                                                const talhaoObj =
+                                                  fazenda?.talhoes.find(
+                                                    (t) =>
+                                                      t.id === talhao.talhaoId
+                                                  );
+                                                return (
+                                                  sum +
+                                                  (Number(talhaoObj?.area) || 0)
+                                                );
+                                              },
+                                              0
+                                            );
+                                          const quantidadeTotal =
+                                            areaTotal * insumo.doseHA;
+                                          return quantidadeTotal.toFixed(2);
+                                        })()}{" "}
                                         {insumoEstoque?.unidade || ""}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Dose/Ha: {insumo.doseHA}
                                       </p>
                                     </div>
                                   </div>
@@ -1594,6 +1924,197 @@ const OrdensServicos = () => {
                             </div>
                           </div>
                         )}
+
+                        {/* Cálculos e Gráfico */}
+                        {(() => {
+                          // Calcular área total dos talhões
+                          const areaTotal = ordem.talhoes.reduce(
+                            (sum, talhao) => {
+                              const fazenda = fazendas.find(
+                                (f) => f.id === talhao.fazendaId
+                              );
+                              const talhaoObj = fazenda?.talhoes.find(
+                                (t) => t.id === talhao.talhaoId
+                              );
+                              return sum + (Number(talhaoObj?.area) || 0);
+                            },
+                            0
+                          );
+
+                          // Calcular total de insumos (área * dose/ha de cada insumo)
+                          const totalInsumos = ordem.insumos.reduce(
+                            (sum, insumo) => {
+                              return sum + areaTotal * insumo.doseHA;
+                            },
+                            0
+                          );
+
+                          // Calcular total de calda (Calda/Ha * área total)
+                          const caldaHA = Number(ordem.caldaHA) || 0;
+                          const totalCalda = caldaHA * areaTotal;
+
+                          // Calcular total de água (Total de Calda - Total de Insumos)
+                          const totalAgua = totalCalda - totalInsumos;
+
+                          return (
+                            <div className="mt-4 space-y-4">
+                              {/* Cards de Cálculos */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <Card>
+                                  <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium">
+                                      Total de Insumos
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <p className="text-2xl font-bold">
+                                      {totalInsumos.toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Área × Dose/Ha de cada insumo
+                                    </p>
+                                  </CardContent>
+                                </Card>
+                                <Card>
+                                  <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium">
+                                      Total de Calda
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <p className="text-2xl font-bold">
+                                      {totalCalda.toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Calda/Ha × Área total
+                                    </p>
+                                  </CardContent>
+                                </Card>
+                                <Card>
+                                  <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium">
+                                      Total de Água
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <p className="text-2xl font-bold">
+                                      {totalAgua.toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Total de Calda - Total de Insumos
+                                    </p>
+                                  </CardContent>
+                                </Card>
+                              </div>
+
+                              {/* Gráfico de Composição da Calda */}
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle className="text-base">
+                                    Composição da Calda
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                  {/* Barra Horizontal */}
+                                  <div className="w-full">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-sm font-medium">
+                                        Total de Calda: {totalCalda.toFixed(2)}{" "}
+                                        L
+                                      </span>
+                                    </div>
+                                    <div className="w-full h-12 bg-muted rounded-lg overflow-hidden flex">
+                                      {/* Porcentagem de Insumos */}
+                                      {totalCalda > 0 && (
+                                        <div
+                                          className="bg-blue-500 flex items-center justify-center text-white text-sm font-medium transition-all"
+                                          style={{
+                                            width: `${
+                                              (totalInsumos / totalCalda) * 100
+                                            }%`,
+                                            minWidth:
+                                              (totalInsumos / totalCalda) *
+                                                100 >
+                                              5
+                                                ? "auto"
+                                                : "0%",
+                                          }}
+                                        >
+                                          {(totalInsumos / totalCalda) * 100 >
+                                            5 && (
+                                            <span>
+                                              {(
+                                                (totalInsumos / totalCalda) *
+                                                100
+                                              ).toFixed(1)}
+                                              %
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                      {/* Porcentagem de Água */}
+                                      {totalCalda > 0 && (
+                                        <div
+                                          className="bg-orange-500 flex items-center justify-center text-white text-sm font-medium transition-all"
+                                          style={{
+                                            width: `${
+                                              (totalAgua / totalCalda) * 100
+                                            }%`,
+                                            minWidth:
+                                              (totalAgua / totalCalda) * 100 > 5
+                                                ? "auto"
+                                                : "0%",
+                                          }}
+                                        >
+                                          {(totalAgua / totalCalda) * 100 >
+                                            5 && (
+                                            <span>
+                                              {(
+                                                (totalAgua / totalCalda) *
+                                                100
+                                              ).toFixed(1)}
+                                              %
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Legenda */}
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                                      <span className="text-sm">
+                                        Insumos: {totalInsumos.toFixed(2)} L (
+                                        {totalCalda > 0
+                                          ? (
+                                              (totalInsumos / totalCalda) *
+                                              100
+                                            ).toFixed(1)
+                                          : "0"}
+                                        %)
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-4 h-4 bg-orange-500 rounded"></div>
+                                      <span className="text-sm">
+                                        Água: {totalAgua.toFixed(2)} L (
+                                        {totalCalda > 0
+                                          ? (
+                                              (totalAgua / totalCalda) *
+                                              100
+                                            ).toFixed(1)
+                                          : "0"}
+                                        %)
+                                      </span>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </div>
+                          );
+                        })()}
 
                         {/* Observações */}
                         {ordem.observacoes && (
@@ -1615,6 +2136,480 @@ const OrdensServicos = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Iniciação da OS */}
+      <Dialog open={dialogIniciarOpen} onOpenChange={handleFecharModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Iniciar Ordem de Serviço</DialogTitle>
+            <DialogDescription>
+              Configure os parâmetros de iniciação da OS em etapas
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Indicador de Etapas */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2 flex-1">
+              <div
+                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                  etapaAtual >= 1
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted text-muted-foreground border-muted-foreground"
+                }`}
+              >
+                1
+              </div>
+              <div
+                className={`flex-1 h-1 ${
+                  etapaAtual >= 2 ? "bg-primary" : "bg-muted"
+                }`}
+              />
+              <div
+                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                  etapaAtual >= 2
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted text-muted-foreground border-muted-foreground"
+                }`}
+              >
+                2
+              </div>
+              <div
+                className={`flex-1 h-1 ${
+                  etapaAtual >= 3 ? "bg-primary" : "bg-muted"
+                }`}
+              />
+              <div
+                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                  etapaAtual >= 3
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted text-muted-foreground border-muted-foreground"
+                }`}
+              >
+                3
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between mb-6 -mt-4">
+            <span className="text-xs text-muted-foreground">BULKS</span>
+            <span className="text-xs text-muted-foreground">Caminhões</span>
+            <span className="text-xs text-muted-foreground">Confirmação</span>
+          </div>
+
+          <div className="space-y-6">
+            {/* Etapa 1: Seleção de BULKS */}
+            {etapaAtual === 1 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">
+                    BULKS e Ordem de Liberação
+                  </Label>
+                  {bulksSelecionados.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {bulksSelecionados.length} selecionado(s)
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, Smart Calda ou localização..."
+                    value={buscaBulks}
+                    onChange={(e) => setBuscaBulks(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="border rounded-lg p-2 max-h-48 overflow-y-auto space-y-2">
+                  {bulksFiltrados.length === 0 ? (
+                    <div className="text-center py-4 text-sm text-muted-foreground">
+                      Nenhum BULK encontrado
+                    </div>
+                  ) : (
+                    bulksFiltrados.map((bulk) => {
+                      const isSelected = bulksSelecionados.some(
+                        (b) => b.bulkId === bulk.id
+                      );
+                      const ordemSelecionada = bulksSelecionados.find(
+                        (b) => b.bulkId === bulk.id
+                      )?.ordem;
+
+                      return (
+                        <div
+                          key={bulk.id}
+                          className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded transition-colors"
+                        >
+                          <Checkbox
+                            id={`bulk-${bulk.id}`}
+                            checked={isSelected}
+                            onCheckedChange={() => handleToggleBulk(bulk.id)}
+                          />
+                          <Label
+                            htmlFor={`bulk-${bulk.id}`}
+                            className="text-sm font-normal cursor-pointer flex-1"
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium">{bulk.nome}</span>
+                              <Badge
+                                variant={
+                                  bulk.tipo === "IBC"
+                                    ? "default"
+                                    : bulk.tipo === "SILO"
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                                className="text-xs"
+                              >
+                                {bulk.tipo}
+                              </Badge>
+                              {isSelected && (
+                                <Badge variant="default" className="text-xs">
+                                  Ordem: {ordemSelecionada}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {bulk.smartCaldaNome} • {bulk.localizacao} • Cap:{" "}
+                              {bulk.capacidade}L
+                            </div>
+                          </Label>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Lista de BULKS Selecionados com Ordem */}
+                {bulksSelecionados.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Ordem de Liberação dos BULKS
+                    </Label>
+                    <div className="border rounded-lg p-3 space-y-2">
+                      {bulksSelecionados
+                        .sort((a, b) => a.ordem - b.ordem)
+                        .map((item, index) => {
+                          const bulk = bulks.find((b) => b.id === item.bulkId);
+                          return (
+                            <div
+                              key={item.bulkId}
+                              className="flex items-center gap-2 p-2 bg-muted/50 rounded"
+                            >
+                              <GripVertical className="h-4 w-4 text-muted-foreground" />
+                              <Badge
+                                variant="default"
+                                className="w-8 text-center"
+                              >
+                                {item.ordem}
+                              </Badge>
+                              <div className="flex-1">
+                                <span className="text-sm font-medium">
+                                  {bulk?.nome}
+                                </span>
+                                <span className="text-xs text-muted-foreground ml-2">
+                                  ({bulk?.tipo}) - {bulk?.smartCaldaNome}
+                                </span>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleMoverBulk(index, "up")}
+                                  disabled={index === 0}
+                                  className="h-7 w-7 p-0"
+                                >
+                                  <ArrowUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleMoverBulk(index, "down")}
+                                  disabled={
+                                    index === bulksSelecionados.length - 1
+                                  }
+                                  className="h-7 w-7 p-0"
+                                >
+                                  <ArrowDown className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Etapa 2: Seleção de Caminhões */}
+            {etapaAtual === 2 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">
+                    Caminhões e Ordem de Saída
+                  </Label>
+                  {caminhoesSelecionados.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {caminhoesSelecionados.length} selecionado(s)
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por placa, patrimônio, modelo ou marca..."
+                    value={buscaCaminhoes}
+                    onChange={(e) => setBuscaCaminhoes(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="border rounded-lg p-2 max-h-48 overflow-y-auto space-y-2">
+                  {caminhoesFiltrados.length === 0 ? (
+                    <div className="text-center py-4 text-sm text-muted-foreground">
+                      Nenhum caminhão encontrado
+                    </div>
+                  ) : (
+                    caminhoesFiltrados.map((caminhao) => {
+                      const isSelected = caminhoesSelecionados.some(
+                        (c) => c.caminhaoId === caminhao.id
+                      );
+                      const ordemSelecionada = caminhoesSelecionados.find(
+                        (c) => c.caminhaoId === caminhao.id
+                      )?.ordem;
+
+                      return (
+                        <div
+                          key={caminhao.id}
+                          className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded transition-colors"
+                        >
+                          <Checkbox
+                            id={`caminhao-${caminhao.id}`}
+                            checked={isSelected}
+                            onCheckedChange={() =>
+                              handleToggleCaminhao(caminhao.id)
+                            }
+                          />
+                          <Label
+                            htmlFor={`caminhao-${caminhao.id}`}
+                            className="text-sm font-normal cursor-pointer flex-1"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">
+                                {caminhao.placa}
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                {caminhao.modelo} - {caminhao.marca}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                Volume: {caminhao.volume}L
+                              </span>
+                              {isSelected && (
+                                <Badge variant="default" className="text-xs">
+                                  Ordem: {ordemSelecionada}
+                                </Badge>
+                              )}
+                            </div>
+                          </Label>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Lista de Caminhões Selecionados com Ordem */}
+                {caminhoesSelecionados.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Ordem de Saída dos Caminhões
+                    </Label>
+                    <div className="border rounded-lg p-3 space-y-2">
+                      {caminhoesSelecionados
+                        .sort((a, b) => a.ordem - b.ordem)
+                        .map((item, index) => {
+                          const caminhao = caminhoes.find(
+                            (c) => c.id === item.caminhaoId
+                          );
+                          return (
+                            <div
+                              key={item.caminhaoId}
+                              className="flex items-center gap-2 p-2 bg-muted/50 rounded"
+                            >
+                              <GripVertical className="h-4 w-4 text-muted-foreground" />
+                              <Badge
+                                variant="default"
+                                className="w-8 text-center"
+                              >
+                                {item.ordem}
+                              </Badge>
+                              <span className="flex-1 text-sm font-medium">
+                                {caminhao?.placa} - {caminhao?.modelo} (
+                                {caminhao?.volume}L)
+                              </span>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleMoverCaminhao(index, "up")
+                                  }
+                                  disabled={index === 0}
+                                  className="h-7 w-7 p-0"
+                                >
+                                  <ArrowUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleMoverCaminhao(index, "down")
+                                  }
+                                  disabled={
+                                    index === caminhoesSelecionados.length - 1
+                                  }
+                                  className="h-7 w-7 p-0"
+                                >
+                                  <ArrowDown className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Etapa 3: Confirmação */}
+            {etapaAtual === 3 && (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h3 className="text-lg font-semibold mb-4">
+                    Resumo da Configuração
+                  </h3>
+
+                  {/* Resumo BULKS */}
+                  <div className="mb-4">
+                    <Label className="text-sm font-medium mb-2 block">
+                      Ordem de Liberação dos BULKS ({bulksSelecionados.length})
+                    </Label>
+                    <div className="space-y-2">
+                      {bulksSelecionados
+                        .sort((a, b) => a.ordem - b.ordem)
+                        .map((item) => {
+                          const bulk = bulks.find((b) => b.id === item.bulkId);
+                          return (
+                            <div
+                              key={item.bulkId}
+                              className="flex items-center gap-2 p-2 bg-background rounded border"
+                            >
+                              <Badge
+                                variant="default"
+                                className="w-8 text-center"
+                              >
+                                {item.ordem}
+                              </Badge>
+                              <span className="text-sm font-medium">
+                                {bulk?.nome}
+                              </span>
+                              <Badge
+                                variant={
+                                  bulk?.tipo === "IBC"
+                                    ? "default"
+                                    : bulk?.tipo === "SILO"
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                                className="text-xs"
+                              >
+                                {bulk?.tipo}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground ml-auto">
+                                {bulk?.smartCaldaNome}
+                              </span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+
+                  {/* Resumo Caminhões */}
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">
+                      Ordem de Saída dos Caminhões (
+                      {caminhoesSelecionados.length})
+                    </Label>
+                    <div className="space-y-2">
+                      {caminhoesSelecionados
+                        .sort((a, b) => a.ordem - b.ordem)
+                        .map((item) => {
+                          const caminhao = caminhoes.find(
+                            (c) => c.id === item.caminhaoId
+                          );
+                          return (
+                            <div
+                              key={item.caminhaoId}
+                              className="flex items-center gap-2 p-2 bg-background rounded border"
+                            >
+                              <Badge
+                                variant="default"
+                                className="w-8 text-center"
+                              >
+                                {item.ordem}
+                              </Badge>
+                              <span className="text-sm font-medium">
+                                {caminhao?.placa}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {caminhao?.modelo} - {caminhao?.marca}
+                              </span>
+                              <span className="text-xs text-muted-foreground ml-auto">
+                                {caminhao?.volume}L
+                              </span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            {etapaAtual === 1 && (
+              <>
+                <Button variant="outline" onClick={handleFecharModal}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleProximaEtapa}>Próximo</Button>
+              </>
+            )}
+            {etapaAtual === 2 && (
+              <>
+                <Button variant="outline" onClick={handleEtapaAnterior}>
+                  Anterior
+                </Button>
+                <Button variant="outline" onClick={handleFecharModal}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleProximaEtapa}>Próximo</Button>
+              </>
+            )}
+            {etapaAtual === 3 && (
+              <>
+                <Button variant="outline" onClick={handleEtapaAnterior}>
+                  Anterior
+                </Button>
+                <Button variant="outline" onClick={handleFecharModal}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleConfirmarIniciar}>
+                  Confirmar e Iniciar OS
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
