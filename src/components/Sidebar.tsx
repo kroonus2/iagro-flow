@@ -95,7 +95,7 @@ const menuItems: MenuItem[] = [
       { title: "Notas de Entrada", icon: FileText, path: "/notas-entrada" },
       { title: "Estoques", icon: Package, path: "/estoques" },
       { title: "Movimentações", icon: ArrowUpDown, path: "/movimentacoes" },
-      { title: "Receitas", icon: FlaskConical, path: "/receitas" },
+      // { title: "Receitas", icon: FlaskConical, path: "/receitas" },
       // {
       //   title: "Importar Receitas",
       //   icon: Download,

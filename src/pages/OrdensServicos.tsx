@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import type { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,10 +44,19 @@ import {
   ChevronDown,
   ChevronRight,
   X,
-  ArrowUp,
-  ArrowDown,
-  GripVertical,
+  Calendar as CalendarIcon,
+  Filter,
+  Edit,
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 // Interfaces
@@ -92,6 +102,26 @@ interface Insumo {
   tipoEstoque: "TÉCNICO" | "FRACIONÁRIO";
 }
 
+interface ParcelaCalda {
+  id: string;
+  ordemServicoId: string;
+  caminhaoId: string;
+  capacidadeCaminhao: number; // Capacidade editada pelo usuário
+  proporcaoCalda: number; // % da calda total que será batida nesta parcela
+  insumosMovimentados: {
+    idEstoque: number;
+    idItem: number;
+    quantidade: number;
+    origem: "PRIMÁRIO" | "FRACIONÁRIO";
+    destino: "TÉCNICO";
+  }[];
+  status: "pendente" | "em_processo" | "finalizada";
+  progressoOS: number; // % que esta parcela representa na OS
+  dataCriacao: string;
+  dataInicio?: string | null;
+  dataFinalizacao?: string | null;
+}
+
 interface InsumoSelecionado {
   idEstoque: number;
   idItem: number;
@@ -124,14 +154,24 @@ interface Bulk {
   localizacao: string;
 }
 
-interface CaminhaoSelecionado {
+interface ParcelaCalda {
+  id: string;
+  ordemServicoId: string;
   caminhaoId: string;
-  ordem: number;
-}
-
-interface BulkSelecionado {
-  bulkId: string;
-  ordem: number;
+  capacidadeCaminhao: number; // Capacidade editada pelo usuário
+  proporcaoCalda: number; // % da calda total que será batida nesta parcela
+  insumosMovimentados: {
+    idEstoque: number;
+    idItem: number;
+    quantidade: number;
+    origem: "PRIMÁRIO" | "FRACIONÁRIO";
+    destino: "TÉCNICO";
+  }[];
+  status: "pendente" | "em_processo" | "finalizada";
+  progressoOS: number; // % que esta parcela representa na OS
+  dataCriacao: string;
+  dataInicio?: string | null;
+  dataFinalizacao?: string | null;
 }
 
 interface OrdemServico {
@@ -147,7 +187,13 @@ interface OrdemServico {
   talhoes: TalhaoSelecionado[];
   insumos: InsumoSelecionado[];
   caldaHA: string; // Calda/Ha
-  status: "aguardando" | "em_producao" | "pausada" | "concluida" | "cancelada";
+  status:
+    | "aguardando_informacoes"
+    | "pendente"
+    | "em_preparo"
+    | "em_processo"
+    | "nao_totalizada"
+    | "finalizada";
   progresso: number;
   iniciado?: string | null;
   previsaoTermino?: string | null;
@@ -156,19 +202,206 @@ interface OrdemServico {
 const OrdensServicos = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [ordemEditando, setOrdemEditando] = useState<OrdemServico | null>(null);
   const [expandedOrdens, setExpandedOrdens] = useState<Set<string>>(new Set());
-  const [dialogIniciarOpen, setDialogIniciarOpen] = useState(false);
-  const [ordemIniciando, setOrdemIniciando] = useState<string | null>(null);
-  const [etapaAtual, setEtapaAtual] = useState(1);
-  const [caminhoesSelecionados, setCaminhoesSelecionados] = useState<
-    CaminhaoSelecionado[]
-  >([]);
-  const [bulksSelecionados, setBulksSelecionados] = useState<BulkSelecionado[]>(
-    []
+  const [expandedTalhoes, setExpandedTalhoes] = useState<Set<string>>(
+    new Set()
   );
-  const [buscaCaminhoes, setBuscaCaminhoes] = useState("");
-  const [buscaBulks, setBuscaBulks] = useState("");
+  const [expandedInsumos, setExpandedInsumos] = useState<Set<string>>(
+    new Set()
+  );
+  const [expandedParcelas, setExpandedParcelas] = useState<Set<string>>(
+    new Set()
+  );
+  const [dialogParametrizacaoOpen, setDialogParametrizacaoOpen] =
+    useState(false);
+  const [ordemParametrizando, setOrdemParametrizando] =
+    useState<OrdemServico | null>(null);
+  const [caminhaoSelecionado, setCaminhaoSelecionado] = useState<string>("");
+  const [capacidadeEditada, setCapacidadeEditada] = useState<string>("");
+  const [proporcaoCalda, setProporcaoCalda] = useState<number>(0);
+  const [insumosMovimentacao, setInsumosMovimentacao] = useState<
+    Map<
+      number,
+      { idItem: number; quantidade: number; origem: "PRIMÁRIO" | "FRACIONÁRIO" }
+    >
+  >(new Map());
+  const [parcelasCalda, setParcelasCalda] = useState<ParcelaCalda[]>([
+    // Parcelas mockadas para OS-2024-006 (Não totalizada - 60%)
+    {
+      id: "PARCELA001",
+      ordemServicoId: "OS006",
+      caminhaoId: "C001",
+      capacidadeCaminhao: 13000,
+      proporcaoCalda: 60,
+      insumosMovimentados: [
+        {
+          idEstoque: 3,
+          idItem: 1027636,
+          quantidade: 75.04,
+          origem: "FRACIONÁRIO",
+          destino: "TÉCNICO",
+        },
+      ],
+      status: "finalizada",
+      progressoOS: 60,
+      dataCriacao: "2024-01-25T08:00:00",
+      dataInicio: "2024-01-25T08:15:00",
+      dataFinalizacao: "2024-01-25T10:30:00",
+    },
+    // Parcelas mockadas para OS-2024-007 (Finalizada - 100%)
+    {
+      id: "PARCELA002",
+      ordemServicoId: "OS007",
+      caminhaoId: "C002",
+      capacidadeCaminhao: 8000,
+      proporcaoCalda: 50,
+      insumosMovimentados: [
+        {
+          idEstoque: 1,
+          idItem: 1005392,
+          quantidade: 30.0,
+          origem: "PRIMÁRIO",
+          destino: "TÉCNICO",
+        },
+      ],
+      status: "finalizada",
+      progressoOS: 50,
+      dataCriacao: "2024-01-26T08:00:00",
+      dataInicio: "2024-01-26T08:20:00",
+      dataFinalizacao: "2024-01-26T11:45:00",
+    },
+    {
+      id: "PARCELA003",
+      ordemServicoId: "OS007",
+      caminhaoId: "C001",
+      capacidadeCaminhao: 13000,
+      proporcaoCalda: 50,
+      insumosMovimentados: [
+        {
+          idEstoque: 1,
+          idItem: 1005392,
+          quantidade: 30.0,
+          origem: "PRIMÁRIO",
+          destino: "TÉCNICO",
+        },
+      ],
+      status: "finalizada",
+      progressoOS: 50,
+      dataCriacao: "2024-01-26T12:00:00",
+      dataInicio: "2024-01-26T12:15:00",
+      dataFinalizacao: "2024-01-26T15:30:00",
+    },
+    // Parcelas mockadas para OS-2024-005 (Finalizada - 100%)
+    {
+      id: "PARCELA004",
+      ordemServicoId: "OS005",
+      caminhaoId: "C003",
+      capacidadeCaminhao: 10000,
+      proporcaoCalda: 40,
+      insumosMovimentados: [
+        {
+          idEstoque: 1,
+          idItem: 1005392,
+          quantidade: 45.0,
+          origem: "PRIMÁRIO",
+          destino: "TÉCNICO",
+        },
+      ],
+      status: "finalizada",
+      progressoOS: 40,
+      dataCriacao: "2024-01-24T07:00:00",
+      dataInicio: "2024-01-24T07:15:00",
+      dataFinalizacao: "2024-01-24T10:00:00",
+    },
+    {
+      id: "PARCELA005",
+      ordemServicoId: "OS005",
+      caminhaoId: "C002",
+      capacidadeCaminhao: 8000,
+      proporcaoCalda: 35,
+      insumosMovimentados: [
+        {
+          idEstoque: 1,
+          idItem: 1005392,
+          quantidade: 39.38,
+          origem: "PRIMÁRIO",
+          destino: "TÉCNICO",
+        },
+      ],
+      status: "finalizada",
+      progressoOS: 35,
+      dataCriacao: "2024-01-24T10:30:00",
+      dataInicio: "2024-01-24T10:45:00",
+      dataFinalizacao: "2024-01-24T13:20:00",
+    },
+    {
+      id: "PARCELA006",
+      ordemServicoId: "OS005",
+      caminhaoId: "C001",
+      capacidadeCaminhao: 13000,
+      proporcaoCalda: 25,
+      insumosMovimentados: [
+        {
+          idEstoque: 1,
+          idItem: 1005392,
+          quantidade: 28.13,
+          origem: "PRIMÁRIO",
+          destino: "TÉCNICO",
+        },
+      ],
+      status: "finalizada",
+      progressoOS: 25,
+      dataCriacao: "2024-01-24T13:45:00",
+      dataInicio: "2024-01-24T14:00:00",
+      dataFinalizacao: "2024-01-24T15:00:00",
+    },
+    // Parcelas mockadas para OS-2024-001 (Não totalizada - 75%)
+    {
+      id: "PARCELA007",
+      ordemServicoId: "OS001",
+      caminhaoId: "C001",
+      capacidadeCaminhao: 13000,
+      proporcaoCalda: 45,
+      insumosMovimentados: [
+        {
+          idEstoque: 1,
+          idItem: 1005392,
+          quantidade: 50.0,
+          origem: "PRIMÁRIO",
+          destino: "TÉCNICO",
+        },
+      ],
+      status: "finalizada",
+      progressoOS: 45,
+      dataCriacao: "2024-01-20T08:00:00",
+      dataInicio: "2024-01-20T08:15:00",
+      dataFinalizacao: "2024-01-20T11:30:00",
+    },
+    {
+      id: "PARCELA008",
+      ordemServicoId: "OS001",
+      caminhaoId: "C002",
+      capacidadeCaminhao: 8000,
+      proporcaoCalda: 30,
+      insumosMovimentados: [
+        {
+          idEstoque: 1,
+          idItem: 1005392,
+          quantidade: 33.33,
+          origem: "PRIMÁRIO",
+          destino: "TÉCNICO",
+        },
+      ],
+      status: "em_processo",
+      progressoOS: 30,
+      dataCriacao: "2024-01-20T12:00:00",
+      dataInicio: "2024-01-20T12:20:00",
+      dataFinalizacao: null,
+    },
+  ]);
 
   // Dados simulados - Centros de Custo
   const centrosCusto: CentroCusto[] = [
@@ -525,7 +758,7 @@ const OrdensServicos = () => {
       talhoes: [{ fazendaId: "1", talhaoId: "1" }],
       insumos: [{ idEstoque: 1, idItem: 1005392, doseHA: 0.12 }],
       caldaHA: "2.5",
-      status: "em_producao",
+      status: "nao_totalizada",
       progresso: 75,
       iniciado: "2024-01-20 08:00",
       previsaoTermino: "2024-01-20 16:00",
@@ -536,32 +769,151 @@ const OrdensServicos = () => {
       centroCustoId: "2",
       operacaoId: "2",
       dataGeracao: "2024-01-21",
-      observacoes: "Aguardando liberação de matéria-prima",
+      observacoes: "OS importada sem calda/HA",
       responsavelId: "2",
       fazendaId: "2",
       secao: "Seção B",
       talhoes: [{ fazendaId: "2", talhaoId: "4" }],
-      insumos: [],
-      caldaHA: "3.0",
-      status: "aguardando",
+      insumos: [{ idEstoque: 2, idItem: 1027638, doseHA: 0.15 }],
+      caldaHA: "",
+      status: "aguardando_informacoes",
       progresso: 0,
       iniciado: null,
-      previsaoTermino: "2024-01-21 12:00",
+      previsaoTermino: null,
+    },
+    {
+      id: "OS003",
+      numeroOS: "OS-2024-003",
+      centroCustoId: "1",
+      operacaoId: "3",
+      dataGeracao: "2024-01-22",
+      observacoes: "OS totalmente preenchida e pronta para iniciar",
+      responsavelId: "1",
+      fazendaId: "1",
+      secao: "Seção A",
+      talhoes: [
+        { fazendaId: "1", talhaoId: "1" },
+        { fazendaId: "1", talhaoId: "2" },
+      ],
+      insumos: [
+        { idEstoque: 1, idItem: 1005392, doseHA: 0.12 },
+        { idEstoque: 3, idItem: 1027636, doseHA: 0.08 },
+      ],
+      caldaHA: "3.5",
+      status: "pendente",
+      progresso: 0,
+      iniciado: null,
+      previsaoTermino: null,
+    },
+    {
+      id: "OS004",
+      numeroOS: "OS-2024-004",
+      centroCustoId: "4",
+      operacaoId: "4",
+      dataGeracao: "2024-01-23",
+      observacoes: "OS em preparo - configurações sendo feitas",
+      responsavelId: "4",
+      fazendaId: "3",
+      secao: "Seção C",
+      talhoes: [{ fazendaId: "3", talhaoId: "6" }],
+      insumos: [{ idEstoque: 1, idItem: 1005392, doseHA: 0.1 }],
+      caldaHA: "2.8",
+      status: "em_preparo",
+      progresso: 0,
+      iniciado: null,
+      previsaoTermino: null,
+    },
+    {
+      id: "OS005",
+      numeroOS: "OS-2024-005",
+      centroCustoId: "5",
+      operacaoId: "5",
+      dataGeracao: "2024-01-24",
+      observacoes: "OS processada com sucesso",
+      responsavelId: "5",
+      fazendaId: "4",
+      secao: "Seção D",
+      talhoes: [
+        { fazendaId: "4", talhaoId: "8" },
+        { fazendaId: "4", talhaoId: "9" },
+      ],
+      insumos: [{ idEstoque: 2, idItem: 1027638, doseHA: 0.2 }],
+      caldaHA: "4.0",
+      status: "finalizada",
+      progresso: 100,
+      iniciado: "2024-01-24 07:00",
+      previsaoTermino: "2024-01-24 15:00",
+    },
+    {
+      id: "OS006",
+      numeroOS: "OS-2024-006",
+      centroCustoId: "2",
+      operacaoId: "2",
+      dataGeracao: "2024-01-25",
+      observacoes: "OS não totalizada - pendências",
+      responsavelId: "2",
+      fazendaId: "2",
+      secao: "Seção B",
+      talhoes: [{ fazendaId: "2", talhaoId: "4" }],
+      insumos: [{ idEstoque: 3, idItem: 1027636, doseHA: 0.15 }],
+      caldaHA: "2.2",
+      status: "nao_totalizada",
+      progresso: 60,
+      iniciado: "2024-01-25 08:00",
+      previsaoTermino: null,
+    },
+    {
+      id: "OS007",
+      numeroOS: "OS-2024-007",
+      centroCustoId: "1",
+      operacaoId: "1",
+      dataGeracao: "2024-01-26",
+      observacoes: "OS finalizada com sucesso",
+      responsavelId: "1",
+      fazendaId: "1",
+      secao: "Seção A",
+      talhoes: [{ fazendaId: "1", talhaoId: "2" }],
+      insumos: [{ idEstoque: 1, idItem: 1005392, doseHA: 0.12 }],
+      caldaHA: "2.5",
+      status: "finalizada",
+      progresso: 100,
+      iniciado: "2024-01-26 08:00",
+      previsaoTermino: "2024-01-26 16:00",
+    },
+    {
+      id: "OS008",
+      numeroOS: "OS-2024-008",
+      centroCustoId: "3",
+      operacaoId: "3",
+      dataGeracao: "2024-01-27",
+      observacoes: "OS importada - falta preencher calda/HA",
+      responsavelId: "3",
+      fazendaId: "3",
+      secao: "Seção C",
+      talhoes: [{ fazendaId: "3", talhaoId: "6" }],
+      insumos: [{ idEstoque: 2, idItem: 1027638, doseHA: 0.18 }],
+      caldaHA: "",
+      status: "aguardando_informacoes",
+      progresso: 0,
+      iniciado: null,
+      previsaoTermino: null,
     },
   ]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "aguardando":
+      case "aguardando_informacoes":
         return "outline";
-      case "em_producao":
-        return "default";
-      case "pausada":
+      case "pendente":
+        return "outline";
+      case "em_preparo":
         return "secondary";
-      case "concluida":
+      case "em_processo":
         return "default";
-      case "cancelada":
+      case "nao_totalizada":
         return "destructive";
+      case "finalizada":
+        return "default";
       default:
         return "outline";
     }
@@ -569,16 +921,18 @@ const OrdensServicos = () => {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "aguardando":
-        return "Aguardando";
-      case "em_producao":
-        return "Em Serviços";
-      case "pausada":
-        return "Pausada";
-      case "concluida":
-        return "Concluída";
-      case "cancelada":
-        return "Cancelada";
+      case "aguardando_informacoes":
+        return "Aguardando informações";
+      case "pendente":
+        return "Pendente";
+      case "em_preparo":
+        return "Em preparo";
+      case "em_processo":
+        return "Em processo";
+      case "nao_totalizada":
+        return "Não totalizada";
+      case "finalizada":
+        return "Finalizada";
       default:
         return status;
     }
@@ -586,28 +940,44 @@ const OrdensServicos = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "aguardando":
+      case "aguardando_informacoes":
+        return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
+      case "pendente":
         return <Clock className="h-4 w-4 text-muted-foreground" />;
-      case "em_producao":
+      case "em_preparo":
+        return <FileText className="h-4 w-4 text-secondary" />;
+      case "em_processo":
         return <Play className="h-4 w-4 text-primary" />;
-      case "pausada":
-        return <Pause className="h-4 w-4 text-warning" />;
-      case "concluida":
-        return <CheckCircle className="h-4 w-4 text-success" />;
-      case "cancelada":
+      case "nao_totalizada":
         return <AlertCircle className="h-4 w-4 text-destructive" />;
+      case "finalizada":
+        return <CheckCircle className="h-4 w-4 text-success" />;
       default:
         return <FileText className="h-4 w-4" />;
     }
   };
 
   const filteredOrdens = ordensServicos.filter((ordem) => {
+    // Filtro de busca: número da OS e nome da fazenda
+    const fazenda = fazendas.find((f) => f.id === ordem.fazendaId);
+    const nomeFazenda = fazenda?.descricao || "";
     const matchesSearch =
+      !searchTerm ||
       ordem.numeroOS.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ordem.id.toLowerCase().includes(searchTerm.toLowerCase());
+      ordem.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      nomeFazenda.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Filtro de status
     const matchesStatus =
       statusFilter === "todos" || ordem.status === statusFilter;
-    return matchesSearch && matchesStatus;
+
+    // Filtro de período (data de geração)
+    const dataGeracao = new Date(ordem.dataGeracao);
+    const matchesPeriodo =
+      (!dateRange?.from || dataGeracao >= dateRange.from) &&
+      (!dateRange?.to || dataGeracao <= dateRange.to);
+
+    return matchesSearch && matchesStatus && matchesPeriodo;
   });
 
   const handleToggleTalhao = (fazendaId: string, talhaoId: string) => {
@@ -675,28 +1045,62 @@ const OrdensServicos = () => {
       (f) => f.id === novaOrdem.fazendaId
     );
 
-    const novaOS: OrdemServico = {
-      id: `OS${Date.now()}`,
-      numeroOS: novaOrdem.numeroOS,
-      centroCustoId: novaOrdem.centroCustoId,
-      operacaoId: novaOrdem.operacaoId,
-      dataGeracao: novaOrdem.dataGeracao,
-      observacoes: novaOrdem.observacoes,
-      responsavelId: novaOrdem.responsavelId,
-      fazendaId: novaOrdem.fazendaId,
-      secao: novaOrdem.secao || fazendaSelecionada?.descricao || "",
-      talhoes,
-      insumos,
-      caldaHA: novaOrdem.caldaHA,
-      status: "aguardando",
-      progresso: 0,
-      iniciado: null,
-      previsaoTermino: null,
-    };
+    if (ordemEditando) {
+      // Modo de edição
+      const ordemAtualizada: OrdemServico = {
+        ...ordemEditando,
+        numeroOS: novaOrdem.numeroOS,
+        centroCustoId: novaOrdem.centroCustoId,
+        operacaoId: novaOrdem.operacaoId,
+        dataGeracao: novaOrdem.dataGeracao,
+        observacoes: novaOrdem.observacoes,
+        responsavelId: novaOrdem.responsavelId,
+        fazendaId: novaOrdem.fazendaId,
+        secao: novaOrdem.secao || fazendaSelecionada?.descricao || "",
+        talhoes,
+        insumos,
+        caldaHA: novaOrdem.caldaHA,
+        // Se estava aguardando informações e agora tem todos os dados, mudar para pendente
+        status:
+          ordemEditando.status === "aguardando_informacoes" && novaOrdem.caldaHA
+            ? "pendente"
+            : ordemEditando.status,
+      };
 
-    setOrdensServicos([...ordensServicos, novaOS]);
-    toast.success("Ordem de serviços criada com sucesso!");
+      setOrdensServicos(
+        ordensServicos.map((o) =>
+          o.id === ordemEditando.id ? ordemAtualizada : o
+        )
+      );
+      toast.success("Ordem de serviços atualizada com sucesso!");
+    } else {
+      // Modo de criação
+      const novaOS: OrdemServico = {
+        id: `OS${Date.now()}`,
+        numeroOS: novaOrdem.numeroOS,
+        centroCustoId: novaOrdem.centroCustoId,
+        operacaoId: novaOrdem.operacaoId,
+        dataGeracao: novaOrdem.dataGeracao,
+        observacoes: novaOrdem.observacoes,
+        responsavelId: novaOrdem.responsavelId,
+        fazendaId: novaOrdem.fazendaId,
+        secao: novaOrdem.secao || fazendaSelecionada?.descricao || "",
+        talhoes,
+        insumos,
+        caldaHA: novaOrdem.caldaHA,
+        status: novaOrdem.caldaHA ? "pendente" : "aguardando_informacoes",
+        progresso: 0,
+        iniciado: null,
+        previsaoTermino: null,
+      };
+
+      setOrdensServicos([...ordensServicos, novaOS]);
+      toast.success("Ordem de serviços criada com sucesso!");
+    }
+
+    // Limpar formulário
     setDialogOpen(false);
+    setOrdemEditando(null);
     setNovaOrdem({
       numeroOS: "",
       centroCustoId: "",
@@ -718,159 +1122,212 @@ const OrdensServicos = () => {
   };
 
   const handleIniciarOrdem = (id: string) => {
-    setOrdemIniciando(id);
-    setCaminhoesSelecionados([]);
-    setBulksSelecionados([]);
-    setBuscaCaminhoes("");
-    setBuscaBulks("");
-    setEtapaAtual(1);
-    setDialogIniciarOpen(true);
+    const ordem = ordensServicos.find((o) => o.id === id);
+    if (!ordem) return;
+
+    setOrdemParametrizando(ordem);
+    setCaminhaoSelecionado("");
+    setCapacidadeEditada("");
+    setProporcaoCalda(0);
+    setInsumosMovimentacao(new Map());
+    setDialogParametrizacaoOpen(true);
   };
 
-  const handleProximaEtapa = () => {
-    if (etapaAtual === 1) {
-      if (bulksSelecionados.length === 0) {
-        toast.error("Selecione pelo menos um BULK");
-        return;
-      }
-      setEtapaAtual(2);
-    } else if (etapaAtual === 2) {
-      if (caminhoesSelecionados.length === 0) {
-        toast.error("Selecione pelo menos um caminhão");
-        return;
-      }
-      setEtapaAtual(3);
+  // Atualizar proporção quando caminhão ou capacidade mudar
+  useEffect(() => {
+    if (ordemParametrizando && caminhaoSelecionado && capacidadeEditada) {
+      const caminhao = caminhoes.find((c) => c.id === caminhaoSelecionado);
+      if (!caminhao) return;
+
+      // Calcular área total dos talhões
+      const areaTotal = ordemParametrizando.talhoes.reduce((sum, talhao) => {
+        const fazenda = fazendas.find((f) => f.id === talhao.fazendaId);
+        const talhaoObj = fazenda?.talhoes.find(
+          (t) => t.id === talhao.talhaoId
+        );
+        return sum + (Number(talhaoObj?.area) || 0);
+      }, 0);
+
+      // Calcular total de calda necessário
+      const caldaHA = Number(ordemParametrizando.caldaHA) || 0;
+      const totalCaldaNecessario = caldaHA * areaTotal;
+
+      // Calcular proporção baseada na capacidade do caminhão
+      const capacidade = Number(capacidadeEditada) || 0;
+      const proporcao =
+        totalCaldaNecessario > 0
+          ? (capacidade / totalCaldaNecessario) * 100
+          : 0;
+
+      const proporcaoLimitada = Math.min(proporcao, 100); // Máximo 100%
+      setProporcaoCalda(proporcaoLimitada);
+
+      // Calcular quantidades de insumos necessárias para esta parcela
+      const novosInsumos = new Map<
+        number,
+        {
+          idItem: number;
+          quantidade: number;
+          origem: "PRIMÁRIO" | "FRACIONÁRIO";
+        }
+      >();
+
+      ordemParametrizando.insumos.forEach((insumo) => {
+        const insumoEstoque = insumos.find(
+          (i) => i.idEstoque === insumo.idEstoque
+        );
+        if (!insumoEstoque) return;
+
+        // Quantidade total do insumo para a OS completa
+        const quantidadeTotal = areaTotal * insumo.doseHA;
+        // Quantidade para esta parcela (proporcional)
+        const quantidadeParcela = (quantidadeTotal * proporcaoLimitada) / 100;
+
+        // Determinar origem: se está em estoque TÉCNICO, vem de PRIMÁRIO
+        // Se está em FRACIONÁRIO, vem de FRACIONÁRIO
+        const origem =
+          insumoEstoque.tipoEstoque === "TÉCNICO" ? "PRIMÁRIO" : "FRACIONÁRIO";
+
+        novosInsumos.set(insumo.idEstoque, {
+          idItem: insumo.idItem,
+          quantidade: quantidadeParcela,
+          origem,
+        });
+      });
+
+      setInsumosMovimentacao(novosInsumos);
+    } else {
+      setProporcaoCalda(0);
+      setInsumosMovimentacao(new Map());
     }
-  };
+  }, [caminhaoSelecionado, capacidadeEditada, ordemParametrizando]);
 
-  const handleEtapaAnterior = () => {
-    if (etapaAtual > 1) {
-      setEtapaAtual(etapaAtual - 1);
-    }
-  };
-
-  const handleFecharModal = () => {
-    setDialogIniciarOpen(false);
-    setOrdemIniciando(null);
-    setEtapaAtual(1);
-    setCaminhoesSelecionados([]);
-    setBulksSelecionados([]);
-    setBuscaCaminhoes("");
-    setBuscaBulks("");
-  };
-
-  const handleConfirmarIniciar = () => {
-    if (caminhoesSelecionados.length === 0) {
-      toast.error("Selecione pelo menos um caminhão");
+  const handleSalvarContinuarDepois = () => {
+    if (!ordemParametrizando || !caminhaoSelecionado || !capacidadeEditada) {
+      toast.error("Preencha todos os campos obrigatórios");
       return;
     }
-    if (bulksSelecionados.length === 0) {
-      toast.error("Selecione pelo menos um BULK");
+
+    if (insumosMovimentacao.size === 0) {
+      toast.error("Nenhum insumo calculado. Verifique os dados.");
       return;
     }
 
-    // Aqui você pode salvar os parâmetros de iniciação
-    toast.success(
-      `Ordem ${ordemIniciando} iniciada com ${caminhoesSelecionados.length} caminhão(ões) e ${bulksSelecionados.length} BULK(s)!`
+    const caminhao = caminhoes.find((c) => c.id === caminhaoSelecionado);
+    if (!caminhao) return;
+
+    // Criar nova parcela
+    const novaParcela: ParcelaCalda = {
+      id: `PARCELA${Date.now()}`,
+      ordemServicoId: ordemParametrizando.id,
+      caminhaoId: caminhaoSelecionado,
+      capacidadeCaminhao: Number(capacidadeEditada),
+      proporcaoCalda,
+      insumosMovimentados: Array.from(insumosMovimentacao.entries()).map(
+        ([idEstoque, dados]) => ({
+          idEstoque,
+          idItem: dados.idItem,
+          quantidade: dados.quantidade,
+          origem: dados.origem,
+          destino: "TÉCNICO",
+        })
+      ),
+      status: "pendente",
+      progressoOS: proporcaoCalda,
+      dataCriacao: new Date().toISOString(),
+      dataInicio: null,
+      dataFinalizacao: null,
+    };
+
+    setParcelasCalda([...parcelasCalda, novaParcela]);
+
+    // Atualizar status da OS para EM PREPARO
+    setOrdensServicos(
+      ordensServicos.map((o) =>
+        o.id === ordemParametrizando.id ? { ...o, status: "em_preparo" } : o
+      )
     );
-    setDialogIniciarOpen(false);
-    setOrdemIniciando(null);
+
+    toast.success("Parcela salva! OS está em preparo.");
+    setDialogParametrizacaoOpen(false);
+    setOrdemParametrizando(null);
+    setCaminhaoSelecionado("");
+    setCapacidadeEditada("");
+    setProporcaoCalda(0);
+    setInsumosMovimentacao(new Map());
   };
 
-  const handleToggleCaminhao = (caminhaoId: string) => {
-    const index = caminhoesSelecionados.findIndex(
-      (c) => c.caminhaoId === caminhaoId
+  const handleIniciarParcela = () => {
+    if (!ordemParametrizando || !caminhaoSelecionado || !capacidadeEditada) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    if (insumosMovimentacao.size === 0) {
+      toast.error("Nenhum insumo calculado. Verifique os dados.");
+      return;
+    }
+
+    const caminhao = caminhoes.find((c) => c.id === caminhaoSelecionado);
+    if (!caminhao) return;
+
+    // Criar nova parcela
+    const novaParcela: ParcelaCalda = {
+      id: `PARCELA${Date.now()}`,
+      ordemServicoId: ordemParametrizando.id,
+      caminhaoId: caminhaoSelecionado,
+      capacidadeCaminhao: Number(capacidadeEditada),
+      proporcaoCalda,
+      insumosMovimentados: Array.from(insumosMovimentacao.entries()).map(
+        ([idEstoque, dados]) => ({
+          idEstoque,
+          idItem: dados.idItem,
+          quantidade: dados.quantidade,
+          origem: dados.origem,
+          destino: "TÉCNICO",
+        })
+      ),
+      status: "em_processo",
+      progressoOS: proporcaoCalda,
+      dataCriacao: new Date().toISOString(),
+      dataInicio: new Date().toISOString(),
+      dataFinalizacao: null,
+    };
+
+    const novasParcelas = [...parcelasCalda, novaParcela];
+    setParcelasCalda(novasParcelas);
+
+    // Calcular progresso total da OS
+    const parcelasDaOS = novasParcelas.filter(
+      (p) => p.ordemServicoId === ordemParametrizando.id
     );
-    if (index >= 0) {
-      // Remove o caminhão e reordena
-      const novos = caminhoesSelecionados
-        .filter((c) => c.caminhaoId !== caminhaoId)
-        .map((c, i) => ({ ...c, ordem: i + 1 }));
-      setCaminhoesSelecionados(novos);
-    } else {
-      // Adiciona o caminhão
-      const novaOrdem = caminhoesSelecionados.length + 1;
-      setCaminhoesSelecionados([
-        ...caminhoesSelecionados,
-        { caminhaoId, ordem: novaOrdem },
-      ]);
-    }
-  };
-
-  const handleMoverCaminhao = (index: number, direcao: "up" | "down") => {
-    const novos = [...caminhoesSelecionados];
-    if (direcao === "up" && index > 0) {
-      [novos[index - 1], novos[index]] = [novos[index], novos[index - 1]];
-      novos.forEach((c, i) => (c.ordem = i + 1));
-      setCaminhoesSelecionados(novos);
-    } else if (direcao === "down" && index < novos.length - 1) {
-      [novos[index], novos[index + 1]] = [novos[index + 1], novos[index]];
-      novos.forEach((c, i) => (c.ordem = i + 1));
-      setCaminhoesSelecionados(novos);
-    }
-  };
-
-  const handleToggleBulk = (bulkId: string) => {
-    const index = bulksSelecionados.findIndex((b) => b.bulkId === bulkId);
-    if (index >= 0) {
-      // Remove o bulk e reordena
-      const novos = bulksSelecionados
-        .filter((b) => b.bulkId !== bulkId)
-        .map((b, i) => ({ ...b, ordem: i + 1 }));
-      setBulksSelecionados(novos);
-    } else {
-      // Adiciona o bulk
-      const novaOrdem = bulksSelecionados.length + 1;
-      setBulksSelecionados([
-        ...bulksSelecionados,
-        { bulkId, ordem: novaOrdem },
-      ]);
-    }
-  };
-
-  const handleMoverBulk = (index: number, direcao: "up" | "down") => {
-    const novos = [...bulksSelecionados];
-    if (direcao === "up" && index > 0) {
-      [novos[index - 1], novos[index]] = [novos[index], novos[index - 1]];
-      novos.forEach((b, i) => (b.ordem = i + 1));
-      setBulksSelecionados(novos);
-    } else if (direcao === "down" && index < novos.length - 1) {
-      [novos[index], novos[index + 1]] = [novos[index + 1], novos[index]];
-      novos.forEach((b, i) => (b.ordem = i + 1));
-      setBulksSelecionados(novos);
-    }
-  };
-
-  // Filtrar caminhões
-  const caminhoesFiltrados = useMemo(() => {
-    const termoLower = buscaCaminhoes.toLowerCase().trim();
-    if (!termoLower) {
-      return caminhoes.filter((c) => c.status === "Ativo");
-    }
-    return caminhoes.filter(
-      (c) =>
-        c.status === "Ativo" &&
-        (c.placa.toLowerCase().includes(termoLower) ||
-          c.patrimonio.toLowerCase().includes(termoLower) ||
-          c.modelo.toLowerCase().includes(termoLower) ||
-          c.marca.toLowerCase().includes(termoLower))
+    const progressoTotal = parcelasDaOS.reduce(
+      (sum, p) => sum + p.progressoOS,
+      0
     );
-  }, [buscaCaminhoes, caminhoes]);
 
-  // Filtrar bulks
-  const bulksFiltrados = useMemo(() => {
-    const termoLower = buscaBulks.toLowerCase().trim();
-    if (!termoLower) {
-      return bulks;
-    }
-    return bulks.filter(
-      (b) =>
-        b.nome.toLowerCase().includes(termoLower) ||
-        b.smartCaldaNome.toLowerCase().includes(termoLower) ||
-        b.localizacao.toLowerCase().includes(termoLower) ||
-        b.tipo.toLowerCase().includes(termoLower)
+    // Atualizar status da OS para NÃO TOTALIZADA e progresso
+    setOrdensServicos(
+      ordensServicos.map((o) =>
+        o.id === ordemParametrizando.id
+          ? {
+              ...o,
+              status: progressoTotal >= 100 ? "finalizada" : "nao_totalizada",
+              progresso: Math.min(progressoTotal, 100),
+            }
+          : o
+      )
     );
-  }, [buscaBulks, bulks]);
+
+    // TODO: Enviar dados para o CLP
+    toast.success("Parcela iniciada! Dados enviados para o CLP.");
+    setDialogParametrizacaoOpen(false);
+    setOrdemParametrizando(null);
+    setCaminhaoSelecionado("");
+    setCapacidadeEditada("");
+    setProporcaoCalda(0);
+    setInsumosMovimentacao(new Map());
+  };
 
   const handlePausarOrdem = (id: string) => {
     toast.warning(`Ordem ${id} pausada!`);
@@ -1010,14 +1467,40 @@ const OrdensServicos = () => {
       </div>
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-2xl font-bold">
+              {
+                ordensServicos.filter(
+                  (o) => o.status === "aguardando_informacoes"
+                ).length
+              }
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Aguardando informações
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardContent className="p-6 text-center">
             <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
             <p className="text-2xl font-bold">
-              {ordensServicos.filter((o) => o.status === "aguardando").length}
+              {ordensServicos.filter((o) => o.status === "pendente").length}
             </p>
-            <p className="text-sm text-muted-foreground">Aguardando</p>
+            <p className="text-sm text-muted-foreground">Pendente</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6 text-center">
+            <FileText className="h-8 w-8 text-secondary mx-auto mb-2" />
+            <p className="text-2xl font-bold text-secondary">
+              {ordensServicos.filter((o) => o.status === "em_preparo").length}
+            </p>
+            <p className="text-sm text-muted-foreground">Em preparo</p>
           </CardContent>
         </Card>
 
@@ -1025,19 +1508,22 @@ const OrdensServicos = () => {
           <CardContent className="p-6 text-center">
             <Play className="h-8 w-8 text-primary mx-auto mb-2" />
             <p className="text-2xl font-bold text-primary">
-              {ordensServicos.filter((o) => o.status === "em_producao").length}
+              {ordensServicos.filter((o) => o.status === "em_processo").length}
             </p>
-            <p className="text-sm text-muted-foreground">Em Serviços</p>
+            <p className="text-sm text-muted-foreground">Em processo</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-6 text-center">
-            <Pause className="h-8 w-8 text-warning mx-auto mb-2" />
-            <p className="text-2xl font-bold text-warning">
-              {ordensServicos.filter((o) => o.status === "pausada").length}
+            <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
+            <p className="text-2xl font-bold text-destructive">
+              {
+                ordensServicos.filter((o) => o.status === "nao_totalizada")
+                  .length
+              }
             </p>
-            <p className="text-sm text-muted-foreground">Pausadas</p>
+            <p className="text-sm text-muted-foreground">Não totalizada</p>
           </CardContent>
         </Card>
 
@@ -1045,9 +1531,9 @@ const OrdensServicos = () => {
           <CardContent className="p-6 text-center">
             <CheckCircle className="h-8 w-8 text-success mx-auto mb-2" />
             <p className="text-2xl font-bold text-success">
-              {ordensServicos.filter((o) => o.status === "concluida").length}
+              {ordensServicos.filter((o) => o.status === "finalizada").length}
             </p>
-            <p className="text-sm text-muted-foreground">Concluídas</p>
+            <p className="text-sm text-muted-foreground">Finalizada</p>
           </CardContent>
         </Card>
       </div>
@@ -1056,35 +1542,106 @@ const OrdensServicos = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
+            <Filter className="h-5 w-5" />
             Filtros de Pesquisa
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex-1 relative">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Busca por número da OS e nome da fazenda */}
+            <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por número da OS"
+                placeholder="Buscar por número da OS ou fazenda"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
+
+            {/* Filtro de Status */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger>
                 <SelectValue placeholder="Filtrar por status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos os status</SelectItem>
-                <SelectItem value="aguardando">Aguardando</SelectItem>
-                <SelectItem value="em_producao">Em Serviços</SelectItem>
-                <SelectItem value="pausada">Pausada</SelectItem>
-                <SelectItem value="concluida">Concluída</SelectItem>
-                <SelectItem value="cancelada">Cancelada</SelectItem>
+                <SelectItem value="aguardando_informacoes">
+                  Aguardando informações
+                </SelectItem>
+                <SelectItem value="pendente">Pendente</SelectItem>
+                <SelectItem value="em_preparo">Em preparo</SelectItem>
+                <SelectItem value="em_processo">Em processo</SelectItem>
+                <SelectItem value="nao_totalizada">Não totalizada</SelectItem>
+                <SelectItem value="finalizada">Finalizada</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Período (Cadastro da OS) */}
+            <Popover>
+              <PopoverTrigger asChild className="w-full">
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !dateRange?.from &&
+                      !dateRange?.to &&
+                      "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "dd/MM/yyyy", {
+                          locale: ptBR,
+                        })}{" "}
+                        - {format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}
+                      </>
+                    ) : (
+                      format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })
+                    )
+                  ) : (
+                    <span>Selecione o período</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-auto p-0"
+                align="start"
+                sideOffset={4}
+              >
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
+          {/* Botão Limpar Filtros - só aparece quando há filtros aplicados */}
+          {(searchTerm !== "" ||
+            statusFilter !== "todos" ||
+            dateRange !== undefined) && (
+            <div className="flex justify-end mt-4">
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("todos");
+                  setDateRange(undefined);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Limpar Filtros
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1103,7 +1660,7 @@ const OrdensServicos = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleImportarOrdens}>
                 <Upload className="h-4 w-4 mr-2" />
-                Importar Ordens
+                PIMS
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1140,9 +1697,15 @@ const OrdensServicos = () => {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Criar Nova Ordem de Serviços</DialogTitle>
+                <DialogTitle>
+                  {ordemEditando
+                    ? "Editar Ordem de Serviços"
+                    : "Criar Nova Ordem de Serviços"}
+                </DialogTitle>
                 <DialogDescription>
-                  Preencha os dados da ordem de serviços
+                  {ordemEditando
+                    ? "Atualize os dados da ordem de serviços"
+                    : "Preencha os dados da ordem de serviços"}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -1532,8 +2095,35 @@ const OrdensServicos = () => {
                 </div>
               </div>
               <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDialogOpen(false);
+                    setOrdemEditando(null);
+                    setNovaOrdem({
+                      numeroOS: "",
+                      centroCustoId: "",
+                      operacaoId: "",
+                      dataGeracao: "",
+                      observacoes: "",
+                      responsavelId: "",
+                      fazendaId: "",
+                      secao: "",
+                      talhoesSelecionados: [],
+                      insumosSelecionados: [],
+                      caldaHA: "",
+                    });
+                    setTalhoesSelecionados(new Set());
+                    setInsumosSelecionados(new Map());
+                    setBuscaTalhoes("");
+                    setBuscaInsumos("");
+                    setFiltroTipoEstoqueInsumos("TODOS");
+                  }}
+                >
+                  Cancelar
+                </Button>
                 <Button type="submit" onClick={handleIncluirOrdem}>
-                  Criar Ordem
+                  {ordemEditando ? "Salvar Alterações" : "Criar Ordem"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1645,7 +2235,71 @@ const OrdensServicos = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {ordem.status === "aguardando" && (
+                          {/* Botão de Editar - para OS que não iniciaram */}
+                          {(ordem.status === "aguardando_informacoes" ||
+                            ordem.status === "pendente") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                // Preencher o formulário com os dados da OS
+                                const ordemParaEditar = ordensServicos.find(
+                                  (o) => o.id === ordem.id
+                                );
+                                if (ordemParaEditar) {
+                                  setOrdemEditando(ordemParaEditar);
+
+                                  // Preencher campos básicos
+                                  setNovaOrdem({
+                                    numeroOS: ordemParaEditar.numeroOS,
+                                    centroCustoId:
+                                      ordemParaEditar.centroCustoId,
+                                    operacaoId: ordemParaEditar.operacaoId,
+                                    dataGeracao: ordemParaEditar.dataGeracao,
+                                    observacoes: ordemParaEditar.observacoes,
+                                    responsavelId:
+                                      ordemParaEditar.responsavelId,
+                                    fazendaId: ordemParaEditar.fazendaId,
+                                    secao: ordemParaEditar.secao,
+                                    talhoesSelecionados:
+                                      ordemParaEditar.talhoes,
+                                    insumosSelecionados:
+                                      ordemParaEditar.insumos,
+                                    caldaHA: ordemParaEditar.caldaHA || "",
+                                  });
+
+                                  // Preencher talhões selecionados
+                                  const talhoesSet = new Set<string>();
+                                  ordemParaEditar.talhoes.forEach((t) => {
+                                    talhoesSet.add(
+                                      `${t.fazendaId}-${t.talhaoId}`
+                                    );
+                                  });
+                                  setTalhoesSelecionados(talhoesSet);
+
+                                  // Preencher insumos selecionados
+                                  const insumosMap = new Map<
+                                    number,
+                                    { idItem: number; doseHA: number }
+                                  >();
+                                  ordemParaEditar.insumos.forEach((i) => {
+                                    insumosMap.set(i.idEstoque, {
+                                      idItem: i.idItem,
+                                      doseHA: i.doseHA,
+                                    });
+                                  });
+                                  setInsumosSelecionados(insumosMap);
+
+                                  setDialogOpen(true);
+                                }
+                              }}
+                              title="Editar Ordem"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {/* Botão de Play - apenas para OS pendente (totalmente preenchida, não aguardando informações) */}
+                          {ordem.status === "pendente" && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1655,7 +2309,7 @@ const OrdensServicos = () => {
                               <Play className="h-4 w-4" />
                             </Button>
                           )}
-                          {ordem.status === "em_producao" && (
+                          {ordem.status === "em_processo" && (
                             <>
                               <Button
                                 variant="ghost"
@@ -1675,12 +2329,13 @@ const OrdensServicos = () => {
                               </Button>
                             </>
                           )}
-                          {ordem.status === "pausada" && (
+                          {(ordem.status === "em_preparo" ||
+                            ordem.status === "nao_totalizada") && (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleIniciarOrdem(ordem.id)}
-                              title="Retomar Ordem"
+                              title="Parametrizar Parcela"
                             >
                               <Play className="h-4 w-4" />
                             </Button>
@@ -1693,48 +2348,6 @@ const OrdensServicos = () => {
                     {isExpanded && (
                       <div className="p-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-muted-foreground">
-                              Número da OS
-                            </Label>
-                            <p className="text-sm font-medium">
-                              {ordem.numeroOS}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground">
-                              Data da Geração
-                            </Label>
-                            <p className="text-sm font-medium">
-                              {new Date(ordem.dataGeracao).toLocaleDateString(
-                                "pt-BR"
-                              )}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground">
-                              Centro de Custo
-                            </Label>
-                            <p className="text-sm font-medium">
-                              {centroCusto?.descricao || "-"}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground">
-                              Operação
-                            </Label>
-                            <p className="text-sm font-medium">
-                              {operacao?.descricao || "-"}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground">
-                              Responsável
-                            </Label>
-                            <p className="text-sm font-medium">
-                              {responsavel?.nome || "-"}
-                            </p>
-                          </div>
                           <div>
                             <Label className="text-muted-foreground">
                               Seção
@@ -1762,168 +2375,458 @@ const OrdensServicos = () => {
                               </Badge>
                             </div>
                           </div>
-                          <div>
+                          <div className="md:col-span-2">
                             <Label className="text-muted-foreground">
-                              Progresso
+                              Iniciado em / Finalizado em
                             </Label>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Progress
-                                value={ordem.progresso}
-                                className="h-2 flex-1"
-                              />
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <span className="text-sm font-medium">
-                                {ordem.progresso}%
+                                Iniciado:{" "}
+                                {ordem.iniciado ? (
+                                  ordem.iniciado
+                                ) : (
+                                  <span className="text-muted-foreground italic">
+                                    Ainda não iniciado
+                                  </span>
+                                )}
+                              </span>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="text-sm font-medium">
+                                Finalizado:{" "}
+                                {ordem.previsaoTermino ? (
+                                  ordem.previsaoTermino
+                                ) : (
+                                  <span className="text-muted-foreground italic">
+                                    Ainda não finalizado
+                                  </span>
+                                )}
                               </span>
                             </div>
                           </div>
-                          {ordem.iniciado && (
-                            <div>
-                              <Label className="text-muted-foreground">
-                                Iniciado em
-                              </Label>
-                              <p className="text-sm font-medium">
-                                {ordem.iniciado}
-                              </p>
-                            </div>
-                          )}
-                          {ordem.previsaoTermino && (
-                            <div>
-                              <Label className="text-muted-foreground">
-                                Previsão de Término
-                              </Label>
-                              <p className="text-sm font-medium">
-                                {ordem.previsaoTermino}
-                              </p>
-                            </div>
-                          )}
                         </div>
 
-                        {/* Talhões */}
-                        {ordem.talhoes.length > 0 && (
-                          <div className="mt-4">
-                            <Label className="text-muted-foreground mb-2 block">
-                              Talhões
-                            </Label>
-                            <div className="space-y-2">
-                              {ordem.talhoes.map((talhao, index) => {
+                        {/* Talhões - Expansível */}
+                        {ordem.talhoes.length > 0 &&
+                          (() => {
+                            const isTalhoesExpanded = expandedTalhoes.has(
+                              ordem.id
+                            );
+                            const areaTotalTalhoes = ordem.talhoes.reduce(
+                              (sum, talhao) => {
                                 const fazenda = fazendas.find(
                                   (f) => f.id === talhao.fazendaId
                                 );
                                 const talhaoObj = fazenda?.talhoes.find(
                                   (t) => t.id === talhao.talhaoId
                                 );
-                                return (
-                                  <div
-                                    key={index}
-                                    className="flex items-center justify-between p-3 border rounded-lg bg-background hover:bg-muted/50 transition-colors"
-                                  >
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <p className="text-sm font-medium">
-                                          {fazenda?.descricao ||
-                                            "Fazenda não encontrada"}{" "}
-                                          -{" "}
-                                          {talhaoObj?.observacoes ||
-                                            `Talhão ${talhao.talhaoId}`}
-                                        </p>
-                                      </div>
-                                      <p className="text-xs text-muted-foreground">
-                                        {talhaoObj?.tipo || "Talhão"} • Área:{" "}
-                                        {talhaoObj?.area || "-"} ha
-                                      </p>
-                                    </div>
-                                    <div className="text-right ml-4">
-                                      <p className="text-sm font-medium">
-                                        {talhaoObj?.area || "-"} ha
-                                      </p>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
+                                return sum + (Number(talhaoObj?.area) || 0);
+                              },
+                              0
+                            );
 
-                        {/* Insumos */}
-                        {ordem.insumos.length > 0 && (
-                          <div className="mt-4">
-                            <Label className="text-muted-foreground mb-2 block">
-                              Insumos
-                            </Label>
-                            <div className="space-y-2">
-                              {ordem.insumos.map((insumo, index) => {
-                                const material =
-                                  materiaisAgricolas[insumo.idItem];
-                                const categoria = material?.categoriaId
-                                  ? categorias[material.categoriaId]
-                                  : null;
-                                const insumoEstoque = insumos.find(
-                                  (i) => i.idEstoque === insumo.idEstoque
-                                );
-                                return (
-                                  <div
-                                    key={index}
-                                    className="flex items-center justify-between p-3 border rounded-lg bg-background hover:bg-muted/50 transition-colors"
-                                  >
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <p className="text-sm font-medium">
-                                          {material?.nomeComercial ||
-                                            `Item ${insumo.idItem}`}
-                                        </p>
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs"
-                                        >
-                                          {material?.codigo || insumo.idItem}
-                                        </Badge>
-                                      </div>
-                                      <p className="text-xs text-muted-foreground">
-                                        {categoria?.descricaoResumida ||
-                                          "Descrição não disponível"}
-                                        {insumoEstoque?.nLote &&
-                                          ` • Lote: ${insumoEstoque.nLote}`}
-                                      </p>
-                                    </div>
-                                    <div className="text-right ml-4">
-                                      <p className="text-sm font-medium">
-                                        {(() => {
-                                          // Calcular quantidade total do insumo
-                                          const areaTotal =
-                                            ordem.talhoes.reduce(
-                                              (sum, talhao) => {
-                                                const fazenda = fazendas.find(
-                                                  (f) =>
-                                                    f.id === talhao.fazendaId
-                                                );
-                                                const talhaoObj =
-                                                  fazenda?.talhoes.find(
-                                                    (t) =>
-                                                      t.id === talhao.talhaoId
-                                                  );
-                                                return (
-                                                  sum +
-                                                  (Number(talhaoObj?.area) || 0)
-                                                );
-                                              },
-                                              0
-                                            );
-                                          const quantidadeTotal =
-                                            areaTotal * insumo.doseHA;
-                                          return quantidadeTotal.toFixed(2);
-                                        })()}{" "}
-                                        {insumoEstoque?.unidade || ""}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground">
-                                        Dose/Ha: {insumo.doseHA}
-                                      </p>
-                                    </div>
+                            return (
+                              <div className="mt-4 border rounded-lg">
+                                <div
+                                  className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                                  onClick={() => {
+                                    const novos = new Set(expandedTalhoes);
+                                    if (novos.has(ordem.id)) {
+                                      novos.delete(ordem.id);
+                                    } else {
+                                      novos.add(ordem.id);
+                                    }
+                                    setExpandedTalhoes(novos);
+                                  }}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {isTalhoesExpanded ? (
+                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                    <Label className="text-muted-foreground cursor-pointer">
+                                      Talhões ({ordem.talhoes.length})
+                                    </Label>
                                   </div>
+                                  <div className="flex items-center gap-4">
+                                    <span className="text-sm text-muted-foreground">
+                                      Área Total: {areaTotalTalhoes.toFixed(2)}{" "}
+                                      ha
+                                    </span>
+                                  </div>
+                                </div>
+                                {isTalhoesExpanded && (
+                                  <div className="border-t p-3 space-y-2">
+                                    {ordem.talhoes.map((talhao, index) => {
+                                      const fazenda = fazendas.find(
+                                        (f) => f.id === talhao.fazendaId
+                                      );
+                                      const talhaoObj = fazenda?.talhoes.find(
+                                        (t) => t.id === talhao.talhaoId
+                                      );
+                                      return (
+                                        <div
+                                          key={index}
+                                          className="flex items-center justify-between p-3 border rounded-lg bg-background hover:bg-muted/50 transition-colors"
+                                        >
+                                          <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <p className="text-sm font-medium">
+                                                {fazenda?.descricao ||
+                                                  "Fazenda não encontrada"}{" "}
+                                                -{" "}
+                                                {talhaoObj?.observacoes ||
+                                                  `Talhão ${talhao.talhaoId}`}
+                                              </p>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                              {talhaoObj?.tipo || "Talhão"} •
+                                              Área: {talhaoObj?.area || "-"} ha
+                                            </p>
+                                          </div>
+                                          <div className="text-right ml-4">
+                                            <p className="text-sm font-medium">
+                                              {talhaoObj?.area || "-"} ha
+                                            </p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+
+                        {/* Insumos - Expansível */}
+                        {ordem.insumos.length > 0 &&
+                          (() => {
+                            const isInsumosExpanded = expandedInsumos.has(
+                              ordem.id
+                            );
+                            const areaTotal = ordem.talhoes.reduce(
+                              (sum, talhao) => {
+                                const fazenda = fazendas.find(
+                                  (f) => f.id === talhao.fazendaId
                                 );
-                              })}
+                                const talhaoObj = fazenda?.talhoes.find(
+                                  (t) => t.id === talhao.talhaoId
+                                );
+                                return sum + (Number(talhaoObj?.area) || 0);
+                              },
+                              0
+                            );
+                            const totalInsumos = ordem.insumos.reduce(
+                              (sum, insumo) => {
+                                return sum + areaTotal * insumo.doseHA;
+                              },
+                              0
+                            );
+
+                            return (
+                              <div className="mt-4 border rounded-lg">
+                                <div
+                                  className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                                  onClick={() => {
+                                    const novos = new Set(expandedInsumos);
+                                    if (novos.has(ordem.id)) {
+                                      novos.delete(ordem.id);
+                                    } else {
+                                      novos.add(ordem.id);
+                                    }
+                                    setExpandedInsumos(novos);
+                                  }}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {isInsumosExpanded ? (
+                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                    <Label className="text-muted-foreground cursor-pointer">
+                                      Insumos ({ordem.insumos.length})
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <span className="text-sm text-muted-foreground">
+                                      Total: {totalInsumos.toFixed(2)} L
+                                    </span>
+                                  </div>
+                                </div>
+                                {isInsumosExpanded && (
+                                  <div className="border-t p-3 space-y-2">
+                                    {ordem.insumos.map((insumo, index) => {
+                                      const material =
+                                        materiaisAgricolas[insumo.idItem];
+                                      const categoria = material?.categoriaId
+                                        ? categorias[material.categoriaId]
+                                        : null;
+                                      const insumoEstoque = insumos.find(
+                                        (i) => i.idEstoque === insumo.idEstoque
+                                      );
+                                      return (
+                                        <div
+                                          key={index}
+                                          className="flex items-center justify-between p-3 border rounded-lg bg-background hover:bg-muted/50 transition-colors"
+                                        >
+                                          <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <p className="text-sm font-medium">
+                                                {material?.nomeComercial ||
+                                                  `Item ${insumo.idItem}`}
+                                              </p>
+                                              <Badge
+                                                variant="outline"
+                                                className="text-xs"
+                                              >
+                                                {material?.codigo ||
+                                                  insumo.idItem}
+                                              </Badge>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                              {categoria?.descricaoResumida ||
+                                                "Descrição não disponível"}
+                                              {insumoEstoque?.nLote &&
+                                                ` • Lote: ${insumoEstoque.nLote}`}
+                                            </p>
+                                          </div>
+                                          <div className="text-right ml-4">
+                                            <p className="text-sm font-medium">
+                                              {(() => {
+                                                // Calcular quantidade total do insumo
+                                                const quantidadeTotal =
+                                                  areaTotal * insumo.doseHA;
+                                                return quantidadeTotal.toFixed(
+                                                  2
+                                                );
+                                              })()}{" "}
+                                              {insumoEstoque?.unidade || ""}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                              Dose/Ha: {insumo.doseHA}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+
+                        {/* Parcelas - Expansível */}
+                        {(() => {
+                          const parcelasDaOS = parcelasCalda.filter(
+                            (p) => p.ordemServicoId === ordem.id
+                          );
+
+                          if (parcelasDaOS.length === 0) return null;
+
+                          const isParcelasExpanded = expandedParcelas.has(
+                            ordem.id
+                          );
+                          const progressoTotalParcelas = parcelasDaOS.reduce(
+                            (sum, p) => sum + p.progressoOS,
+                            0
+                          );
+
+                          const getStatusParcelaLabel = (
+                            status: "pendente" | "em_processo" | "finalizada"
+                          ) => {
+                            switch (status) {
+                              case "pendente":
+                                return "Pendente";
+                              case "em_processo":
+                                return "Em Processo";
+                              case "finalizada":
+                                return "Finalizada";
+                              default:
+                                return status;
+                            }
+                          };
+
+                          const getStatusParcelaBadge = (
+                            status: "pendente" | "em_processo" | "finalizada"
+                          ) => {
+                            switch (status) {
+                              case "pendente":
+                                return (
+                                  <Badge variant="outline" className="text-xs">
+                                    Pendente
+                                  </Badge>
+                                );
+                              case "em_processo":
+                                return (
+                                  <Badge variant="default" className="text-xs">
+                                    Em Processo
+                                  </Badge>
+                                );
+                              case "finalizada":
+                                return (
+                                  <Badge
+                                    variant="default"
+                                    className="text-xs bg-success"
+                                  >
+                                    Finalizada
+                                  </Badge>
+                                );
+                              default:
+                                return null;
+                            }
+                          };
+
+                          return (
+                            <div className="mt-4 border rounded-lg">
+                              <div
+                                className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                                onClick={() => {
+                                  const novos = new Set(expandedParcelas);
+                                  if (novos.has(ordem.id)) {
+                                    novos.delete(ordem.id);
+                                  } else {
+                                    novos.add(ordem.id);
+                                  }
+                                  setExpandedParcelas(novos);
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {isParcelasExpanded ? (
+                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                  )}
+                                  <Label className="text-muted-foreground cursor-pointer">
+                                    Parcelas ({parcelasDaOS.length})
+                                  </Label>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <span className="text-sm text-muted-foreground">
+                                    Progresso:{" "}
+                                    {progressoTotalParcelas.toFixed(2)}%
+                                  </span>
+                                </div>
+                              </div>
+                              {isParcelasExpanded && (
+                                <div className="border-t p-3 space-y-2">
+                                  {parcelasDaOS.map((parcela, index) => {
+                                    const caminhao = caminhoes.find(
+                                      (c) => c.id === parcela.caminhaoId
+                                    );
+                                    const totalInsumosParcela =
+                                      parcela.insumosMovimentados.reduce(
+                                        (sum, insumo) =>
+                                          sum + insumo.quantidade,
+                                        0
+                                      );
+
+                                    return (
+                                      <div
+                                        key={parcela.id}
+                                        className="flex flex-col gap-3 p-3 border rounded-lg bg-background hover:bg-muted/50 transition-colors"
+                                      >
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-2">
+                                            <Badge
+                                              variant="outline"
+                                              className="text-xs"
+                                            >
+                                              Parcela {index + 1}
+                                            </Badge>
+                                            {getStatusParcelaBadge(
+                                              parcela.status
+                                            )}
+                                          </div>
+                                          <span className="text-sm font-medium">
+                                            {parcela.proporcaoCalda.toFixed(2)}%
+                                            da calda
+                                          </span>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                          <div>
+                                            <Label className="text-xs text-muted-foreground">
+                                              Caminhão
+                                            </Label>
+                                            <p className="text-sm font-medium">
+                                              {caminhao?.placa ||
+                                                "Não encontrado"}{" "}
+                                              - {caminhao?.modelo || "-"}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-xs text-muted-foreground">
+                                              Capacidade
+                                            </Label>
+                                            <p className="text-sm font-medium">
+                                              {parcela.capacidadeCaminhao.toFixed(
+                                                2
+                                              )}{" "}
+                                              L
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-xs text-muted-foreground">
+                                              Insumos Movimentados
+                                            </Label>
+                                            <p className="text-sm font-medium">
+                                              {totalInsumosParcela.toFixed(2)} L
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-xs text-muted-foreground">
+                                              Progresso na OS
+                                            </Label>
+                                            <p className="text-sm font-medium">
+                                              {parcela.progressoOS.toFixed(2)}%
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-3 text-xs text-muted-foreground border-t pt-2">
+                                          <div>
+                                            <Label className="text-xs">
+                                              Criada em:
+                                            </Label>
+                                            <p>
+                                              {new Date(
+                                                parcela.dataCriacao
+                                              ).toLocaleString("pt-BR")}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-xs">
+                                              Iniciada em:
+                                            </Label>
+                                            <p>
+                                              {parcela.dataInicio
+                                                ? new Date(
+                                                    parcela.dataInicio
+                                                  ).toLocaleString("pt-BR")
+                                                : "Ainda não iniciada"}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-xs">
+                                              Finalizada em:
+                                            </Label>
+                                            <p>
+                                              {parcela.dataFinalizacao
+                                                ? new Date(
+                                                    parcela.dataFinalizacao
+                                                  ).toLocaleString("pt-BR")
+                                                : "Ainda não finalizada"}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
 
                         {/* Cálculos e Gráfico */}
                         {(() => {
@@ -2137,476 +3040,211 @@ const OrdensServicos = () => {
         </CardContent>
       </Card>
 
-      {/* Modal de Iniciação da OS */}
-      <Dialog open={dialogIniciarOpen} onOpenChange={handleFecharModal}>
+      {/* Modal de Parametrização da OS */}
+      <Dialog
+        open={dialogParametrizacaoOpen}
+        onOpenChange={(open) => {
+          setDialogParametrizacaoOpen(open);
+          if (!open) {
+            setOrdemParametrizando(null);
+            setCaminhaoSelecionado("");
+            setCapacidadeEditada("");
+            setProporcaoCalda(0);
+            setInsumosMovimentacao(new Map());
+          }
+        }}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Iniciar Ordem de Serviço</DialogTitle>
+            <DialogTitle>Parametrização da OS</DialogTitle>
             <DialogDescription>
-              Configure os parâmetros de iniciação da OS em etapas
+              Configure o caminhão e movimente os insumos necessários
             </DialogDescription>
           </DialogHeader>
 
-          {/* Indicador de Etapas */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2 flex-1">
-              <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                  etapaAtual >= 1
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-muted text-muted-foreground border-muted-foreground"
-                }`}
-              >
-                1
-              </div>
-              <div
-                className={`flex-1 h-1 ${
-                  etapaAtual >= 2 ? "bg-primary" : "bg-muted"
-                }`}
-              />
-              <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                  etapaAtual >= 2
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-muted text-muted-foreground border-muted-foreground"
-                }`}
-              >
-                2
-              </div>
-              <div
-                className={`flex-1 h-1 ${
-                  etapaAtual >= 3 ? "bg-primary" : "bg-muted"
-                }`}
-              />
-              <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                  etapaAtual >= 3
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-muted text-muted-foreground border-muted-foreground"
-                }`}
-              >
-                3
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center justify-between mb-6 -mt-4">
-            <span className="text-xs text-muted-foreground">BULKS</span>
-            <span className="text-xs text-muted-foreground">Caminhões</span>
-            <span className="text-xs text-muted-foreground">Confirmação</span>
-          </div>
-
           <div className="space-y-6">
-            {/* Etapa 1: Seleção de BULKS */}
-            {etapaAtual === 1 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">
-                    BULKS e Ordem de Liberação
-                  </Label>
-                  {bulksSelecionados.length > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      {bulksSelecionados.length} selecionado(s)
-                    </span>
-                  )}
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome, Smart Calda ou localização..."
-                    value={buscaBulks}
-                    onChange={(e) => setBuscaBulks(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="border rounded-lg p-2 max-h-48 overflow-y-auto space-y-2">
-                  {bulksFiltrados.length === 0 ? (
-                    <div className="text-center py-4 text-sm text-muted-foreground">
-                      Nenhum BULK encontrado
-                    </div>
-                  ) : (
-                    bulksFiltrados.map((bulk) => {
-                      const isSelected = bulksSelecionados.some(
-                        (b) => b.bulkId === bulk.id
-                      );
-                      const ordemSelecionada = bulksSelecionados.find(
-                        (b) => b.bulkId === bulk.id
-                      )?.ordem;
-
-                      return (
-                        <div
-                          key={bulk.id}
-                          className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded transition-colors"
-                        >
-                          <Checkbox
-                            id={`bulk-${bulk.id}`}
-                            checked={isSelected}
-                            onCheckedChange={() => handleToggleBulk(bulk.id)}
-                          />
-                          <Label
-                            htmlFor={`bulk-${bulk.id}`}
-                            className="text-sm font-normal cursor-pointer flex-1"
-                          >
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium">{bulk.nome}</span>
-                              <Badge
-                                variant={
-                                  bulk.tipo === "IBC"
-                                    ? "default"
-                                    : bulk.tipo === "SILO"
-                                    ? "secondary"
-                                    : "outline"
-                                }
-                                className="text-xs"
-                              >
-                                {bulk.tipo}
-                              </Badge>
-                              {isSelected && (
-                                <Badge variant="default" className="text-xs">
-                                  Ordem: {ordemSelecionada}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {bulk.smartCaldaNome} • {bulk.localizacao} • Cap:{" "}
-                              {bulk.capacidade}L
-                            </div>
-                          </Label>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                {/* Lista de BULKS Selecionados com Ordem */}
-                {bulksSelecionados.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Ordem de Liberação dos BULKS
-                    </Label>
-                    <div className="border rounded-lg p-3 space-y-2">
-                      {bulksSelecionados
-                        .sort((a, b) => a.ordem - b.ordem)
-                        .map((item, index) => {
-                          const bulk = bulks.find((b) => b.id === item.bulkId);
-                          return (
-                            <div
-                              key={item.bulkId}
-                              className="flex items-center gap-2 p-2 bg-muted/50 rounded"
-                            >
-                              <GripVertical className="h-4 w-4 text-muted-foreground" />
-                              <Badge
-                                variant="default"
-                                className="w-8 text-center"
-                              >
-                                {item.ordem}
-                              </Badge>
-                              <div className="flex-1">
-                                <span className="text-sm font-medium">
-                                  {bulk?.nome}
-                                </span>
-                                <span className="text-xs text-muted-foreground ml-2">
-                                  ({bulk?.tipo}) - {bulk?.smartCaldaNome}
-                                </span>
-                              </div>
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleMoverBulk(index, "up")}
-                                  disabled={index === 0}
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <ArrowUp className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleMoverBulk(index, "down")}
-                                  disabled={
-                                    index === bulksSelecionados.length - 1
-                                  }
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <ArrowDown className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Etapa 2: Seleção de Caminhões */}
-            {etapaAtual === 2 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">
-                    Caminhões e Ordem de Saída
-                  </Label>
-                  {caminhoesSelecionados.length > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      {caminhoesSelecionados.length} selecionado(s)
-                    </span>
-                  )}
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por placa, patrimônio, modelo ou marca..."
-                    value={buscaCaminhoes}
-                    onChange={(e) => setBuscaCaminhoes(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="border rounded-lg p-2 max-h-48 overflow-y-auto space-y-2">
-                  {caminhoesFiltrados.length === 0 ? (
-                    <div className="text-center py-4 text-sm text-muted-foreground">
-                      Nenhum caminhão encontrado
-                    </div>
-                  ) : (
-                    caminhoesFiltrados.map((caminhao) => {
-                      const isSelected = caminhoesSelecionados.some(
-                        (c) => c.caminhaoId === caminhao.id
-                      );
-                      const ordemSelecionada = caminhoesSelecionados.find(
-                        (c) => c.caminhaoId === caminhao.id
-                      )?.ordem;
-
-                      return (
-                        <div
-                          key={caminhao.id}
-                          className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded transition-colors"
-                        >
-                          <Checkbox
-                            id={`caminhao-${caminhao.id}`}
-                            checked={isSelected}
-                            onCheckedChange={() =>
-                              handleToggleCaminhao(caminhao.id)
-                            }
-                          />
-                          <Label
-                            htmlFor={`caminhao-${caminhao.id}`}
-                            className="text-sm font-normal cursor-pointer flex-1"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">
-                                {caminhao.placa}
-                              </span>
-                              <Badge variant="outline" className="text-xs">
-                                {caminhao.modelo} - {caminhao.marca}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                Volume: {caminhao.volume}L
-                              </span>
-                              {isSelected && (
-                                <Badge variant="default" className="text-xs">
-                                  Ordem: {ordemSelecionada}
-                                </Badge>
-                              )}
-                            </div>
-                          </Label>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                {/* Lista de Caminhões Selecionados com Ordem */}
-                {caminhoesSelecionados.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Ordem de Saída dos Caminhões
-                    </Label>
-                    <div className="border rounded-lg p-3 space-y-2">
-                      {caminhoesSelecionados
-                        .sort((a, b) => a.ordem - b.ordem)
-                        .map((item, index) => {
-                          const caminhao = caminhoes.find(
-                            (c) => c.id === item.caminhaoId
-                          );
-                          return (
-                            <div
-                              key={item.caminhaoId}
-                              className="flex items-center gap-2 p-2 bg-muted/50 rounded"
-                            >
-                              <GripVertical className="h-4 w-4 text-muted-foreground" />
-                              <Badge
-                                variant="default"
-                                className="w-8 text-center"
-                              >
-                                {item.ordem}
-                              </Badge>
-                              <span className="flex-1 text-sm font-medium">
-                                {caminhao?.placa} - {caminhao?.modelo} (
-                                {caminhao?.volume}L)
-                              </span>
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleMoverCaminhao(index, "up")
-                                  }
-                                  disabled={index === 0}
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <ArrowUp className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleMoverCaminhao(index, "down")
-                                  }
-                                  disabled={
-                                    index === caminhoesSelecionados.length - 1
-                                  }
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <ArrowDown className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Etapa 3: Confirmação */}
-            {etapaAtual === 3 && (
-              <div className="space-y-4">
+            {ordemParametrizando && (
+              <>
+                {/* Informações da OS */}
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-4">
-                    Resumo da Configuração
-                  </h3>
-
-                  {/* Resumo BULKS */}
-                  <div className="mb-4">
-                    <Label className="text-sm font-medium mb-2 block">
-                      Ordem de Liberação dos BULKS ({bulksSelecionados.length})
-                    </Label>
-                    <div className="space-y-2">
-                      {bulksSelecionados
-                        .sort((a, b) => a.ordem - b.ordem)
-                        .map((item) => {
-                          const bulk = bulks.find((b) => b.id === item.bulkId);
-                          return (
-                            <div
-                              key={item.bulkId}
-                              className="flex items-center gap-2 p-2 bg-background rounded border"
-                            >
-                              <Badge
-                                variant="default"
-                                className="w-8 text-center"
-                              >
-                                {item.ordem}
-                              </Badge>
-                              <span className="text-sm font-medium">
-                                {bulk?.nome}
-                              </span>
-                              <Badge
-                                variant={
-                                  bulk?.tipo === "IBC"
-                                    ? "default"
-                                    : bulk?.tipo === "SILO"
-                                    ? "secondary"
-                                    : "outline"
-                                }
-                                className="text-xs"
-                              >
-                                {bulk?.tipo}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground ml-auto">
-                                {bulk?.smartCaldaNome}
-                              </span>
-                            </div>
-                          );
-                        })}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <Label className="text-muted-foreground">
+                        Número da OS
+                      </Label>
+                      <p className="font-medium">
+                        {ordemParametrizando.numeroOS}
+                      </p>
                     </div>
-                  </div>
-
-                  {/* Resumo Caminhões */}
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">
-                      Ordem de Saída dos Caminhões (
-                      {caminhoesSelecionados.length})
-                    </Label>
-                    <div className="space-y-2">
-                      {caminhoesSelecionados
-                        .sort((a, b) => a.ordem - b.ordem)
-                        .map((item) => {
-                          const caminhao = caminhoes.find(
-                            (c) => c.id === item.caminhaoId
-                          );
-                          return (
-                            <div
-                              key={item.caminhaoId}
-                              className="flex items-center gap-2 p-2 bg-background rounded border"
-                            >
-                              <Badge
-                                variant="default"
-                                className="w-8 text-center"
-                              >
-                                {item.ordem}
-                              </Badge>
-                              <span className="text-sm font-medium">
-                                {caminhao?.placa}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {caminhao?.modelo} - {caminhao?.marca}
-                              </span>
-                              <span className="text-xs text-muted-foreground ml-auto">
-                                {caminhao?.volume}L
-                              </span>
-                            </div>
-                          );
-                        })}
+                    <div>
+                      <Label className="text-muted-foreground">Calda/Ha</Label>
+                      <p className="font-medium">
+                        {ordemParametrizando.caldaHA} L
+                      </p>
                     </div>
                   </div>
                 </div>
-              </div>
+
+                {/* Seleção de Caminhão */}
+                <div className="space-y-2">
+                  <Label>Caminhão *</Label>
+                  <Select
+                    value={caminhaoSelecionado}
+                    onValueChange={(value) => {
+                      setCaminhaoSelecionado(value);
+                      const caminhao = caminhoes.find((c) => c.id === value);
+                      if (caminhao) {
+                        setCapacidadeEditada(caminhao.volume);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o caminhão" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {caminhoes
+                        .filter((c) => c.status === "Ativo")
+                        .map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.placa} - {c.modelo} ({c.volume}L)
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Capacidade Editável */}
+                {caminhaoSelecionado && (
+                  <div className="space-y-2">
+                    <Label>Capacidade do Caminhão (L) *</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={capacidadeEditada}
+                        onChange={(e) => {
+                          const valor = e.target.value;
+                          setCapacidadeEditada(valor);
+                        }}
+                        placeholder="Capacidade"
+                        min={0}
+                        step="0.01"
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        Capacidade original:{" "}
+                        {
+                          caminhoes.find((c) => c.id === caminhaoSelecionado)
+                            ?.volume
+                        }
+                        L
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Proporção de Calda Calculada */}
+                {proporcaoCalda > 0 && (
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm font-medium">
+                          Proporção de Calda
+                        </Label>
+                        <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                          {proporcaoCalda.toFixed(2)}%
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Esta parcela representa {proporcaoCalda.toFixed(2)}%
+                          da calda total
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Lista de Insumos com Quantidades */}
+                {insumosMovimentacao.size > 0 && (
+                  <div className="space-y-2">
+                    <Label>Insumos para Movimentação</Label>
+                    <div className="border rounded-lg p-3 space-y-3">
+                      {Array.from(insumosMovimentacao.entries()).map(
+                        ([idEstoque, dados]) => {
+                          const material = materiaisAgricolas[dados.idItem];
+                          const insumoEstoque = insumos.find(
+                            (i) => i.idEstoque === idEstoque
+                          );
+                          const origemAtual =
+                            insumosMovimentacao.get(idEstoque)?.origem;
+
+                          return (
+                            <div
+                              key={idEstoque}
+                              className="flex items-center justify-between p-3 border rounded-lg bg-background"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="text-sm font-medium">
+                                    {material?.nomeComercial ||
+                                      `Item ${dados.idItem}`}
+                                  </p>
+                                  <Badge variant="outline" className="text-xs">
+                                    {material?.codigo || dados.idItem}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Origem: {origemAtual} → Destino: TÉCNICO
+                                </p>
+                              </div>
+                              <div className="text-right ml-4">
+                                <p className="text-sm font-medium">
+                                  {dados.quantidade.toFixed(2)}{" "}
+                                  {insumoEstoque?.unidade || "L"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Necessário para esta parcela
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      * A movimentação será registrada automaticamente ao salvar
+                      ou iniciar
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
-          <DialogFooter>
-            {etapaAtual === 1 && (
-              <>
-                <Button variant="outline" onClick={handleFecharModal}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleProximaEtapa}>Próximo</Button>
-              </>
-            )}
-            {etapaAtual === 2 && (
-              <>
-                <Button variant="outline" onClick={handleEtapaAnterior}>
-                  Anterior
-                </Button>
-                <Button variant="outline" onClick={handleFecharModal}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleProximaEtapa}>Próximo</Button>
-              </>
-            )}
-            {etapaAtual === 3 && (
-              <>
-                <Button variant="outline" onClick={handleEtapaAnterior}>
-                  Anterior
-                </Button>
-                <Button variant="outline" onClick={handleFecharModal}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleConfirmarIniciar}>
-                  Confirmar e Iniciar OS
-                </Button>
-              </>
-            )}
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDialogParametrizacaoOpen(false);
+                setOrdemParametrizando(null);
+                setCaminhaoSelecionado("");
+                setCapacidadeEditada("");
+                setProporcaoCalda(0);
+                setInsumosMovimentacao(new Map());
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleSalvarContinuarDepois}
+              disabled={!caminhaoSelecionado || !capacidadeEditada}
+            >
+              Salvar e continuar depois
+            </Button>
+            <Button
+              onClick={handleIniciarParcela}
+              disabled={!caminhaoSelecionado || !capacidadeEditada}
+            >
+              Iniciar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
