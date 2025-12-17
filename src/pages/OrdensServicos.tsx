@@ -35,9 +35,9 @@ import {
   Search,
   FileText,
   Play,
-  Pause,
   CheckCircle,
   Clock,
+  Activity,
   AlertCircle,
   Upload,
   Download,
@@ -191,7 +191,6 @@ interface OrdemServico {
     | "aguardando_informacoes"
     | "pendente"
     | "em_preparo"
-    | "em_processo"
     | "nao_totalizada"
     | "finalizada";
   progresso: number;
@@ -219,6 +218,9 @@ const OrdensServicos = () => {
     useState(false);
   const [ordemParametrizando, setOrdemParametrizando] =
     useState<OrdemServico | null>(null);
+  const [parcelaEditando, setParcelaEditando] = useState<ParcelaCalda | null>(
+    null
+  );
   const [caminhaoSelecionado, setCaminhaoSelecionado] = useState<string>("");
   const [capacidadeEditada, setCapacidadeEditada] = useState<string>("");
   const [proporcaoCalda, setProporcaoCalda] = useState<number>(0);
@@ -399,6 +401,28 @@ const OrdensServicos = () => {
       progressoOS: 30,
       dataCriacao: "2024-01-20T12:00:00",
       dataInicio: "2024-01-20T12:20:00",
+      dataFinalizacao: null,
+    },
+    // Parcelas mockadas para OS-2024-003 (Em preparo - parcela salva para depois)
+    {
+      id: "PARCELA009",
+      ordemServicoId: "OS003",
+      caminhaoId: "C001",
+      capacidadeCaminhao: 12000,
+      proporcaoCalda: 55,
+      insumosMovimentados: [
+        {
+          idEstoque: 1,
+          idItem: 1005392,
+          quantidade: 40.0,
+          origem: "PRIMÁRIO",
+          destino: "TÉCNICO",
+        },
+      ],
+      status: "pendente",
+      progressoOS: 55,
+      dataCriacao: "2024-01-22T14:30:00",
+      dataInicio: null,
       dataFinalizacao: null,
     },
   ]);
@@ -800,8 +824,8 @@ const OrdensServicos = () => {
         { idEstoque: 3, idItem: 1027636, doseHA: 0.08 },
       ],
       caldaHA: "3.5",
-      status: "pendente",
-      progresso: 0,
+      status: "em_preparo",
+      progresso: 55,
       iniciado: null,
       previsaoTermino: null,
     },
@@ -908,8 +932,6 @@ const OrdensServicos = () => {
         return "outline";
       case "em_preparo":
         return "secondary";
-      case "em_processo":
-        return "default";
       case "nao_totalizada":
         return "destructive";
       case "finalizada":
@@ -927,8 +949,6 @@ const OrdensServicos = () => {
         return "Pendente";
       case "em_preparo":
         return "Em preparo";
-      case "em_processo":
-        return "Em processo";
       case "nao_totalizada":
         return "Não totalizada";
       case "finalizada":
@@ -946,8 +966,6 @@ const OrdensServicos = () => {
         return <Clock className="h-4 w-4 text-muted-foreground" />;
       case "em_preparo":
         return <FileText className="h-4 w-4 text-secondary" />;
-      case "em_processo":
-        return <Play className="h-4 w-4 text-primary" />;
       case "nao_totalizada":
         return <AlertCircle className="h-4 w-4 text-destructive" />;
       case "finalizada":
@@ -1126,11 +1144,144 @@ const OrdensServicos = () => {
     if (!ordem) return;
 
     setOrdemParametrizando(ordem);
+    setParcelaEditando(null);
     setCaminhaoSelecionado("");
     setCapacidadeEditada("");
     setProporcaoCalda(0);
     setInsumosMovimentacao(new Map());
     setDialogParametrizacaoOpen(true);
+  };
+
+  const handleEditarParcela = (parcela: ParcelaCalda) => {
+    setParcelaEditando(parcela);
+    setCaminhaoSelecionado(parcela.caminhaoId);
+    setCapacidadeEditada(parcela.capacidadeCaminhao.toString());
+    // Os cálculos serão feitos automaticamente pelo useEffect
+  };
+
+  const handleCancelarEdicaoParcela = () => {
+    setParcelaEditando(null);
+    setCaminhaoSelecionado("");
+    setCapacidadeEditada("");
+    setProporcaoCalda(0);
+    setInsumosMovimentacao(new Map());
+  };
+
+  const handleSalvarAlteracoesParcela = () => {
+    if (
+      !ordemParametrizando ||
+      !parcelaEditando ||
+      !caminhaoSelecionado ||
+      !capacidadeEditada
+    ) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    if (insumosMovimentacao.size === 0) {
+      toast.error("Nenhum insumo calculado. Verifique os dados.");
+      return;
+    }
+
+    // Atualizar a parcela existente
+    setParcelasCalda(
+      parcelasCalda.map((p) =>
+        p.id === parcelaEditando.id
+          ? {
+              ...p,
+              caminhaoId: caminhaoSelecionado,
+              capacidadeCaminhao: Number(capacidadeEditada),
+              proporcaoCalda,
+              insumosMovimentados: Array.from(
+                insumosMovimentacao.entries()
+              ).map(([idEstoque, dados]) => ({
+                idEstoque,
+                idItem: dados.idItem,
+                quantidade: dados.quantidade,
+                origem: dados.origem,
+                destino: "TÉCNICO",
+              })),
+              progressoOS: proporcaoCalda,
+            }
+          : p
+      )
+    );
+
+    // Recalcular progresso da OS
+    const parcelasDaOS = parcelasCalda
+      .map((p) =>
+        p.id === parcelaEditando.id
+          ? {
+              ...p,
+              caminhaoId: caminhaoSelecionado,
+              capacidadeCaminhao: Number(capacidadeEditada),
+              proporcaoCalda,
+              progressoOS: proporcaoCalda,
+            }
+          : p
+      )
+      .filter((p) => p.ordemServicoId === ordemParametrizando.id);
+
+    const progressoTotal = parcelasDaOS.reduce(
+      (sum, p) => sum + p.progressoOS,
+      0
+    );
+
+    setOrdensServicos(
+      ordensServicos.map((o) =>
+        o.id === ordemParametrizando.id
+          ? {
+              ...o,
+              progresso: Math.min(progressoTotal, 100),
+            }
+          : o
+      )
+    );
+
+    toast.success("Parcela atualizada com sucesso!");
+    handleCancelarEdicaoParcela();
+  };
+
+  const handleIniciarParcelaExistente = (parcelaId: string) => {
+    const parcela = parcelasCalda.find((p) => p.id === parcelaId);
+    if (!parcela || !ordemParametrizando) return;
+
+    // Atualizar status da parcela para em_processo
+    const parcelasAtualizadas = parcelasCalda.map((p) =>
+      p.id === parcelaId
+        ? {
+            ...p,
+            status: "em_processo" as const,
+            dataInicio: new Date().toISOString(),
+          }
+        : p
+    );
+    setParcelasCalda(parcelasAtualizadas);
+
+    // Calcular progresso total da OS
+    const parcelasDaOS = parcelasAtualizadas.filter(
+      (p) => p.ordemServicoId === ordemParametrizando.id
+    );
+    const progressoTotal = parcelasDaOS.reduce(
+      (sum, p) => sum + p.progressoOS,
+      0
+    );
+
+    // Atualizar status da OS para NÃO TOTALIZADA e progresso
+    setOrdensServicos(
+      ordensServicos.map((o) =>
+        o.id === ordemParametrizando.id
+          ? {
+              ...o,
+              status: progressoTotal >= 100 ? "finalizada" : "nao_totalizada",
+              progresso: Math.min(progressoTotal, 100),
+            }
+          : o
+      )
+    );
+
+    // TODO: Enviar dados para o CLP
+    toast.success("Parcela iniciada! Dados enviados para o CLP.");
   };
 
   // Atualizar proporção quando caminhão ou capacidade mudar
@@ -1200,7 +1351,12 @@ const OrdensServicos = () => {
       setProporcaoCalda(0);
       setInsumosMovimentacao(new Map());
     }
-  }, [caminhaoSelecionado, capacidadeEditada, ordemParametrizando]);
+  }, [
+    caminhaoSelecionado,
+    capacidadeEditada,
+    ordemParametrizando,
+    parcelaEditando,
+  ]);
 
   const handleSalvarContinuarDepois = () => {
     if (!ordemParametrizando || !caminhaoSelecionado || !capacidadeEditada) {
@@ -1329,12 +1485,12 @@ const OrdensServicos = () => {
     setInsumosMovimentacao(new Map());
   };
 
-  const handlePausarOrdem = (id: string) => {
-    toast.warning(`Ordem ${id} pausada!`);
-  };
-
-  const handleConcluirOrdem = (id: string) => {
-    toast.success(`Ordem ${id} concluída!`);
+  const handleAbrirSupervisorio = (ordemId: string) => {
+    // TODO: Redirecionar para o supervisório da OS específica
+    // Exemplo: window.location.href = `/supervisorio/${ordemId}`;
+    // Ou usar navegação do React Router: navigate(`/supervisorio/${ordemId}`);
+    toast.info(`Redirecionando para o supervisório da OS ${ordemId}`);
+    // Por enquanto apenas mostra um toast, mas aqui deve redirecionar
   };
 
   const handleImportarOrdens = () => {
@@ -1507,10 +1663,6 @@ const OrdensServicos = () => {
         <Card>
           <CardContent className="p-6 text-center">
             <Play className="h-8 w-8 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold text-primary">
-              {ordensServicos.filter((o) => o.status === "em_processo").length}
-            </p>
-            <p className="text-sm text-muted-foreground">Em processo</p>
           </CardContent>
         </Card>
 
@@ -1571,7 +1723,6 @@ const OrdensServicos = () => {
                 </SelectItem>
                 <SelectItem value="pendente">Pendente</SelectItem>
                 <SelectItem value="em_preparo">Em preparo</SelectItem>
-                <SelectItem value="em_processo">Em processo</SelectItem>
                 <SelectItem value="nao_totalizada">Não totalizada</SelectItem>
                 <SelectItem value="finalizada">Finalizada</SelectItem>
               </SelectContent>
@@ -2309,26 +2460,32 @@ const OrdensServicos = () => {
                               <Play className="h-4 w-4" />
                             </Button>
                           )}
-                          {ordem.status === "em_processo" && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handlePausarOrdem(ordem.id)}
-                                title="Pausar Ordem"
-                              >
-                                <Pause className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleConcluirOrdem(ordem.id)}
-                                title="Concluir Ordem"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
+                          {/* Botão Supervisório - apenas para OS não totalizada com parcela em processo */}
+                          {(() => {
+                            const parcelasDaOS = parcelasCalda.filter(
+                              (p) => p.ordemServicoId === ordem.id
+                            );
+                            const temParcelaEmProcesso = parcelasDaOS.some(
+                              (p) => p.status === "em_processo"
+                            );
+
+                            return (
+                              ordem.status === "nao_totalizada" &&
+                              temParcelaEmProcesso && (
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleAbrirSupervisorio(ordem.id)
+                                  }
+                                  title="Abrir Supervisório"
+                                  className="bg-primary hover:bg-primary/90"
+                                >
+                                  <Activity className="h-4 w-4" />
+                                </Button>
+                              )
+                            );
+                          })()}
                           {(ordem.status === "em_preparo" ||
                             ordem.status === "nao_totalizada") && (
                             <Button
@@ -3047,6 +3204,7 @@ const OrdensServicos = () => {
           setDialogParametrizacaoOpen(open);
           if (!open) {
             setOrdemParametrizando(null);
+            setParcelaEditando(null);
             setCaminhaoSelecionado("");
             setCapacidadeEditada("");
             setProporcaoCalda(0);
@@ -3085,36 +3243,187 @@ const OrdensServicos = () => {
                   </div>
                 </div>
 
-                {/* Seleção de Caminhão */}
-                <div className="space-y-2">
-                  <Label>Caminhão *</Label>
-                  <Select
-                    value={caminhaoSelecionado}
-                    onValueChange={(value) => {
-                      setCaminhaoSelecionado(value);
-                      const caminhao = caminhoes.find((c) => c.id === value);
-                      if (caminhao) {
-                        setCapacidadeEditada(caminhao.volume);
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o caminhão" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {caminhoes
-                        .filter((c) => c.status === "Ativo")
-                        .map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.placa} - {c.modelo} ({c.volume}L)
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Parcelas Pendentes */}
+                {(() => {
+                  const parcelasPendentes = parcelasCalda.filter(
+                    (p) =>
+                      p.ordemServicoId === ordemParametrizando.id &&
+                      p.status === "pendente"
+                  );
+
+                  if (parcelasPendentes.length === 0 && !parcelaEditando) {
+                    return null;
+                  }
+
+                  return (
+                    <div className="space-y-3">
+                      <Label className="text-base font-semibold">
+                        Parcelas Pendentes
+                      </Label>
+                      <div className="border rounded-lg p-3 space-y-2">
+                        {parcelasPendentes.map((parcela) => {
+                          const caminhao = caminhoes.find(
+                            (c) => c.id === parcela.caminhaoId
+                          );
+                          const totalInsumosParcela =
+                            parcela.insumosMovimentados.reduce(
+                              (sum, insumo) => sum + insumo.quantidade,
+                              0
+                            );
+
+                          return (
+                            <div
+                              key={parcela.id}
+                              className="flex items-center justify-between p-3 border rounded-lg bg-background"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {parcela.proporcaoCalda.toFixed(2)}% da
+                                    calda
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    Pendente
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground">
+                                      Caminhão:{" "}
+                                    </span>
+                                    <span className="font-medium">
+                                      {caminhao?.placa || "Não encontrado"} -{" "}
+                                      {caminhao?.modelo || "-"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">
+                                      Capacidade:{" "}
+                                    </span>
+                                    <span className="font-medium">
+                                      {parcela.capacidadeCaminhao.toFixed(2)} L
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">
+                                      Insumos:{" "}
+                                    </span>
+                                    <span className="font-medium">
+                                      {totalInsumosParcela.toFixed(2)} L
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">
+                                      Criada em:{" "}
+                                    </span>
+                                    <span className="font-medium">
+                                      {new Date(
+                                        parcela.dataCriacao
+                                      ).toLocaleString("pt-BR")}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 ml-4">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditarParcela(parcela)}
+                                  disabled={!!parcelaEditando}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </Button>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleIniciarParcelaExistente(parcela.id)
+                                  }
+                                  disabled={!!parcelaEditando}
+                                >
+                                  <Play className="h-4 w-4 mr-2" />
+                                  Iniciar
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Formulário de Edição/Criação de Parcela */}
+                {parcelaEditando && (
+                  <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-950">
+                    <div className="flex items-center justify-between mb-4">
+                      <Label className="text-base font-semibold">
+                        Editando Parcela (
+                        {parcelaEditando.proporcaoCalda.toFixed(2)}% da calda)
+                      </Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelarEdicaoParcela}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Seleção de Caminhão - Mostra se não há parcelas pendentes OU se está editando */}
+                {(() => {
+                  const parcelasPendentes = parcelasCalda.filter(
+                    (p) =>
+                      p.ordemServicoId === ordemParametrizando.id &&
+                      p.status === "pendente"
+                  );
+                  return parcelasPendentes.length === 0 || parcelaEditando;
+                })() && (
+                  <div className="space-y-2">
+                    <Label>
+                      {parcelaEditando ? "Editar Caminhão" : "Caminhão"} *
+                    </Label>
+                    <Select
+                      value={caminhaoSelecionado}
+                      onValueChange={(value) => {
+                        setCaminhaoSelecionado(value);
+                        const caminhao = caminhoes.find((c) => c.id === value);
+                        if (caminhao) {
+                          setCapacidadeEditada(caminhao.volume);
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o caminhão" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {caminhoes
+                          .filter((c) => c.status === "Ativo")
+                          .map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.placa} - {c.modelo} ({c.volume}L)
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {/* Capacidade Editável */}
-                {caminhaoSelecionado && (
+                {(() => {
+                  const parcelasPendentes = parcelasCalda.filter(
+                    (p) =>
+                      p.ordemServicoId === ordemParametrizando.id &&
+                      p.status === "pendente"
+                  );
+                  return (
+                    (parcelasPendentes.length === 0 || parcelaEditando) &&
+                    caminhaoSelecionado
+                  );
+                })() && (
                   <div className="space-y-2">
                     <Label>Capacidade do Caminhão (L) *</Label>
                     <div className="flex items-center gap-2">
@@ -3224,6 +3533,7 @@ const OrdensServicos = () => {
               onClick={() => {
                 setDialogParametrizacaoOpen(false);
                 setOrdemParametrizando(null);
+                setParcelaEditando(null);
                 setCaminhaoSelecionado("");
                 setCapacidadeEditada("");
                 setProporcaoCalda(0);
@@ -3232,19 +3542,32 @@ const OrdensServicos = () => {
             >
               Cancelar
             </Button>
-            <Button
-              variant="secondary"
-              onClick={handleSalvarContinuarDepois}
-              disabled={!caminhaoSelecionado || !capacidadeEditada}
-            >
-              Salvar e continuar depois
-            </Button>
-            <Button
-              onClick={handleIniciarParcela}
-              disabled={!caminhaoSelecionado || !capacidadeEditada}
-            >
-              Iniciar
-            </Button>
+            {parcelaEditando ? (
+              <>
+                <Button variant="outline" onClick={handleCancelarEdicaoParcela}>
+                  Cancelar Edição
+                </Button>
+                <Button onClick={handleSalvarAlteracoesParcela}>
+                  Salvar Alterações
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={handleSalvarContinuarDepois}
+                  disabled={!caminhaoSelecionado || !capacidadeEditada}
+                >
+                  Salvar e continuar depois
+                </Button>
+                <Button
+                  onClick={handleIniciarParcela}
+                  disabled={!caminhaoSelecionado || !capacidadeEditada}
+                >
+                  Iniciar
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
