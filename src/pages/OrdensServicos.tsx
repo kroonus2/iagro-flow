@@ -47,6 +47,7 @@ import {
   Calendar as CalendarIcon,
   Filter,
   Edit,
+  Settings,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -102,9 +103,17 @@ interface Insumo {
   tipoEstoque: "TÉCNICO" | "FRACIONÁRIO";
 }
 
+interface SmartCalda {
+  id: number;
+  nome: string;
+  numeroSerie: string;
+  status: string;
+}
+
 interface ParcelaCalda {
   id: string;
   ordemServicoId: string;
+  smartCaldaId: number; // Smart Calda que irá bater a calda
   caminhaoId: string;
   capacidadeCaminhao: number; // Capacidade editada pelo usuário
   proporcaoCalda: number; // % da calda total que será batida nesta parcela
@@ -157,6 +166,7 @@ interface Bulk {
 interface ParcelaCalda {
   id: string;
   ordemServicoId: string;
+  smartCaldaId: number; // Smart Calda que irá bater a calda
   caminhaoId: string;
   capacidadeCaminhao: number; // Capacidade editada pelo usuário
   proporcaoCalda: number; // % da calda total que será batida nesta parcela
@@ -221,6 +231,8 @@ const OrdensServicos = () => {
   const [parcelaEditando, setParcelaEditando] = useState<ParcelaCalda | null>(
     null
   );
+  const [smartCaldaSelecionada, setSmartCaldaSelecionada] =
+    useState<string>("");
   const [caminhaoSelecionado, setCaminhaoSelecionado] = useState<string>("");
   const [capacidadeEditada, setCapacidadeEditada] = useState<string>("");
   const [proporcaoCalda, setProporcaoCalda] = useState<number>(0);
@@ -235,7 +247,8 @@ const OrdensServicos = () => {
     {
       id: "PARCELA001",
       ordemServicoId: "OS006",
-      caminhaoId: "C001",
+      smartCaldaId: 1,
+      caminhaoId: "1",
       capacidadeCaminhao: 13000,
       proporcaoCalda: 60,
       insumosMovimentados: [
@@ -257,7 +270,8 @@ const OrdensServicos = () => {
     {
       id: "PARCELA002",
       ordemServicoId: "OS007",
-      caminhaoId: "C002",
+      smartCaldaId: 1,
+      caminhaoId: "2",
       capacidadeCaminhao: 8000,
       proporcaoCalda: 50,
       insumosMovimentados: [
@@ -278,7 +292,8 @@ const OrdensServicos = () => {
     {
       id: "PARCELA003",
       ordemServicoId: "OS007",
-      caminhaoId: "C001",
+      smartCaldaId: 1,
+      caminhaoId: "1",
       capacidadeCaminhao: 13000,
       proporcaoCalda: 50,
       insumosMovimentados: [
@@ -300,7 +315,8 @@ const OrdensServicos = () => {
     {
       id: "PARCELA004",
       ordemServicoId: "OS005",
-      caminhaoId: "C003",
+      smartCaldaId: 1,
+      caminhaoId: "3",
       capacidadeCaminhao: 10000,
       proporcaoCalda: 40,
       insumosMovimentados: [
@@ -321,7 +337,8 @@ const OrdensServicos = () => {
     {
       id: "PARCELA005",
       ordemServicoId: "OS005",
-      caminhaoId: "C002",
+      smartCaldaId: 1,
+      caminhaoId: "2",
       capacidadeCaminhao: 8000,
       proporcaoCalda: 35,
       insumosMovimentados: [
@@ -342,7 +359,8 @@ const OrdensServicos = () => {
     {
       id: "PARCELA006",
       ordemServicoId: "OS005",
-      caminhaoId: "C001",
+      smartCaldaId: 1,
+      caminhaoId: "1",
       capacidadeCaminhao: 13000,
       proporcaoCalda: 25,
       insumosMovimentados: [
@@ -364,7 +382,8 @@ const OrdensServicos = () => {
     {
       id: "PARCELA007",
       ordemServicoId: "OS001",
-      caminhaoId: "C001",
+      smartCaldaId: 1,
+      caminhaoId: "1",
       capacidadeCaminhao: 13000,
       proporcaoCalda: 45,
       insumosMovimentados: [
@@ -385,7 +404,8 @@ const OrdensServicos = () => {
     {
       id: "PARCELA008",
       ordemServicoId: "OS001",
-      caminhaoId: "C002",
+      smartCaldaId: 1,
+      caminhaoId: "2",
       capacidadeCaminhao: 8000,
       proporcaoCalda: 30,
       insumosMovimentados: [
@@ -407,7 +427,8 @@ const OrdensServicos = () => {
     {
       id: "PARCELA009",
       ordemServicoId: "OS003",
-      caminhaoId: "C001",
+      smartCaldaId: 1,
+      caminhaoId: "3",
       capacidadeCaminhao: 12000,
       proporcaoCalda: 55,
       insumosMovimentados: [
@@ -525,6 +546,28 @@ const OrdensServicos = () => {
           observacoes: "Talhão B",
         },
       ],
+    },
+  ];
+
+  // Dados simulados - Smart Caldas (baseado em GestaoSmartCaldas.tsx)
+  const smartCaldas: SmartCalda[] = [
+    {
+      id: 1,
+      nome: "Smart Calda #001",
+      numeroSerie: "SC-2024-001",
+      status: "online",
+    },
+    {
+      id: 2,
+      nome: "Smart Calda #002",
+      numeroSerie: "SC-2024-002",
+      status: "online",
+    },
+    {
+      id: 3,
+      nome: "Smart Calda #003",
+      numeroSerie: "SC-2024-003",
+      status: "online",
     },
   ];
 
@@ -965,7 +1008,7 @@ const OrdensServicos = () => {
       case "pendente":
         return <Clock className="h-4 w-4 text-muted-foreground" />;
       case "em_preparo":
-        return <FileText className="h-4 w-4 text-secondary" />;
+        return <Settings className="h-4 w-4 text-blue-500" />;
       case "nao_totalizada":
         return <AlertCircle className="h-4 w-4 text-destructive" />;
       case "finalizada":
@@ -1154,6 +1197,7 @@ const OrdensServicos = () => {
 
   const handleEditarParcela = (parcela: ParcelaCalda) => {
     setParcelaEditando(parcela);
+    setSmartCaldaSelecionada(parcela.smartCaldaId.toString());
     setCaminhaoSelecionado(parcela.caminhaoId);
     setCapacidadeEditada(parcela.capacidadeCaminhao.toString());
     // Os cálculos serão feitos automaticamente pelo useEffect
@@ -1161,6 +1205,7 @@ const OrdensServicos = () => {
 
   const handleCancelarEdicaoParcela = () => {
     setParcelaEditando(null);
+    setSmartCaldaSelecionada("");
     setCaminhaoSelecionado("");
     setCapacidadeEditada("");
     setProporcaoCalda(0);
@@ -1171,10 +1216,27 @@ const OrdensServicos = () => {
     if (
       !ordemParametrizando ||
       !parcelaEditando ||
+      !smartCaldaSelecionada ||
       !caminhaoSelecionado ||
       !capacidadeEditada
     ) {
       toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    const caminhao = caminhoes.find((c) => c.id === caminhaoSelecionado);
+    if (!caminhao) {
+      toast.error("Caminhão não encontrado. Selecione um caminhão válido.");
+      return;
+    }
+
+    // Validação: capacidade editada não pode ser maior que a capacidade original do caminhão
+    const capacidadeOriginal = Number(caminhao.volume) || 0;
+    const capacidadeEditadaNum = Number(capacidadeEditada) || 0;
+    if (capacidadeEditadaNum > capacidadeOriginal) {
+      toast.error(
+        `A capacidade não pode ser maior que ${capacidadeOriginal}L (capacidade original do caminhão)`
+      );
       return;
     }
 
@@ -1189,6 +1251,7 @@ const OrdensServicos = () => {
         p.id === parcelaEditando.id
           ? {
               ...p,
+              smartCaldaId: Number(smartCaldaSelecionada),
               caminhaoId: caminhaoSelecionado,
               capacidadeCaminhao: Number(capacidadeEditada),
               proporcaoCalda,
@@ -1213,6 +1276,7 @@ const OrdensServicos = () => {
         p.id === parcelaEditando.id
           ? {
               ...p,
+              smartCaldaId: Number(smartCaldaSelecionada),
               caminhaoId: caminhaoSelecionado,
               capacidadeCaminhao: Number(capacidadeEditada),
               proporcaoCalda,
@@ -1359,7 +1423,12 @@ const OrdensServicos = () => {
   ]);
 
   const handleSalvarContinuarDepois = () => {
-    if (!ordemParametrizando || !caminhaoSelecionado || !capacidadeEditada) {
+    if (
+      !ordemParametrizando ||
+      !smartCaldaSelecionada ||
+      !caminhaoSelecionado ||
+      !capacidadeEditada
+    ) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -1370,12 +1439,26 @@ const OrdensServicos = () => {
     }
 
     const caminhao = caminhoes.find((c) => c.id === caminhaoSelecionado);
-    if (!caminhao) return;
+    if (!caminhao) {
+      toast.error("Caminhão não encontrado. Selecione um caminhão válido.");
+      return;
+    }
+
+    // Validação: capacidade editada não pode ser maior que a capacidade original do caminhão
+    const capacidadeOriginal = Number(caminhao.volume) || 0;
+    const capacidadeEditadaNum = Number(capacidadeEditada) || 0;
+    if (capacidadeEditadaNum > capacidadeOriginal) {
+      toast.error(
+        `A capacidade não pode ser maior que ${capacidadeOriginal}L (capacidade original do caminhão)`
+      );
+      return;
+    }
 
     // Criar nova parcela
     const novaParcela: ParcelaCalda = {
       id: `PARCELA${Date.now()}`,
       ordemServicoId: ordemParametrizando.id,
+      smartCaldaId: 1,
       caminhaoId: caminhaoSelecionado,
       capacidadeCaminhao: Number(capacidadeEditada),
       proporcaoCalda,
@@ -1407,6 +1490,7 @@ const OrdensServicos = () => {
     toast.success("Parcela salva! OS está em preparo.");
     setDialogParametrizacaoOpen(false);
     setOrdemParametrizando(null);
+    setSmartCaldaSelecionada("");
     setCaminhaoSelecionado("");
     setCapacidadeEditada("");
     setProporcaoCalda(0);
@@ -1414,7 +1498,12 @@ const OrdensServicos = () => {
   };
 
   const handleIniciarParcela = () => {
-    if (!ordemParametrizando || !caminhaoSelecionado || !capacidadeEditada) {
+    if (
+      !ordemParametrizando ||
+      !smartCaldaSelecionada ||
+      !caminhaoSelecionado ||
+      !capacidadeEditada
+    ) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -1425,12 +1514,26 @@ const OrdensServicos = () => {
     }
 
     const caminhao = caminhoes.find((c) => c.id === caminhaoSelecionado);
-    if (!caminhao) return;
+    if (!caminhao) {
+      toast.error("Caminhão não encontrado. Selecione um caminhão válido.");
+      return;
+    }
+
+    // Validação: capacidade editada não pode ser maior que a capacidade original do caminhão
+    const capacidadeOriginal = Number(caminhao.volume) || 0;
+    const capacidadeEditadaNum = Number(capacidadeEditada) || 0;
+    if (capacidadeEditadaNum > capacidadeOriginal) {
+      toast.error(
+        `A capacidade não pode ser maior que ${capacidadeOriginal}L (capacidade original do caminhão)`
+      );
+      return;
+    }
 
     // Criar nova parcela
     const novaParcela: ParcelaCalda = {
       id: `PARCELA${Date.now()}`,
       ordemServicoId: ordemParametrizando.id,
+      smartCaldaId: 1,
       caminhaoId: caminhaoSelecionado,
       capacidadeCaminhao: Number(capacidadeEditada),
       proporcaoCalda,
@@ -1485,11 +1588,11 @@ const OrdensServicos = () => {
     setInsumosMovimentacao(new Map());
   };
 
-  const handleAbrirSupervisorio = (ordemId: string) => {
-    // TODO: Redirecionar para o supervisório da OS específica
-    // Exemplo: window.location.href = `/supervisorio/${ordemId}`;
-    // Ou usar navegação do React Router: navigate(`/supervisorio/${ordemId}`);
-    toast.info(`Redirecionando para o supervisório da OS ${ordemId}`);
+  const handleAbrirSupervisorio = (parcelaId: string) => {
+    // TODO: Redirecionar para o supervisório da parcela específica
+    // Exemplo: window.location.href = `/supervisorio/parcela/${parcelaId}`;
+    // Ou usar navegação do React Router: navigate(`/supervisorio/parcela/${parcelaId}`);
+    toast.info(`Redirecionando para o supervisório da parcela ${parcelaId}`);
     // Por enquanto apenas mostra um toast, mas aqui deve redirecionar
   };
 
@@ -1623,7 +1726,7 @@ const OrdensServicos = () => {
       </div>
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-6 text-center">
             <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
@@ -1652,40 +1755,11 @@ const OrdensServicos = () => {
 
         <Card>
           <CardContent className="p-6 text-center">
-            <FileText className="h-8 w-8 text-secondary mx-auto mb-2" />
-            <p className="text-2xl font-bold text-secondary">
+            <Settings className="h-8 w-8 text-blue-500 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-blue-500">
               {ordensServicos.filter((o) => o.status === "em_preparo").length}
             </p>
             <p className="text-sm text-muted-foreground">Em preparo</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Play className="h-8 w-8 text-primary mx-auto mb-2" />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
-            <p className="text-2xl font-bold text-destructive">
-              {
-                ordensServicos.filter((o) => o.status === "nao_totalizada")
-                  .length
-              }
-            </p>
-            <p className="text-sm text-muted-foreground">Não totalizada</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <CheckCircle className="h-8 w-8 text-success mx-auto mb-2" />
-            <p className="text-2xl font-bold text-success">
-              {ordensServicos.filter((o) => o.status === "finalizada").length}
-            </p>
-            <p className="text-sm text-muted-foreground">Finalizada</p>
           </CardContent>
         </Card>
       </div>
@@ -2460,32 +2534,6 @@ const OrdensServicos = () => {
                               <Play className="h-4 w-4" />
                             </Button>
                           )}
-                          {/* Botão Supervisório - apenas para OS não totalizada com parcela em processo */}
-                          {(() => {
-                            const parcelasDaOS = parcelasCalda.filter(
-                              (p) => p.ordemServicoId === ordem.id
-                            );
-                            const temParcelaEmProcesso = parcelasDaOS.some(
-                              (p) => p.status === "em_processo"
-                            );
-
-                            return (
-                              ordem.status === "nao_totalizada" &&
-                              temParcelaEmProcesso && (
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleAbrirSupervisorio(ordem.id)
-                                  }
-                                  title="Abrir Supervisório"
-                                  className="bg-primary hover:bg-primary/90"
-                                >
-                                  <Activity className="h-4 w-4" />
-                                </Button>
-                              )
-                            );
-                          })()}
                           {(ordem.status === "em_preparo" ||
                             ordem.status === "nao_totalizada") && (
                             <Button
@@ -2894,10 +2942,31 @@ const OrdensServicos = () => {
                                               parcela.status
                                             )}
                                           </div>
-                                          <span className="text-sm font-medium">
-                                            {parcela.proporcaoCalda.toFixed(2)}%
-                                            da calda
-                                          </span>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium">
+                                              {parcela.proporcaoCalda.toFixed(
+                                                2
+                                              )}
+                                              % da calda
+                                            </span>
+                                            {/* Botão Supervisório - apenas para parcelas em processo */}
+                                            {parcela.status ===
+                                              "em_processo" && (
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() =>
+                                                  handleAbrirSupervisorio(
+                                                    parcela.id
+                                                  )
+                                                }
+                                                title="Abrir Supervisório"
+                                                className="bg-primary hover:bg-primary/90"
+                                              >
+                                                <Activity className="h-4 w-4" />
+                                              </Button>
+                                            )}
+                                          </div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-3 text-sm">
@@ -2906,9 +2975,9 @@ const OrdensServicos = () => {
                                               Caminhão
                                             </Label>
                                             <p className="text-sm font-medium">
-                                              {caminhao?.placa ||
-                                                "Não encontrado"}{" "}
-                                              - {caminhao?.modelo || "-"}
+                                              {caminhao
+                                                ? `${caminhao.placa} - ${caminhao.modelo}`
+                                                : "Caminhão não encontrado"}
                                             </p>
                                           </div>
                                           <div>
@@ -3373,6 +3442,39 @@ const OrdensServicos = () => {
                   </div>
                 )}
 
+                {/* Seleção de Smart Calda - Mostra se não há parcelas pendentes OU se está editando */}
+                {(() => {
+                  const parcelasPendentes = parcelasCalda.filter(
+                    (p) =>
+                      p.ordemServicoId === ordemParametrizando.id &&
+                      p.status === "pendente"
+                  );
+                  return parcelasPendentes.length === 0 || parcelaEditando;
+                })() && (
+                  <div className="space-y-2">
+                    <Label>
+                      {parcelaEditando ? "Editar Smart Calda" : "Smart Calda"} *
+                    </Label>
+                    <Select
+                      value={smartCaldaSelecionada}
+                      onValueChange={setSmartCaldaSelecionada}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a Smart Calda" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {smartCaldas
+                          .filter((sc) => sc.status === "online")
+                          .map((sc) => (
+                            <SelectItem key={sc.id} value={sc.id.toString()}>
+                              {sc.nome} - {sc.numeroSerie}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {/* Seleção de Caminhão - Mostra se não há parcelas pendentes OU se está editando */}
                 {(() => {
                   const parcelasPendentes = parcelasCalda.filter(
@@ -3432,6 +3534,20 @@ const OrdensServicos = () => {
                         value={capacidadeEditada}
                         onChange={(e) => {
                           const valor = e.target.value;
+                          const caminhao = caminhoes.find(
+                            (c) => c.id === caminhaoSelecionado
+                          );
+                          if (caminhao) {
+                            const capacidadeOriginal =
+                              Number(caminhao.volume) || 0;
+                            const valorNum = Number(valor) || 0;
+                            if (valorNum > capacidadeOriginal) {
+                              toast.error(
+                                `A capacidade não pode ser maior que ${capacidadeOriginal}L (capacidade original do caminhão)`
+                              );
+                              return;
+                            }
+                          }
                           setCapacidadeEditada(valor);
                         }}
                         placeholder="Capacidade"
@@ -3562,7 +3678,11 @@ const OrdensServicos = () => {
                 </Button>
                 <Button
                   onClick={handleIniciarParcela}
-                  disabled={!caminhaoSelecionado || !capacidadeEditada}
+                  disabled={
+                    !smartCaldaSelecionada ||
+                    !caminhaoSelecionado ||
+                    !capacidadeEditada
+                  }
                 >
                   Iniciar
                 </Button>
