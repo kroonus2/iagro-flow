@@ -30,6 +30,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -257,6 +267,11 @@ const OrdensServicos = () => {
   const [ordemParametrizando, setOrdemParametrizando] =
     useState<OrdemServico | null>(null);
   const [parcelaEditando, setParcelaEditando] = useState<ParcelaCalda | null>(
+    null
+  );
+  const [dialogCancelarParcelaOpen, setDialogCancelarParcelaOpen] =
+    useState(false);
+  const [parcelaParaCancelar, setParcelaParaCancelar] = useState<string | null>(
     null
   );
   const [smartCaldaSelecionada, setSmartCaldaSelecionada] =
@@ -1782,18 +1797,20 @@ const OrdensServicos = () => {
       return;
     }
 
-    // Confirmar cancelamento
-    if (
-      !confirm(
-        "Tem certeza que deseja cancelar esta parcela? Esta ação não pode ser desfeita."
-      )
-    ) {
-      return;
-    }
+    // Abrir modal de confirmação
+    setParcelaParaCancelar(parcelaId);
+    setDialogCancelarParcelaOpen(true);
+  };
+
+  const handleConfirmarCancelarParcela = () => {
+    if (!parcelaParaCancelar) return;
+
+    const parcela = parcelasCalda.find((p) => p.id === parcelaParaCancelar);
+    if (!parcela) return;
 
     // Atualizar status da parcela para cancelado
     const parcelasAtualizadas = parcelasCalda.map((p) =>
-      p.id === parcelaId
+      p.id === parcelaParaCancelar
         ? {
             ...p,
             status: "cancelado" as const,
@@ -1833,6 +1850,8 @@ const OrdensServicos = () => {
     }
 
     toast.success("Parcela cancelada com sucesso!");
+    setDialogCancelarParcelaOpen(false);
+    setParcelaParaCancelar(null);
   };
 
   const handleImportarOrdens = () => {
@@ -3537,23 +3556,25 @@ const OrdensServicos = () => {
                                               )}
                                               % da calda
                                             </span>
-                                            {/* Botões de ação - apenas para parcelas em produção */}
-                                            {parcela.status ===
-                                              "em_producao" && (
-                                              <Button
-                                                variant="default"
-                                                size="sm"
-                                                onClick={() =>
-                                                  handleAbrirSupervisorio(
-                                                    parcela.id
-                                                  )
-                                                }
-                                                title="Abrir Supervisório"
-                                                className="bg-primary hover:bg-primary/90"
-                                              >
-                                                <Activity className="h-4 w-4" />
-                                              </Button>
-                                            )}
+                                            {/* Botão Supervisório - disponível para todos os status exceto bloqueado, cancelado e processada */}
+                                            {parcela.status !== "bloqueado" &&
+                                              parcela.status !== "cancelado" &&
+                                              parcela.status !==
+                                                "processada" && (
+                                                <Button
+                                                  variant="default"
+                                                  size="sm"
+                                                  onClick={() =>
+                                                    handleAbrirSupervisorio(
+                                                      parcela.id
+                                                    )
+                                                  }
+                                                  title="Abrir Supervisório"
+                                                  className="bg-primary hover:bg-primary/90"
+                                                >
+                                                  <Activity className="h-4 w-4" />
+                                                </Button>
+                                              )}
                                             {/* Botão Cancelar - apenas para parcelas na máquina */}
                                             {parcela.status ===
                                               "na_maquina" && (
@@ -4451,6 +4472,28 @@ const OrdensServicos = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Confirmação de Cancelamento de Parcela */}
+      <AlertDialog
+        open={dialogCancelarParcelaOpen}
+        onOpenChange={setDialogCancelarParcelaOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Cancelamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar esta parcela? Esta ação não pode
+              ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmarCancelarParcela}>
+              Confirmar Cancelamento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
