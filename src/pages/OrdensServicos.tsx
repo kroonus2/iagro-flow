@@ -826,23 +826,34 @@ const OrdensServicos = () => {
 
   // Mapeamento de categorias (baseado em InsumosAgricolas.tsx)
   const categorias: {
-    [key: number]: { codigo: string; descricaoResumida: string };
+    [key: number]: {
+      codigo: string;
+      descricaoResumida: string;
+      descricaoCompleta?: string;
+    };
   } = {
     69: {
       codigo: "69",
       descricaoResumida: "Herbicida 2,4 D-DIMETILAM 806 G/L",
+      descricaoCompleta:
+        "Herbicida 2,4 D-DIMETILAM 806 G/L - Descrição completa do grupo",
     },
     617: {
       codigo: "617",
       descricaoResumida: "Fertilizante (Adubo)",
+      descricaoCompleta: "Fertilizante (Adubo) - Descrição completa do grupo",
     },
     3001: {
       codigo: "3001",
       descricaoResumida: "Herbicida Tebuthiuron 500 G/L",
+      descricaoCompleta:
+        "Herbicida Tebuthiuron 500 G/L - Descrição completa do grupo",
     },
     5027: {
       codigo: "5027",
       descricaoResumida: "Formicida Isca Sulfluramida",
+      descricaoCompleta:
+        "Formicida Isca Sulfluramida - Descrição completa do grupo",
     },
   };
 
@@ -1288,10 +1299,22 @@ const OrdensServicos = () => {
   };
 
   const handleEditarParcela = (parcela: ParcelaCalda) => {
+    // Encontrar a ordem de serviço relacionada à parcela
+    const ordem = ordensServicos.find((o) => o.id === parcela.ordemServicoId);
+    if (!ordem) return;
+
+    // Configurar a ordem para parametrização
+    setOrdemParametrizando(ordem);
+
+    // Configurar os dados da parcela para edição
     setParcelaEditando(parcela);
     setSmartCaldaSelecionada(parcela.smartCaldaId.toString());
     setCaminhaoSelecionado(parcela.caminhaoId);
     setCapacidadeEditada(parcela.capacidadeCaminhao.toString());
+
+    // Abrir o modal
+    setDialogParametrizacaoOpen(true);
+
     // Os cálculos serão feitos automaticamente pelo useEffect
   };
 
@@ -1868,6 +1891,27 @@ const OrdensServicos = () => {
   }, [fazendas, novaOrdem.fazendaId]);
 
   // Filtrar insumos com busca (otimizado com useMemo)
+  // Função para formatar data no formato DD/MM/YYYY - hh:mm:ss
+  const formatarDataHora = (dataHora: string | null | undefined): string => {
+    if (!dataHora) return "";
+    try {
+      // Tenta parsear a data/hora
+      const data = new Date(dataHora);
+      if (isNaN(data.getTime())) return dataHora; // Se não conseguir parsear, retorna o valor original
+
+      const dia = String(data.getDate()).padStart(2, "0");
+      const mes = String(data.getMonth() + 1).padStart(2, "0");
+      const ano = data.getFullYear();
+      const horas = String(data.getHours()).padStart(2, "0");
+      const minutos = String(data.getMinutes()).padStart(2, "0");
+      const segundos = String(data.getSeconds()).padStart(2, "0");
+
+      return `${dia}/${mes}/${ano} - ${horas}:${minutos}:${segundos}`;
+    } catch {
+      return dataHora;
+    }
+  };
+
   const insumosFiltrados = useMemo(() => {
     const termoLower = buscaInsumos.toLowerCase().trim();
     const filtroEstoque =
@@ -1884,24 +1928,19 @@ const OrdensServicos = () => {
         if (!termoLower) return true;
 
         const material = materiaisAgricolas[insumo.idItem];
-        const materialNome =
-          material?.nomeComercial?.toLowerCase() ||
-          material?.descricao?.toLowerCase() ||
-          "";
-        const materialCodigo = material?.codigo?.toLowerCase() || "";
         const categoria = material?.categoriaId
           ? categorias[material.categoriaId]
           : null;
-        const categoriaNome = categoria?.descricaoResumida?.toLowerCase() || "";
         const categoriaCodigo = categoria?.codigo?.toLowerCase() || "";
-        const lote = insumo.nLote?.toLowerCase() || "";
+        const categoriaDescricaoResumida =
+          categoria?.descricaoResumida?.toLowerCase() || "";
+        const categoriaDescricaoCompleta =
+          categoria?.descricaoCompleta?.toLowerCase() || "";
 
         return (
-          materialNome.includes(termoLower) ||
-          materialCodigo.includes(termoLower) ||
-          categoriaNome.includes(termoLower) ||
           categoriaCodigo.includes(termoLower) ||
-          lote.includes(termoLower) ||
+          categoriaDescricaoResumida.includes(termoLower) ||
+          categoriaDescricaoCompleta.includes(termoLower) ||
           insumo.idItem.toString().includes(termoLower)
         );
       })
@@ -2675,6 +2714,9 @@ const OrdensServicos = () => {
                             );
                             if (!insumo) return null;
                             const material = materiaisAgricolas[insumo.idItem];
+                            const categoria = material?.categoriaId
+                              ? categorias[material.categoriaId]
+                              : null;
                             return (
                               <div
                                 key={idEstoque}
@@ -2682,8 +2724,9 @@ const OrdensServicos = () => {
                               >
                                 <div className="flex-1">
                                   <span className="font-medium">
-                                    {material?.nomeComercial ||
-                                      `Item ${insumo.idItem}`}
+                                    {categoria?.codigo || "N/A"} -{" "}
+                                    {categoria?.descricaoResumida ||
+                                      "Sem descrição"}
                                   </span>
                                   <span className="text-muted-foreground ml-2">
                                     • Dose/Ha: {dados.doseHA.toFixed(2)}{" "}
@@ -2713,7 +2756,7 @@ const OrdensServicos = () => {
                       <div className="relative md:col-span-2 w-full">
                         <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="Buscar por código, nome, grupo, classe ou lote."
+                          placeholder="Buscar por código do grupo, descrição resumida ou descrição completa."
                           value={buscaInsumos}
                           onChange={(e) => setBuscaInsumos(e.target.value)}
                           className="pl-10"
@@ -2760,26 +2803,12 @@ const OrdensServicos = () => {
                                 htmlFor={`insumo-${insumo.idEstoque}`}
                                 className="text-sm font-normal cursor-pointer flex-1"
                               >
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="flex items-center gap-2">
                                   <span className="font-medium">
-                                    {material?.nomeComercial ||
-                                      `Item ${insumo.idItem}`}
+                                    {categoria?.codigo || "N/A"} -{" "}
+                                    {categoria?.descricaoResumida ||
+                                      "Sem descrição"}
                                   </span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {material?.codigo || insumo.idItem}
-                                  </Badge>
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
-                                    {insumo.tipoEstoque}
-                                  </Badge>
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {categoria?.descricaoResumida ||
-                                    "Sem descrição"}{" "}
-                                  • Lote: {insumo.nLote} • Disponível:{" "}
-                                  {insumo.saldoDispon} {insumo.unidade}
                                 </div>
                               </Label>
                               {isSelected && (
@@ -3073,7 +3102,8 @@ const OrdensServicos = () => {
                             ) : (
                               <div className="flex items-center gap-2 flex-nowrap">
                                 <span className="text-sm font-medium whitespace-nowrap">
-                                  Iniciada em: {ordem.iniciado}
+                                  Iniciada em:{" "}
+                                  {formatarDataHora(ordem.iniciado)}
                                 </span>
                                 {!ordem.previsaoTermino && (
                                   <>
@@ -3091,7 +3121,8 @@ const OrdensServicos = () => {
                                       •
                                     </span>
                                     <span className="text-sm font-medium whitespace-nowrap">
-                                      Finalizada em: {ordem.previsaoTermino}
+                                      Finalizada em:{" "}
+                                      {formatarDataHora(ordem.previsaoTermino)}
                                     </span>
                                   </>
                                 )}
@@ -3152,7 +3183,7 @@ const OrdensServicos = () => {
                                     )}
                                     <Label className="text-muted-foreground cursor-pointer">
                                       {codigoExterno
-                                        ? `${codigoExterno}-${nomeFazenda}: Talhões (${ordem.talhoes.length})`
+                                        ? `${codigoExterno} - ${nomeFazenda}: Talhões (${ordem.talhoes.length})`
                                         : nomeFazenda
                                         ? `${nomeFazenda}: Talhões (${ordem.talhoes.length})`
                                         : `Talhões (${ordem.talhoes.length})`}
@@ -3963,7 +3994,7 @@ const OrdensServicos = () => {
                   return (
                     <div className="space-y-3">
                       <Label className="text-base font-semibold">
-                        Parcelas Na Máquina
+                        Parcelas na Máquina
                       </Label>
                       <div className="border rounded-lg p-3 space-y-2">
                         {parcelasNaMaquina.map((parcela) => {
@@ -4050,7 +4081,7 @@ const OrdensServicos = () => {
                                   disabled={!!parcelaEditando}
                                 >
                                   <Play className="h-4 w-4 mr-2" />
-                                  Enviar ao Supervisorio
+                                  Enviar ao Supervisório
                                 </Button>
                               </div>
                             </div>
@@ -4080,72 +4111,66 @@ const OrdensServicos = () => {
                   </div>
                 )}
 
-                {/* Seleção de Smart Calda - Mostra se OS não está finalizada e não está editando */}
-                {!parcelaEditando &&
-                  ordemParametrizando.status !== "finalizada" && (
-                    <div className="space-y-2">
-                      <Label>
-                        {parcelaEditando ? "Editar Smart Calda" : "Smart Calda"}{" "}
-                        *
-                      </Label>
-                      <Select
-                        value={smartCaldaSelecionada}
-                        onValueChange={setSmartCaldaSelecionada}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a Smart Calda" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {smartCaldas
-                            .filter((sc) => sc.status === "online")
-                            .map((sc) => (
-                              <SelectItem key={sc.id} value={sc.id.toString()}>
-                                {sc.nome} - {sc.numeroSerie}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                {/* Seleção de Smart Calda - Mostra se OS não está finalizada */}
+                {ordemParametrizando.status !== "finalizada" && (
+                  <div className="space-y-2">
+                    <Label>
+                      {parcelaEditando ? "Editar Smart Calda" : "Smart Calda"} *
+                    </Label>
+                    <Select
+                      value={smartCaldaSelecionada}
+                      onValueChange={setSmartCaldaSelecionada}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a Smart Calda" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {smartCaldas
+                          .filter((sc) => sc.status === "online")
+                          .map((sc) => (
+                            <SelectItem key={sc.id} value={sc.id.toString()}>
+                              {sc.nome} - {sc.numeroSerie}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-                {/* Seleção de Caminhão - Mostra se OS não está finalizada e não está editando */}
-                {!parcelaEditando &&
-                  ordemParametrizando.status !== "finalizada" && (
-                    <div className="space-y-2">
-                      <Label>
-                        {parcelaEditando ? "Editar Caminhão" : "Caminhão"} *
-                      </Label>
-                      <Select
-                        value={caminhaoSelecionado}
-                        onValueChange={(value) => {
-                          setCaminhaoSelecionado(value);
-                          const caminhao = caminhoes.find(
-                            (c) => c.id === value
-                          );
-                          if (caminhao) {
-                            setCapacidadeEditada(caminhao.volume);
-                          }
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o caminhão" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {caminhoes
-                            .filter((c) => c.status === "Ativo")
-                            .map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.placa} - {c.modelo} ({c.volume}L)
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                {/* Seleção de Caminhão - Mostra se OS não está finalizada */}
+                {ordemParametrizando.status !== "finalizada" && (
+                  <div className="space-y-2">
+                    <Label>
+                      {parcelaEditando ? "Editar Caminhão" : "Caminhão"} *
+                    </Label>
+                    <Select
+                      value={caminhaoSelecionado}
+                      onValueChange={(value) => {
+                        setCaminhaoSelecionado(value);
+                        const caminhao = caminhoes.find((c) => c.id === value);
+                        if (caminhao) {
+                          setCapacidadeEditada(caminhao.volume);
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o caminhão" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {caminhoes
+                          .filter((c) => c.status === "Ativo")
+                          .map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.placa} - {c.modelo} ({c.volume}L)
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-                {/* Capacidade Editável - Mostra se não está editando e há caminhão selecionado */}
-                {!parcelaEditando &&
-                  ordemParametrizando.status !== "finalizada" &&
+                {/* Capacidade Editável - Mostra se há caminhão selecionado e OS não está finalizada */}
+                {ordemParametrizando.status !== "finalizada" &&
                   caminhaoSelecionado && (
                     <div className="space-y-2">
                       <Label>Capacidade do Caminhão (L) *</Label>
@@ -4212,69 +4237,153 @@ const OrdensServicos = () => {
                   <div className="space-y-2">
                     <Label>Insumos para Movimentação</Label>
                     <div className="border rounded-lg p-3 space-y-3">
-                      {Array.from(insumosMovimentacao.entries()).map(
-                        ([idEstoque, dados]) => {
-                          const material = materiaisAgricolas[dados.idItem];
-                          const insumoEstoque = insumos.find(
-                            (i) => i.idEstoque === idEstoque
-                          );
-                          const origemAtual =
-                            insumosMovimentacao.get(idEstoque)?.origem;
-                          const capacidadeEmbalagem =
-                            material?.capacidadeEmbalagem || 0;
-                          const unidade = insumoEstoque?.unidade || "L";
+                      {(() => {
+                        // Agrupar insumos por categoriaId (grupo)
+                        const insumosPorGrupo = new Map<
+                          number,
+                          Array<{
+                            idEstoque: number;
+                            dados: {
+                              idItem: number;
+                              quantidade: number;
+                              origem: "PRIMÁRIO" | "FRACIONÁRIO";
+                            };
+                            material: {
+                              codigo: string;
+                              descricao: string;
+                              nomeComercial: string;
+                              categoriaId?: number;
+                              capacidadeEmbalagem?: number;
+                            };
+                            insumoEstoque: {
+                              idEstoque: number;
+                              idItem: number;
+                              nLote: string;
+                              unidade: string;
+                              saldoDispon: number;
+                              tipoEstoque: string;
+                            };
+                          }>
+                        >();
 
-                          // Calcular movimentações detalhadas
-                          const movimentacoes = calcularMovimentacoesDetalhadas(
-                            dados.quantidade,
-                            capacidadeEmbalagem,
-                            origemAtual || "PRIMÁRIO",
-                            unidade
-                          );
+                        // Agrupar insumos
+                        Array.from(insumosMovimentacao.entries()).forEach(
+                          ([idEstoque, dados]) => {
+                            const material = materiaisAgricolas[dados.idItem];
+                            const insumoEstoque = insumos.find(
+                              (i) => i.idEstoque === idEstoque
+                            );
+                            if (!material || !insumoEstoque) return;
 
-                          return (
-                            <div
-                              key={idEstoque}
-                              className="space-y-2 p-3 border rounded-lg bg-background"
-                            >
-                              {/* Cabeçalho do insumo */}
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm font-medium">
-                                    {material?.nomeComercial ||
-                                      `Item ${dados.idItem}`}
+                            const categoriaId = material.categoriaId || 0;
+                            if (!insumosPorGrupo.has(categoriaId)) {
+                              insumosPorGrupo.set(categoriaId, []);
+                            }
+                            insumosPorGrupo.get(categoriaId)?.push({
+                              idEstoque,
+                              dados,
+                              material,
+                              insumoEstoque,
+                            });
+                          }
+                        );
+
+                        // Renderizar grupos
+                        return Array.from(insumosPorGrupo.entries()).map(
+                          ([categoriaId, produtos]) => {
+                            const categoria = categorias[categoriaId];
+                            const codigoGrupo = categoria?.codigo || "N/A";
+                            const descricaoGrupo =
+                              categoria?.descricaoResumida || "Sem descrição";
+
+                            return (
+                              <div
+                                key={categoriaId}
+                                className="space-y-2 p-3 border rounded-lg bg-background"
+                              >
+                                {/* Título do Grupo */}
+                                <div className="mb-3 pb-2 border-b">
+                                  <p className="text-sm font-semibold">
+                                    {codigoGrupo} - {descricaoGrupo}
                                   </p>
-                                  <Badge variant="outline" className="text-xs">
-                                    {material?.codigo || dados.idItem}
-                                  </Badge>
                                 </div>
-                                <div className="text-right">
-                                  <p className="text-sm font-medium">
-                                    {dados.quantidade.toFixed(2)} {unidade}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Necessário para esta parcela
-                                  </p>
+
+                                {/* Lista de Produtos do Grupo */}
+                                <div className="space-y-2">
+                                  {produtos.map(
+                                    ({
+                                      idEstoque,
+                                      dados,
+                                      material,
+                                      insumoEstoque,
+                                    }) => {
+                                      const origemAtual =
+                                        insumosMovimentacao.get(
+                                          idEstoque
+                                        )?.origem;
+                                      const capacidadeEmbalagem =
+                                        material.capacidadeEmbalagem || 0;
+                                      const unidade = insumoEstoque.unidade;
+
+                                      // Calcular movimentações detalhadas
+                                      const movimentacoes =
+                                        calcularMovimentacoesDetalhadas(
+                                          dados.quantidade,
+                                          capacidadeEmbalagem,
+                                          origemAtual || "PRIMÁRIO",
+                                          unidade
+                                        );
+
+                                      return (
+                                        <div
+                                          key={idEstoque}
+                                          className="space-y-1 pl-2 border-l-2 border-muted"
+                                        >
+                                          {/* Cabeçalho do Produto */}
+                                          <div className="flex items-center justify-between mb-1">
+                                            <div className="flex items-center gap-2">
+                                              <p className="text-sm font-medium">
+                                                {material.codigo} -{" "}
+                                                {material.nomeComercial}
+                                              </p>
+                                            </div>
+                                            <div className="text-right">
+                                              <p className="text-sm font-medium">
+                                                {dados.quantidade.toFixed(2)}{" "}
+                                                {unidade}
+                                              </p>
+                                              <p className="text-xs text-muted-foreground">
+                                                Necessário para esta parcela
+                                              </p>
+                                            </div>
+                                          </div>
+
+                                          {/* Lista de movimentações detalhadas */}
+                                          <div className="space-y-1">
+                                            {movimentacoes.map((mov, index) => (
+                                              <p
+                                                key={index}
+                                                className="text-xs text-muted-foreground"
+                                              >
+                                                {material.codigo} -{" "}
+                                                {material.nomeComercial} •
+                                                Origem: {mov.origem} → Destino:{" "}
+                                                {mov.destino} (
+                                                {mov.quantidade.toFixed(2)}{" "}
+                                                {mov.unidade})
+                                              </p>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+                                  )}
                                 </div>
                               </div>
-
-                              {/* Lista de movimentações detalhadas */}
-                              <div className="space-y-1">
-                                {movimentacoes.map((mov, index) => (
-                                  <p
-                                    key={index}
-                                    className="text-xs text-muted-foreground"
-                                  >
-                                    Origem: {mov.origem} → Destino:{" "}
-                                    {mov.destino} ({mov.quantidade.toFixed(2)}{" "}
-                                    {mov.unidade})
-                                  </p>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        }
-                      )}
+                            );
+                          }
+                        );
+                      })()}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       * A movimentação será registrada automaticamente ao salvar
@@ -4331,7 +4440,7 @@ const OrdensServicos = () => {
                     !capacidadeEditada
                   }
                 >
-                  Enviar ao Supervisorio
+                  Enviar ao Supervisório
                 </Button>
               </>
             )}
