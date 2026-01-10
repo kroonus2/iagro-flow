@@ -13,6 +13,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -48,6 +56,7 @@ import {
   Filter,
   Edit,
   Settings,
+  HelpCircle,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -81,6 +90,7 @@ interface Responsavel {
 
 interface Fazenda {
   id: string;
+  codigoExterno?: string; // Código externo da fazenda (será implementado futuramente)
   descricao: string;
   status?: "Ativo" | "Inativo";
   talhoes: Talhao[];
@@ -124,7 +134,13 @@ interface ParcelaCalda {
     origem: "PRIMÁRIO" | "FRACIONÁRIO";
     destino: "TÉCNICO";
   }[];
-  status: "pendente" | "em_processo" | "finalizada";
+  status:
+    | "na_maquina"
+    | "em_producao"
+    | "processada"
+    | "pausado"
+    | "bloqueado"
+    | "cancelado";
   progressoOS: number; // % que esta parcela representa na OS
   dataCriacao: string;
   dataInicio?: string | null;
@@ -177,7 +193,13 @@ interface ParcelaCalda {
     origem: "PRIMÁRIO" | "FRACIONÁRIO";
     destino: "TÉCNICO";
   }[];
-  status: "pendente" | "em_processo" | "finalizada";
+  status:
+    | "na_maquina"
+    | "em_producao"
+    | "processada"
+    | "pausado"
+    | "bloqueado"
+    | "cancelado";
   progressoOS: number; // % que esta parcela representa na OS
   dataCriacao: string;
   dataInicio?: string | null;
@@ -213,6 +235,7 @@ const OrdensServicos = () => {
   const [statusFilter, setStatusFilter] = useState("todos");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [ordemEditando, setOrdemEditando] = useState<OrdemServico | null>(null);
   const [expandedOrdens, setExpandedOrdens] = useState<Set<string>>(new Set());
   const [expandedTalhoes, setExpandedTalhoes] = useState<Set<string>>(
@@ -260,7 +283,7 @@ const OrdensServicos = () => {
           destino: "TÉCNICO",
         },
       ],
-      status: "finalizada",
+      status: "processada",
       progressoOS: 60,
       dataCriacao: "2024-01-25T08:00:00",
       dataInicio: "2024-01-25T08:15:00",
@@ -283,7 +306,7 @@ const OrdensServicos = () => {
           destino: "TÉCNICO",
         },
       ],
-      status: "finalizada",
+      status: "processada",
       progressoOS: 50,
       dataCriacao: "2024-01-26T08:00:00",
       dataInicio: "2024-01-26T08:20:00",
@@ -305,7 +328,7 @@ const OrdensServicos = () => {
           destino: "TÉCNICO",
         },
       ],
-      status: "finalizada",
+      status: "processada",
       progressoOS: 50,
       dataCriacao: "2024-01-26T12:00:00",
       dataInicio: "2024-01-26T12:15:00",
@@ -328,7 +351,7 @@ const OrdensServicos = () => {
           destino: "TÉCNICO",
         },
       ],
-      status: "finalizada",
+      status: "processada",
       progressoOS: 40,
       dataCriacao: "2024-01-24T07:00:00",
       dataInicio: "2024-01-24T07:15:00",
@@ -350,7 +373,7 @@ const OrdensServicos = () => {
           destino: "TÉCNICO",
         },
       ],
-      status: "finalizada",
+      status: "processada",
       progressoOS: 35,
       dataCriacao: "2024-01-24T10:30:00",
       dataInicio: "2024-01-24T10:45:00",
@@ -372,7 +395,7 @@ const OrdensServicos = () => {
           destino: "TÉCNICO",
         },
       ],
-      status: "finalizada",
+      status: "processada",
       progressoOS: 25,
       dataCriacao: "2024-01-24T13:45:00",
       dataInicio: "2024-01-24T14:00:00",
@@ -395,7 +418,7 @@ const OrdensServicos = () => {
           destino: "TÉCNICO",
         },
       ],
-      status: "finalizada",
+      status: "processada",
       progressoOS: 45,
       dataCriacao: "2024-01-20T08:00:00",
       dataInicio: "2024-01-20T08:15:00",
@@ -417,13 +440,43 @@ const OrdensServicos = () => {
           destino: "TÉCNICO",
         },
       ],
-      status: "em_processo",
+      status: "em_producao",
       progressoOS: 30,
       dataCriacao: "2024-01-20T12:00:00",
       dataInicio: "2024-01-20T12:20:00",
       dataFinalizacao: null,
     },
-    // Parcelas mockadas para OS-2024-003 (Em preparo - parcela salva para depois)
+    // Parcelas mockadas para OS-2024-009 (Não totalizada - parcela em processo para demonstrar cancelamento)
+    {
+      id: "PARCELA010",
+      ordemServicoId: "OS009",
+      smartCaldaId: 1,
+      caminhaoId: "1",
+      capacidadeCaminhao: 12000,
+      proporcaoCalda: 65,
+      insumosMovimentados: [
+        {
+          idEstoque: 1,
+          idItem: 1005392,
+          quantidade: 45.5,
+          origem: "PRIMÁRIO",
+          destino: "TÉCNICO",
+        },
+        {
+          idEstoque: 3,
+          idItem: 1027636,
+          quantidade: 30.2,
+          origem: "FRACIONÁRIO",
+          destino: "TÉCNICO",
+        },
+      ],
+      status: "em_producao",
+      progressoOS: 65,
+      dataCriacao: "2024-01-28T08:00:00",
+      dataInicio: "2024-01-28T08:30:00",
+      dataFinalizacao: null,
+    },
+    // Parcelas mockadas para OS-2024-003 (Na máquina - parcela salva para depois)
     {
       id: "PARCELA009",
       ordemServicoId: "OS003",
@@ -440,7 +493,7 @@ const OrdensServicos = () => {
           destino: "TÉCNICO",
         },
       ],
-      status: "pendente",
+      status: "na_maquina",
       progressoOS: 55,
       dataCriacao: "2024-01-22T14:30:00",
       dataInicio: null,
@@ -483,6 +536,7 @@ const OrdensServicos = () => {
   const fazendas: Fazenda[] = [
     {
       id: "1",
+      codigoExterno: "FAZ001",
       descricao: "Fazenda São José",
       talhoes: [
         {
@@ -503,6 +557,7 @@ const OrdensServicos = () => {
     },
     {
       id: "2",
+      codigoExterno: "FAZ002",
       descricao: "Fazenda Boa Vista",
       talhoes: [
         {
@@ -516,6 +571,7 @@ const OrdensServicos = () => {
     },
     {
       id: "3",
+      codigoExterno: "FAZ003",
       descricao: "Fazenda Vista Alegre",
       talhoes: [
         {
@@ -529,6 +585,7 @@ const OrdensServicos = () => {
     },
     {
       id: "4",
+      codigoExterno: "FAZ004",
       descricao: "Fazenda São Pedro",
       talhoes: [
         {
@@ -736,6 +793,7 @@ const OrdensServicos = () => {
       descricao: string;
       nomeComercial: string;
       categoriaId?: number;
+      capacidadeEmbalagem?: number; // Capacidade da embalagem em L ou unidade do produto
     };
   } = {
     1005392: {
@@ -743,18 +801,21 @@ const OrdensServicos = () => {
       descricao: "HERBICIDA NUFARM U 46 BR",
       nomeComercial: "U 46 BR",
       categoriaId: 69,
+      capacidadeEmbalagem: 30, // 30L por embalagem
     },
     1027638: {
       codigo: "1027638",
       descricao: "HERBICIDA UPL DEZ",
       nomeComercial: "DEZ",
       categoriaId: 69,
+      capacidadeEmbalagem: 20, // 20L por embalagem
     },
     1027636: {
       codigo: "1027636",
       descricao: "HERBICIDA IHARA MIRANT",
       nomeComercial: "MIRANT",
       categoriaId: 69,
+      capacidadeEmbalagem: 25, // 25L por embalagem
     },
   };
 
@@ -804,7 +865,6 @@ const OrdensServicos = () => {
   >(new Map());
 
   // Estados para busca/filtro
-  const [buscaTalhoes, setBuscaTalhoes] = useState("");
   const [buscaInsumos, setBuscaInsumos] = useState("");
   const [filtroTipoEstoqueInsumos, setFiltroTipoEstoqueInsumos] = useState<
     "TODOS" | "TÉCNICO" | "FRACIONÁRIO"
@@ -965,6 +1025,30 @@ const OrdensServicos = () => {
       iniciado: null,
       previsaoTermino: null,
     },
+    {
+      id: "OS009",
+      numeroOS: "OS-2024-009",
+      centroCustoId: "1",
+      operacaoId: "1",
+      dataGeracao: "2024-01-28",
+      observacoes: "OS com parcela em processo para demonstrar cancelamento",
+      responsavelId: "1",
+      fazendaId: "1",
+      secao: "Seção A",
+      talhoes: [
+        { fazendaId: "1", talhaoId: "1" },
+        { fazendaId: "1", talhaoId: "2" },
+      ],
+      insumos: [
+        { idEstoque: 1, idItem: 1005392, doseHA: 0.12 },
+        { idEstoque: 3, idItem: 1027636, doseHA: 0.08 },
+      ],
+      caldaHA: "3.5",
+      status: "nao_totalizada",
+      progresso: 65,
+      iniciado: "2024-01-28T08:30:00",
+      previsaoTermino: null,
+    },
   ]);
 
   const getStatusBadge = (status: string) => {
@@ -991,7 +1075,7 @@ const OrdensServicos = () => {
       case "pendente":
         return "Pendente";
       case "em_preparo":
-        return "Em preparo";
+        return "Em Preparo";
       case "nao_totalizada":
         return "Não totalizada";
       case "finalizada":
@@ -1177,12 +1261,11 @@ const OrdensServicos = () => {
     });
     setTalhoesSelecionados(new Set());
     setInsumosSelecionados(new Map());
-    setBuscaTalhoes("");
     setBuscaInsumos("");
     setFiltroTipoEstoqueInsumos("TODOS");
   };
 
-  const handleIniciarOrdem = (id: string) => {
+  const handleParametrizarOrdem = (id: string) => {
     const ordem = ordensServicos.find((o) => o.id === id);
     if (!ordem) return;
 
@@ -1306,16 +1389,16 @@ const OrdensServicos = () => {
     handleCancelarEdicaoParcela();
   };
 
-  const handleIniciarParcelaExistente = (parcelaId: string) => {
+  const handleEnviarParcelaAoSupervisorio = (parcelaId: string) => {
     const parcela = parcelasCalda.find((p) => p.id === parcelaId);
     if (!parcela || !ordemParametrizando) return;
 
-    // Atualizar status da parcela para em_processo
+    // Atualizar status da parcela para em_producao
     const parcelasAtualizadas = parcelasCalda.map((p) =>
       p.id === parcelaId
         ? {
             ...p,
-            status: "em_processo" as const,
+            status: "em_producao" as const,
             dataInicio: new Date().toISOString(),
           }
         : p
@@ -1344,8 +1427,66 @@ const OrdensServicos = () => {
       )
     );
 
-    // TODO: Enviar dados para o CLP
-    toast.success("Parcela iniciada! Dados enviados para o CLP.");
+    // Fechar modal e redirecionar para o supervisorio
+    setDialogParametrizacaoOpen(false);
+    setOrdemParametrizando(null);
+    handleAbrirSupervisorio(parcelaId);
+    toast.success("Calda parametrizada! Redirecionando para o supervisorio.");
+  };
+
+  // Função para calcular movimentações detalhadas baseadas na capacidade da embalagem
+  const calcularMovimentacoesDetalhadas = (
+    quantidadeNecessaria: number,
+    capacidadeEmbalagem: number,
+    origem: "PRIMÁRIO" | "FRACIONÁRIO",
+    unidade: string
+  ) => {
+    const movimentacoes: {
+      origem: "PRIMÁRIO" | "FRACIONÁRIO" | "TÉCNICO";
+      destino: "TÉCNICO" | "FRACIONÁRIO";
+      quantidade: number;
+      unidade: string;
+    }[] = [];
+
+    if (!capacidadeEmbalagem || capacidadeEmbalagem <= 0) {
+      // Se não há capacidade definida, retorna uma movimentação simples
+      movimentacoes.push({
+        origem,
+        destino: "TÉCNICO",
+        quantidade: quantidadeNecessaria,
+        unidade,
+      });
+      return movimentacoes;
+    }
+
+    // Calcular quantas embalagens completas são necessárias
+    const embalagensCompletas = Math.floor(
+      quantidadeNecessaria / capacidadeEmbalagem
+    );
+    const resto = quantidadeNecessaria % capacidadeEmbalagem;
+
+    // Adicionar movimentações de embalagens completas (ORIGEM -> TÉCNICO)
+    for (let i = 0; i < embalagensCompletas; i++) {
+      movimentacoes.push({
+        origem,
+        destino: "TÉCNICO",
+        quantidade: capacidadeEmbalagem,
+        unidade,
+      });
+    }
+
+    // Se houver resto, adicionar movimentação parcial (FRACIONÁRIO -> TÉCNICO)
+    // O estoque usado no Smart Calda sempre será o TÉCNICO
+    if (resto > 0) {
+      movimentacoes.push({
+        origem: "FRACIONÁRIO",
+        destino: "TÉCNICO",
+        quantidade: resto,
+        unidade,
+      });
+    }
+
+    return movimentacoes;
   };
 
   // Atualizar proporção quando caminhão ou capacidade mudar
@@ -1458,7 +1599,7 @@ const OrdensServicos = () => {
     const novaParcela: ParcelaCalda = {
       id: `PARCELA${Date.now()}`,
       ordemServicoId: ordemParametrizando.id,
-      smartCaldaId: 1,
+      smartCaldaId: Number(smartCaldaSelecionada),
       caminhaoId: caminhaoSelecionado,
       capacidadeCaminhao: Number(capacidadeEditada),
       proporcaoCalda,
@@ -1471,7 +1612,7 @@ const OrdensServicos = () => {
           destino: "TÉCNICO",
         })
       ),
-      status: "pendente",
+      status: "na_maquina",
       progressoOS: proporcaoCalda,
       dataCriacao: new Date().toISOString(),
       dataInicio: null,
@@ -1480,7 +1621,7 @@ const OrdensServicos = () => {
 
     setParcelasCalda([...parcelasCalda, novaParcela]);
 
-    // Atualizar status da OS para EM PREPARO
+    // Atualizar status da OS para NA MÁQUINA
     setOrdensServicos(
       ordensServicos.map((o) =>
         o.id === ordemParametrizando.id ? { ...o, status: "em_preparo" } : o
@@ -1488,8 +1629,7 @@ const OrdensServicos = () => {
     );
 
     toast.success("Parcela salva! OS está em preparo.");
-    setDialogParametrizacaoOpen(false);
-    setOrdemParametrizando(null);
+    // Limpar campos mas manter o modal aberto para adicionar mais parcelas
     setSmartCaldaSelecionada("");
     setCaminhaoSelecionado("");
     setCapacidadeEditada("");
@@ -1497,7 +1637,7 @@ const OrdensServicos = () => {
     setInsumosMovimentacao(new Map());
   };
 
-  const handleIniciarParcela = () => {
+  const handleEnviarAoSupervisorio = () => {
     if (
       !ordemParametrizando ||
       !smartCaldaSelecionada ||
@@ -1533,7 +1673,7 @@ const OrdensServicos = () => {
     const novaParcela: ParcelaCalda = {
       id: `PARCELA${Date.now()}`,
       ordemServicoId: ordemParametrizando.id,
-      smartCaldaId: 1,
+      smartCaldaId: Number(smartCaldaSelecionada),
       caminhaoId: caminhaoSelecionado,
       capacidadeCaminhao: Number(capacidadeEditada),
       proporcaoCalda,
@@ -1546,7 +1686,7 @@ const OrdensServicos = () => {
           destino: "TÉCNICO",
         })
       ),
-      status: "em_processo",
+      status: "em_producao",
       progressoOS: proporcaoCalda,
       dataCriacao: new Date().toISOString(),
       dataInicio: new Date().toISOString(),
@@ -1578,14 +1718,16 @@ const OrdensServicos = () => {
       )
     );
 
-    // TODO: Enviar dados para o CLP
-    toast.success("Parcela iniciada! Dados enviados para o CLP.");
+    // Fechar modal e redirecionar para o supervisorio
+    const parcelaId = novaParcela.id;
     setDialogParametrizacaoOpen(false);
     setOrdemParametrizando(null);
     setCaminhaoSelecionado("");
     setCapacidadeEditada("");
     setProporcaoCalda(0);
     setInsumosMovimentacao(new Map());
+    handleAbrirSupervisorio(parcelaId);
+    toast.success("Calda parametrizada! Redirecionando para o supervisorio.");
   };
 
   const handleAbrirSupervisorio = (parcelaId: string) => {
@@ -1594,6 +1736,71 @@ const OrdensServicos = () => {
     // Ou usar navegação do React Router: navigate(`/supervisorio/parcela/${parcelaId}`);
     toast.info(`Redirecionando para o supervisório da parcela ${parcelaId}`);
     // Por enquanto apenas mostra um toast, mas aqui deve redirecionar
+  };
+
+  const handleCancelarParcela = (parcelaId: string) => {
+    const parcela = parcelasCalda.find((p) => p.id === parcelaId);
+    if (!parcela) return;
+
+    // Validar que a parcela está na máquina (único status que permite cancelamento)
+    if (parcela.status !== "na_maquina") {
+      toast.error(
+        "Apenas parcelas na máquina podem ser canceladas. Parcelas em produção devem ser pausadas ou finalizadas."
+      );
+      return;
+    }
+
+    // Confirmar cancelamento
+    if (
+      !confirm(
+        "Tem certeza que deseja cancelar esta parcela? Esta ação não pode ser desfeita."
+      )
+    ) {
+      return;
+    }
+
+    // Atualizar status da parcela para cancelado
+    const parcelasAtualizadas = parcelasCalda.map((p) =>
+      p.id === parcelaId
+        ? {
+            ...p,
+            status: "cancelado" as const,
+          }
+        : p
+    );
+    setParcelasCalda(parcelasAtualizadas);
+
+    // Recalcular progresso da OS (remover a parcela cancelada do progresso)
+    const ordem = ordensServicos.find((o) => o.id === parcela.ordemServicoId);
+    if (ordem) {
+      const parcelasDaOS = parcelasAtualizadas.filter(
+        (p) => p.ordemServicoId === ordem.id && p.status !== "cancelado"
+      );
+      const progressoTotal = parcelasDaOS.reduce(
+        (sum, p) => sum + p.progressoOS,
+        0
+      );
+
+      // Atualizar status e progresso da OS
+      setOrdensServicos(
+        ordensServicos.map((o) =>
+          o.id === ordem.id
+            ? {
+                ...o,
+                progresso: Math.min(progressoTotal, 100),
+                status:
+                  progressoTotal >= 100
+                    ? "finalizada"
+                    : progressoTotal > 0
+                    ? "nao_totalizada"
+                    : o.status,
+              }
+            : o
+        )
+      );
+    }
+
+    toast.success("Parcela cancelada com sucesso!");
   };
 
   const handleImportarOrdens = () => {
@@ -1631,9 +1838,8 @@ const OrdensServicos = () => {
     setExpandedOrdens(novosExpandidos);
   };
 
-  // Filtrar talhões com busca (otimizado com useMemo) - apenas da fazenda selecionada
+  // Filtrar talhões da fazenda selecionada (otimizado com useMemo)
   const talhoesFiltrados = useMemo(() => {
-    const termoLower = buscaTalhoes.toLowerCase().trim();
     const fazendaSelecionada = fazendas.find(
       (f) => f.id === novaOrdem.fazendaId
     );
@@ -1643,34 +1849,14 @@ const OrdensServicos = () => {
       return [];
     }
 
-    const talhoesDaFazenda = fazendaSelecionada.talhoes
+    return fazendaSelecionada.talhoes
       .filter((t) => t.tipo === "Talhão" && t.status === "Ativo")
       .map((talhao) => ({
         fazenda: fazendaSelecionada,
         talhao,
         key: `${fazendaSelecionada.id}-${talhao.id}`,
       }));
-
-    // Se não houver termo de busca, retornar todos os talhões da fazenda
-    if (!termoLower) {
-      return talhoesDaFazenda;
-    }
-
-    // Filtrar por termo de busca
-    return talhoesDaFazenda.filter((item) => {
-      const fazendaNome = item.fazenda.descricao.toLowerCase();
-      const talhaoObs = item.talhao.observacoes?.toLowerCase() || "";
-      const talhaoArea = item.talhao.area.toLowerCase();
-      const talhaoId = item.talhao.id.toLowerCase();
-
-      return (
-        fazendaNome.includes(termoLower) ||
-        talhaoObs.includes(termoLower) ||
-        talhaoArea.includes(termoLower) ||
-        talhaoId.includes(termoLower)
-      );
-    });
-  }, [buscaTalhoes, fazendas, novaOrdem.fazendaId]);
+  }, [fazendas, novaOrdem.fazendaId]);
 
   // Filtrar insumos com busca (otimizado com useMemo)
   const insumosFiltrados = useMemo(() => {
@@ -1716,13 +1902,201 @@ const OrdensServicos = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">
-          Ordens de Serviços
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Controle e acompanhamento das ordens de serviços
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">
+            Ordens de Serviços
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Controle e acompanhamento das ordens de serviços
+          </p>
+        </div>
+        <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="icon" className="mt-1">
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Status das Ordens de Serviços e Parcelas
+              </DialogTitle>
+              <DialogDescription>
+                Descrição completa dos status disponíveis no sistema
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 space-y-6">
+              {/* Tabela de Status da OS */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">
+                  Status da Ordem de Serviço (OS)
+                </h3>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Descrição</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          <Badge variant="outline">
+                            Aguardando informações
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          Quando os dados obrigatórios ainda não foram todos
+                          preenchidos
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          <Badge variant="outline">Pendente</Badge>
+                        </TableCell>
+                        <TableCell>
+                          Quando os dados obrigatórios foram preenchidos, mas
+                          nenhuma ação foi realizada
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          <Badge variant="secondary">Em Preparo</Badge>
+                        </TableCell>
+                        <TableCell>
+                          Quando o operador está realizando as configurações de
+                          movimentação para iniciar a execução, mas clicou em
+                          "salvar e continuar depois"
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          <Badge variant="destructive">Não totalizada</Badge>
+                        </TableCell>
+                        <TableCell>
+                          Quando pelo menos 1 parcela foi executada
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          <Badge variant="default" className="bg-success">
+                            Finalizada
+                          </Badge>
+                        </TableCell>
+                        <TableCell>Quando 100% da OS foi executada</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Tabela de Status da Parcela */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">
+                  Status da Parcela da OS
+                </h3>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Descrição</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          <Badge
+                            variant="default"
+                            className="bg-blue-500 text-white"
+                          >
+                            Na máquina
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          Quando o operador registrou a parcela, mas não a
+                          iniciou
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          <Badge
+                            variant="default"
+                            className="bg-primary text-white"
+                          >
+                            Em Produção
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          Quando está no processo de batida no smartcalda
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          <Badge
+                            variant="default"
+                            className="bg-green-500 text-white"
+                          >
+                            Processada
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          Quando a batida da parcela estiver concluída
+                          (informado pelo supervisório)
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          <Badge
+                            variant="default"
+                            className="bg-yellow-500 text-white"
+                          >
+                            Pausado
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          Quando a batida é pausada (informado pelo
+                          supervisório)
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          <Badge
+                            variant="default"
+                            className="bg-orange-500 text-white"
+                          >
+                            Bloqueado
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          Quando uma OS é iniciada, mas a Smart Calda já está
+                          ocupada. Neste caso, o CLP impede (bloqueia) a
+                          execução dessa parcela de receita
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          <Badge
+                            variant="default"
+                            className="bg-red-500 text-white"
+                          >
+                            Cancelado
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          Quando a produção da calda é cancelada pelo operador
+                          na tela de OS
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Estatísticas */}
@@ -1759,7 +2133,7 @@ const OrdensServicos = () => {
             <p className="text-2xl font-bold text-blue-500">
               {ordensServicos.filter((o) => o.status === "em_preparo").length}
             </p>
-            <p className="text-sm text-muted-foreground">Em preparo</p>
+            <p className="text-sm text-muted-foreground">Em Preparo</p>
           </CardContent>
         </Card>
       </div>
@@ -1796,7 +2170,7 @@ const OrdensServicos = () => {
                   Aguardando informações
                 </SelectItem>
                 <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="em_preparo">Em preparo</SelectItem>
+                <SelectItem value="em_preparo">Em Preparo</SelectItem>
                 <SelectItem value="nao_totalizada">Não totalizada</SelectItem>
                 <SelectItem value="finalizada">Finalizada</SelectItem>
               </SelectContent>
@@ -1924,13 +2298,13 @@ const OrdensServicos = () => {
               <DialogHeader>
                 <DialogTitle>
                   {ordemEditando
-                    ? "Editar Ordem de Serviços"
-                    : "Criar Nova Ordem de Serviços"}
+                    ? "Editar Ordem de Serviço"
+                    : "Criar Nova Ordem de Serviço"}
                 </DialogTitle>
                 <DialogDescription>
                   {ordemEditando
-                    ? "Atualize os dados da ordem de serviços"
-                    : "Preencha os dados da ordem de serviços"}
+                    ? "Atualize os dados da ordem de serviço"
+                    : "Preencha os dados da ordem de serviço"}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -2011,7 +2385,7 @@ const OrdensServicos = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2 col-span-2">
                     <Label htmlFor="responsavel">Responsável</Label>
                     <Select
                       value={novaOrdem.responsavelId}
@@ -2033,43 +2407,100 @@ const OrdensServicos = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fazenda">Seção (Fazenda) *</Label>
-                    <Select
-                      value={novaOrdem.fazendaId}
-                      onValueChange={(value) => {
-                        const fazenda = fazendas.find((f) => f.id === value);
-                        setNovaOrdem({
-                          ...novaOrdem,
-                          fazendaId: value,
-                          secao: fazenda?.descricao || "",
-                        });
-                        // Limpar talhões selecionados ao trocar fazenda
-                        setTalhoesSelecionados(new Set());
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a fazenda" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fazendas
-                          .filter((f) => !f.status || f.status === "Ativo")
-                          .map((f) => (
-                            <SelectItem key={f.id} value={f.id}>
-                              {f.descricao}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Seção é a mesma coisa que fazenda
-                    </p>
-                  </div>
                 </div>
+
+                {/* Seleção de Fazenda - Ocupa linha inteira */}
+                <div className="space-y-2">
+                  <Label htmlFor="fazenda">(Seção)Fazenda/Talhões</Label>
+                  <Select
+                    value={novaOrdem.fazendaId}
+                    onValueChange={(value) => {
+                      const fazenda = fazendas.find((f) => f.id === value);
+                      setNovaOrdem({
+                        ...novaOrdem,
+                        fazendaId: value,
+                        secao: fazenda?.descricao || "",
+                      });
+                      // Limpar talhões selecionados ao trocar fazenda
+                      setTalhoesSelecionados(new Set());
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a fazenda" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fazendas
+                        .filter((f) => !f.status || f.status === "Ativo")
+                        .map((f) => (
+                          <SelectItem key={f.id} value={f.id}>
+                            {f.descricao}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Seção é a mesma coisa que fazenda
+                  </p>
+                </div>
+
+                {/* Seleção de Talhões - Mostra apenas se fazenda estiver selecionada */}
+                {novaOrdem.fazendaId && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Talhões</Label>
+                      {talhoesSelecionados.size > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {talhoesSelecionados.size} selecionado(s)
+                        </span>
+                      )}
+                    </div>
+                    <div className="border rounded-lg p-2 max-h-80 overflow-y-auto">
+                      {talhoesFiltrados.length === 0 ? (
+                        <div className="text-center py-4 text-sm text-muted-foreground">
+                          Nenhum talhão encontrado
+                        </div>
+                      ) : (
+                        talhoesFiltrados.map((item) => {
+                          const isSelected = talhoesSelecionados.has(item.key);
+                          return (
+                            <div
+                              key={item.key}
+                              className="flex items-center space-x-2 py-2 px-2 hover:bg-muted/50 rounded transition-colors"
+                            >
+                              <Checkbox
+                                id={item.key}
+                                checked={isSelected}
+                                onCheckedChange={() =>
+                                  handleToggleTalhao(
+                                    item.fazenda.id,
+                                    item.talhao.id
+                                  )
+                                }
+                              />
+                              <Label
+                                htmlFor={item.key}
+                                className="text-sm font-normal cursor-pointer flex-1"
+                              >
+                                <span className="font-medium">
+                                  {item.fazenda.descricao}
+                                </span>
+                                {" - "}
+                                {item.talhao.observacoes ||
+                                  `Talhão ${item.talhao.id}`}
+                                {" ("}
+                                {item.talhao.area} ha)
+                              </Label>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="caldaHA">Calda/Ha</Label>
+                    <Label htmlFor="caldaHA">Calda/Ha (L)</Label>
                     <Input
                       id="caldaHA"
                       type="number"
@@ -2082,7 +2513,7 @@ const OrdensServicos = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="producao">Produção</Label>
+                    <Label htmlFor="producao">Área Total de Aplicação</Label>
                     <Input
                       id="producao"
                       type="number"
@@ -2114,68 +2545,6 @@ const OrdensServicos = () => {
                   </div>
                 </div>
 
-                {/* Seleção de Talhões */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Talhões</Label>
-                    {talhoesSelecionados.size > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {talhoesSelecionados.size} selecionado(s)
-                      </span>
-                    )}
-                  </div>
-                  <div className="relative mb-2">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar por fazenda, talhão ou área..."
-                      value={buscaTalhoes}
-                      onChange={(e) => setBuscaTalhoes(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <div className="border rounded-lg p-2 max-h-64 overflow-y-auto">
-                    {talhoesFiltrados.length === 0 ? (
-                      <div className="text-center py-4 text-sm text-muted-foreground">
-                        Nenhum talhão encontrado
-                      </div>
-                    ) : (
-                      talhoesFiltrados.map((item) => {
-                        const isSelected = talhoesSelecionados.has(item.key);
-                        return (
-                          <div
-                            key={item.key}
-                            className="flex items-center space-x-2 py-2 px-2 hover:bg-muted/50 rounded transition-colors"
-                          >
-                            <Checkbox
-                              id={item.key}
-                              checked={isSelected}
-                              onCheckedChange={() =>
-                                handleToggleTalhao(
-                                  item.fazenda.id,
-                                  item.talhao.id
-                                )
-                              }
-                            />
-                            <Label
-                              htmlFor={item.key}
-                              className="text-sm font-normal cursor-pointer flex-1"
-                            >
-                              <span className="font-medium">
-                                {item.fazenda.descricao}
-                              </span>
-                              {" - "}
-                              {item.talhao.observacoes ||
-                                `Talhão ${item.talhao.id}`}
-                              {" ("}
-                              {item.talhao.area} ha)
-                            </Label>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-
                 {/* Seleção de Insumos */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -2186,33 +2555,16 @@ const OrdensServicos = () => {
                       </span>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                    <div className="relative md:col-span-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="relative md:col-span-2 w-full">
                       <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="Buscar por código, nome, grupo, classe ou lote..."
+                        placeholder="Buscar por código, nome, grupo, classe ou lote."
                         value={buscaInsumos}
                         onChange={(e) => setBuscaInsumos(e.target.value)}
                         className="pl-10"
                       />
                     </div>
-                    <Select
-                      value={filtroTipoEstoqueInsumos}
-                      onValueChange={(
-                        value: "TODOS" | "TÉCNICO" | "FRACIONÁRIO"
-                      ) => setFiltroTipoEstoqueInsumos(value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="TODOS">Todos os estoques</SelectItem>
-                        <SelectItem value="TÉCNICO">Estoque Técnico</SelectItem>
-                        <SelectItem value="FRACIONÁRIO">
-                          Estoque Fracionário
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                   <div className="border rounded-lg p-2 max-h-64 overflow-y-auto space-y-2">
                     {insumosFiltrados.length === 0 ? (
@@ -2340,7 +2692,6 @@ const OrdensServicos = () => {
                     });
                     setTalhoesSelecionados(new Set());
                     setInsumosSelecionados(new Map());
-                    setBuscaTalhoes("");
                     setBuscaInsumos("");
                     setFiltroTipoEstoqueInsumos("TODOS");
                   }}
@@ -2528,8 +2879,8 @@ const OrdensServicos = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleIniciarOrdem(ordem.id)}
-                              title="Iniciar Ordem"
+                              onClick={() => handleParametrizarOrdem(ordem.id)}
+                              title="Parametrizar Calda"
                             >
                               <Play className="h-4 w-4" />
                             </Button>
@@ -2539,7 +2890,7 @@ const OrdensServicos = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleIniciarOrdem(ordem.id)}
+                              onClick={() => handleParametrizarOrdem(ordem.id)}
                               title="Parametrizar Parcela"
                             >
                               <Play className="h-4 w-4" />
@@ -2552,61 +2903,42 @@ const OrdensServicos = () => {
                     {/* Detalhes Expandidos */}
                     {isExpanded && (
                       <div className="p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-muted-foreground">
-                              Seção
-                            </Label>
-                            <p className="text-sm font-medium">
-                              {ordem.secao || "-"}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground">
-                              Calda/Ha
-                            </Label>
-                            <p className="text-sm font-medium">
-                              {ordem.caldaHA || "-"}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground">
-                              Status
-                            </Label>
-                            <div className="flex items-center gap-2 mt-1">
-                              {getStatusIcon(ordem.status)}
-                              <Badge variant={getStatusBadge(ordem.status)}>
-                                {getStatusLabel(ordem.status)}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="md:col-span-2">
-                            <Label className="text-muted-foreground">
-                              Iniciado em / Finalizado em
-                            </Label>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <span className="text-sm font-medium">
-                                Iniciado:{" "}
-                                {ordem.iniciado ? (
-                                  ordem.iniciado
-                                ) : (
-                                  <span className="text-muted-foreground italic">
-                                    Ainda não iniciado
-                                  </span>
-                                )}
+                        <div>
+                          <Label className="text-muted-foreground">
+                            Período de execução da Calda:
+                          </Label>
+                          <div className="flex items-center gap-2 mt-1 flex-nowrap">
+                            {!ordem.iniciado ? (
+                              <span className="text-sm font-medium text-muted-foreground italic whitespace-nowrap">
+                                Não iniciada.
                               </span>
-                              <span className="text-muted-foreground">•</span>
-                              <span className="text-sm font-medium">
-                                Finalizado:{" "}
-                                {ordem.previsaoTermino ? (
-                                  ordem.previsaoTermino
-                                ) : (
-                                  <span className="text-muted-foreground italic">
-                                    Ainda não finalizado
-                                  </span>
+                            ) : (
+                              <div className="flex items-center gap-2 flex-nowrap">
+                                <span className="text-sm font-medium whitespace-nowrap">
+                                  Iniciada em: {ordem.iniciado}
+                                </span>
+                                {!ordem.previsaoTermino && (
+                                  <>
+                                    <span className="text-muted-foreground">
+                                      •
+                                    </span>
+                                    <span className="text-sm font-medium text-muted-foreground italic whitespace-nowrap">
+                                      Não finalizada
+                                    </span>
+                                  </>
                                 )}
-                              </span>
-                            </div>
+                                {ordem.previsaoTermino && (
+                                  <>
+                                    <span className="text-muted-foreground">
+                                      •
+                                    </span>
+                                    <span className="text-sm font-medium whitespace-nowrap">
+                                      Finalizada em: {ordem.previsaoTermino}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -2629,6 +2961,17 @@ const OrdensServicos = () => {
                               0
                             );
 
+                            // Obter a primeira fazenda dos talhões para exibir no título
+                            const primeiraFazendaId =
+                              ordem.talhoes[0]?.fazendaId;
+                            const primeiraFazenda = fazendas.find(
+                              (f) => f.id === primeiraFazendaId
+                            );
+                            const codigoExterno =
+                              primeiraFazenda?.codigoExterno || "";
+                            const nomeFazenda =
+                              primeiraFazenda?.descricao || "";
+
                             return (
                               <div className="mt-4 border rounded-lg">
                                 <div
@@ -2650,7 +2993,11 @@ const OrdensServicos = () => {
                                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                                     )}
                                     <Label className="text-muted-foreground cursor-pointer">
-                                      Talhões ({ordem.talhoes.length})
+                                      {codigoExterno
+                                        ? `${codigoExterno}-${nomeFazenda}: Talhões (${ordem.talhoes.length})`
+                                        : nomeFazenda
+                                        ? `${nomeFazenda}: Talhões (${ordem.talhoes.length})`
+                                        : `Talhões (${ordem.talhoes.length})`}
                                     </Label>
                                   </div>
                                   <div className="flex items-center gap-4">
@@ -2677,9 +3024,6 @@ const OrdensServicos = () => {
                                           <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1">
                                               <p className="text-sm font-medium">
-                                                {fazenda?.descricao ||
-                                                  "Fazenda não encontrada"}{" "}
-                                                -{" "}
                                                 {talhaoObj?.observacoes ||
                                                   `Talhão ${talhao.talhaoId}`}
                                               </p>
@@ -2837,43 +3181,94 @@ const OrdensServicos = () => {
                           );
 
                           const getStatusParcelaLabel = (
-                            status: "pendente" | "em_processo" | "finalizada"
+                            status:
+                              | "na_maquina"
+                              | "em_producao"
+                              | "processada"
+                              | "pausado"
+                              | "bloqueado"
+                              | "cancelado"
                           ) => {
                             switch (status) {
-                              case "pendente":
-                                return "Pendente";
-                              case "em_processo":
-                                return "Em Processo";
-                              case "finalizada":
-                                return "Finalizada";
+                              case "na_maquina":
+                                return "Na máquina";
+                              case "em_producao":
+                                return "Em Produção";
+                              case "processada":
+                                return "Processada";
+                              case "pausado":
+                                return "Pausado";
+                              case "bloqueado":
+                                return "Bloqueado";
+                              case "cancelado":
+                                return "Cancelado";
                               default:
                                 return status;
                             }
                           };
 
                           const getStatusParcelaBadge = (
-                            status: "pendente" | "em_processo" | "finalizada"
+                            status:
+                              | "na_maquina"
+                              | "em_producao"
+                              | "processada"
+                              | "pausado"
+                              | "bloqueado"
+                              | "cancelado"
                           ) => {
                             switch (status) {
-                              case "pendente":
-                                return (
-                                  <Badge variant="outline" className="text-xs">
-                                    Pendente
-                                  </Badge>
-                                );
-                              case "em_processo":
-                                return (
-                                  <Badge variant="default" className="text-xs">
-                                    Em Processo
-                                  </Badge>
-                                );
-                              case "finalizada":
+                              case "na_maquina":
                                 return (
                                   <Badge
                                     variant="default"
-                                    className="text-xs bg-success"
+                                    className="text-xs bg-blue-500 hover:bg-blue-600 text-white"
                                   >
-                                    Finalizada
+                                    Na máquina
+                                  </Badge>
+                                );
+                              case "em_producao":
+                                return (
+                                  <Badge
+                                    variant="default"
+                                    className="text-xs bg-primary hover:bg-primary/90 text-white"
+                                  >
+                                    Em Produção
+                                  </Badge>
+                                );
+                              case "processada":
+                                return (
+                                  <Badge
+                                    variant="default"
+                                    className="text-xs bg-green-500 hover:bg-green-600 text-white"
+                                  >
+                                    Processada
+                                  </Badge>
+                                );
+                              case "pausado":
+                                return (
+                                  <Badge
+                                    variant="default"
+                                    className="text-xs bg-yellow-500 hover:bg-yellow-600 text-white"
+                                  >
+                                    Pausado
+                                  </Badge>
+                                );
+                              case "bloqueado":
+                                return (
+                                  <Badge
+                                    variant="default"
+                                    className="text-xs bg-orange-500 hover:bg-orange-600 text-white"
+                                  >
+                                    Bloqueado
+                                  </Badge>
+                                );
+                              case "cancelado":
+                                return (
+                                  <Badge
+                                    variant="default"
+                                    className="text-xs bg-red-500 hover:bg-red-600 text-white"
+                                  >
+                                    Cancelado
                                   </Badge>
                                 );
                               default:
@@ -2949,9 +3344,9 @@ const OrdensServicos = () => {
                                               )}
                                               % da calda
                                             </span>
-                                            {/* Botão Supervisório - apenas para parcelas em processo */}
+                                            {/* Botões de ação - apenas para parcelas em produção */}
                                             {parcela.status ===
-                                              "em_processo" && (
+                                              "em_producao" && (
                                               <Button
                                                 variant="default"
                                                 size="sm"
@@ -2964,6 +3359,22 @@ const OrdensServicos = () => {
                                                 className="bg-primary hover:bg-primary/90"
                                               >
                                                 <Activity className="h-4 w-4" />
+                                              </Button>
+                                            )}
+                                            {/* Botão Cancelar - apenas para parcelas na máquina */}
+                                            {parcela.status ===
+                                              "na_maquina" && (
+                                              <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() =>
+                                                  handleCancelarParcela(
+                                                    parcela.id
+                                                  )
+                                                }
+                                                title="Cancelar Parcela"
+                                              >
+                                                <X className="h-4 w-4" />
                                               </Button>
                                             )}
                                           </div>
@@ -3088,7 +3499,22 @@ const OrdensServicos = () => {
                           return (
                             <div className="mt-4 space-y-4">
                               {/* Cards de Cálculos */}
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <Card>
+                                  <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium">
+                                      Calda/Ha
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <p className="text-2xl font-bold">
+                                      {ordem.caldaHA || "0.00"}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Litros por hectare
+                                    </p>
+                                  </CardContent>
+                                </Card>
                                 <Card>
                                   <CardHeader className="pb-2">
                                     <CardTitle className="text-sm font-medium">
@@ -3294,7 +3720,7 @@ const OrdensServicos = () => {
               <>
                 {/* Informações da OS */}
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <Label className="text-muted-foreground">
                         Número da OS
@@ -3309,28 +3735,80 @@ const OrdensServicos = () => {
                         {ordemParametrizando.caldaHA} L
                       </p>
                     </div>
+                    <div>
+                      <Label className="text-muted-foreground">
+                        Área Total
+                      </Label>
+                      <p className="font-medium">
+                        {(() => {
+                          // Calcular área total dos talhões
+                          const areaTotal = ordemParametrizando.talhoes.reduce(
+                            (sum, talhao) => {
+                              const fazenda = fazendas.find(
+                                (f) => f.id === talhao.fazendaId
+                              );
+                              const talhaoObj = fazenda?.talhoes.find(
+                                (t) => t.id === talhao.talhaoId
+                              );
+                              return sum + (Number(talhaoObj?.area) || 0);
+                            },
+                            0
+                          );
+                          return areaTotal.toFixed(2);
+                        })()}{" "}
+                        ha
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">
+                        Total da Calda
+                      </Label>
+                      <p className="font-medium">
+                        {(() => {
+                          // Calcular área total dos talhões
+                          const areaTotal = ordemParametrizando.talhoes.reduce(
+                            (sum, talhao) => {
+                              const fazenda = fazendas.find(
+                                (f) => f.id === talhao.fazendaId
+                              );
+                              const talhaoObj = fazenda?.talhoes.find(
+                                (t) => t.id === talhao.talhaoId
+                              );
+                              return sum + (Number(talhaoObj?.area) || 0);
+                            },
+                            0
+                          );
+                          // Calcular total de calda (Calda/Ha × área total)
+                          const caldaHA =
+                            Number(ordemParametrizando.caldaHA) || 0;
+                          const totalCalda = caldaHA * areaTotal;
+                          return totalCalda.toFixed(2);
+                        })()}{" "}
+                        L
+                      </p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Parcelas Pendentes */}
                 {(() => {
-                  const parcelasPendentes = parcelasCalda.filter(
+                  const parcelasNaMaquina = parcelasCalda.filter(
                     (p) =>
                       p.ordemServicoId === ordemParametrizando.id &&
-                      p.status === "pendente"
+                      p.status === "na_maquina"
                   );
 
-                  if (parcelasPendentes.length === 0 && !parcelaEditando) {
+                  if (parcelasNaMaquina.length === 0 && !parcelaEditando) {
                     return null;
                   }
 
                   return (
                     <div className="space-y-3">
                       <Label className="text-base font-semibold">
-                        Parcelas Pendentes
+                        Parcelas Na Máquina
                       </Label>
                       <div className="border rounded-lg p-3 space-y-2">
-                        {parcelasPendentes.map((parcela) => {
+                        {parcelasNaMaquina.map((parcela) => {
                           const caminhao = caminhoes.find(
                             (c) => c.id === parcela.caminhaoId
                           );
@@ -3407,12 +3885,14 @@ const OrdensServicos = () => {
                                   variant="default"
                                   size="sm"
                                   onClick={() =>
-                                    handleIniciarParcelaExistente(parcela.id)
+                                    handleEnviarParcelaAoSupervisorio(
+                                      parcela.id
+                                    )
                                   }
                                   disabled={!!parcelaEditando}
                                 >
                                   <Play className="h-4 w-4 mr-2" />
-                                  Iniciar
+                                  Enviar ao Supervisorio
                                 </Button>
                               </div>
                             </div>
@@ -3442,129 +3922,112 @@ const OrdensServicos = () => {
                   </div>
                 )}
 
-                {/* Seleção de Smart Calda - Mostra se não há parcelas pendentes OU se está editando */}
-                {(() => {
-                  const parcelasPendentes = parcelasCalda.filter(
-                    (p) =>
-                      p.ordemServicoId === ordemParametrizando.id &&
-                      p.status === "pendente"
-                  );
-                  return parcelasPendentes.length === 0 || parcelaEditando;
-                })() && (
-                  <div className="space-y-2">
-                    <Label>
-                      {parcelaEditando ? "Editar Smart Calda" : "Smart Calda"} *
-                    </Label>
-                    <Select
-                      value={smartCaldaSelecionada}
-                      onValueChange={setSmartCaldaSelecionada}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a Smart Calda" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {smartCaldas
-                          .filter((sc) => sc.status === "online")
-                          .map((sc) => (
-                            <SelectItem key={sc.id} value={sc.id.toString()}>
-                              {sc.nome} - {sc.numeroSerie}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                {/* Seleção de Smart Calda - Mostra se OS não está finalizada e não está editando */}
+                {!parcelaEditando &&
+                  ordemParametrizando.status !== "finalizada" && (
+                    <div className="space-y-2">
+                      <Label>
+                        {parcelaEditando ? "Editar Smart Calda" : "Smart Calda"}{" "}
+                        *
+                      </Label>
+                      <Select
+                        value={smartCaldaSelecionada}
+                        onValueChange={setSmartCaldaSelecionada}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a Smart Calda" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {smartCaldas
+                            .filter((sc) => sc.status === "online")
+                            .map((sc) => (
+                              <SelectItem key={sc.id} value={sc.id.toString()}>
+                                {sc.nome} - {sc.numeroSerie}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-                {/* Seleção de Caminhão - Mostra se não há parcelas pendentes OU se está editando */}
-                {(() => {
-                  const parcelasPendentes = parcelasCalda.filter(
-                    (p) =>
-                      p.ordemServicoId === ordemParametrizando.id &&
-                      p.status === "pendente"
-                  );
-                  return parcelasPendentes.length === 0 || parcelaEditando;
-                })() && (
-                  <div className="space-y-2">
-                    <Label>
-                      {parcelaEditando ? "Editar Caminhão" : "Caminhão"} *
-                    </Label>
-                    <Select
-                      value={caminhaoSelecionado}
-                      onValueChange={(value) => {
-                        setCaminhaoSelecionado(value);
-                        const caminhao = caminhoes.find((c) => c.id === value);
-                        if (caminhao) {
-                          setCapacidadeEditada(caminhao.volume);
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o caminhão" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {caminhoes
-                          .filter((c) => c.status === "Ativo")
-                          .map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.placa} - {c.modelo} ({c.volume}L)
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Capacidade Editável */}
-                {(() => {
-                  const parcelasPendentes = parcelasCalda.filter(
-                    (p) =>
-                      p.ordemServicoId === ordemParametrizando.id &&
-                      p.status === "pendente"
-                  );
-                  return (
-                    (parcelasPendentes.length === 0 || parcelaEditando) &&
-                    caminhaoSelecionado
-                  );
-                })() && (
-                  <div className="space-y-2">
-                    <Label>Capacidade do Caminhão (L) *</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={capacidadeEditada}
-                        onChange={(e) => {
-                          const valor = e.target.value;
+                {/* Seleção de Caminhão - Mostra se OS não está finalizada e não está editando */}
+                {!parcelaEditando &&
+                  ordemParametrizando.status !== "finalizada" && (
+                    <div className="space-y-2">
+                      <Label>
+                        {parcelaEditando ? "Editar Caminhão" : "Caminhão"} *
+                      </Label>
+                      <Select
+                        value={caminhaoSelecionado}
+                        onValueChange={(value) => {
+                          setCaminhaoSelecionado(value);
                           const caminhao = caminhoes.find(
-                            (c) => c.id === caminhaoSelecionado
+                            (c) => c.id === value
                           );
                           if (caminhao) {
-                            const capacidadeOriginal =
-                              Number(caminhao.volume) || 0;
-                            const valorNum = Number(valor) || 0;
-                            if (valorNum > capacidadeOriginal) {
-                              toast.error(
-                                `A capacidade não pode ser maior que ${capacidadeOriginal}L (capacidade original do caminhão)`
-                              );
-                              return;
-                            }
+                            setCapacidadeEditada(caminhao.volume);
                           }
-                          setCapacidadeEditada(valor);
                         }}
-                        placeholder="Capacidade"
-                        min={0}
-                        step="0.01"
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        Capacidade original:{" "}
-                        {
-                          caminhoes.find((c) => c.id === caminhaoSelecionado)
-                            ?.volume
-                        }
-                        L
-                      </span>
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o caminhão" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {caminhoes
+                            .filter((c) => c.status === "Ativo")
+                            .map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.placa} - {c.modelo} ({c.volume}L)
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                {/* Capacidade Editável - Mostra se não está editando e há caminhão selecionado */}
+                {!parcelaEditando &&
+                  ordemParametrizando.status !== "finalizada" &&
+                  caminhaoSelecionado && (
+                    <div className="space-y-2">
+                      <Label>Capacidade do Caminhão (L) *</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={capacidadeEditada}
+                          onChange={(e) => {
+                            const valor = e.target.value;
+                            const caminhao = caminhoes.find(
+                              (c) => c.id === caminhaoSelecionado
+                            );
+                            if (caminhao) {
+                              const capacidadeOriginal =
+                                Number(caminhao.volume) || 0;
+                              const valorNum = Number(valor) || 0;
+                              if (valorNum > capacidadeOriginal) {
+                                toast.error(
+                                  `A capacidade não pode ser maior que ${capacidadeOriginal}L (capacidade original do caminhão)`
+                                );
+                                return;
+                              }
+                            }
+                            setCapacidadeEditada(valor);
+                          }}
+                          placeholder="Capacidade"
+                          min={0}
+                          step="0.01"
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          Capacidade original:{" "}
+                          {
+                            caminhoes.find((c) => c.id === caminhaoSelecionado)
+                              ?.volume
+                          }
+                          L
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                 {/* Proporção de Calda Calculada */}
                 {proporcaoCalda > 0 && (
@@ -3578,8 +4041,8 @@ const OrdensServicos = () => {
                           {proporcaoCalda.toFixed(2)}%
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Esta parcela representa {proporcaoCalda.toFixed(2)}%
-                          da calda total
+                          Essa parcela representa {proporcaoCalda.toFixed(2)}%
+                          do total da calda
                         </p>
                       </div>
                     </div>
@@ -3599,14 +4062,26 @@ const OrdensServicos = () => {
                           );
                           const origemAtual =
                             insumosMovimentacao.get(idEstoque)?.origem;
+                          const capacidadeEmbalagem =
+                            material?.capacidadeEmbalagem || 0;
+                          const unidade = insumoEstoque?.unidade || "L";
+
+                          // Calcular movimentações detalhadas
+                          const movimentacoes = calcularMovimentacoesDetalhadas(
+                            dados.quantidade,
+                            capacidadeEmbalagem,
+                            origemAtual || "PRIMÁRIO",
+                            unidade
+                          );
 
                           return (
                             <div
                               key={idEstoque}
-                              className="flex items-center justify-between p-3 border rounded-lg bg-background"
+                              className="space-y-2 p-3 border rounded-lg bg-background"
                             >
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
+                              {/* Cabeçalho do insumo */}
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
                                   <p className="text-sm font-medium">
                                     {material?.nomeComercial ||
                                       `Item ${dados.idItem}`}
@@ -3615,18 +4090,28 @@ const OrdensServicos = () => {
                                     {material?.codigo || dados.idItem}
                                   </Badge>
                                 </div>
-                                <p className="text-xs text-muted-foreground">
-                                  Origem: {origemAtual} → Destino: TÉCNICO
-                                </p>
+                                <div className="text-right">
+                                  <p className="text-sm font-medium">
+                                    {dados.quantidade.toFixed(2)} {unidade}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Necessário para esta parcela
+                                  </p>
+                                </div>
                               </div>
-                              <div className="text-right ml-4">
-                                <p className="text-sm font-medium">
-                                  {dados.quantidade.toFixed(2)}{" "}
-                                  {insumoEstoque?.unidade || "L"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Necessário para esta parcela
-                                </p>
+
+                              {/* Lista de movimentações detalhadas */}
+                              <div className="space-y-1">
+                                {movimentacoes.map((mov, index) => (
+                                  <p
+                                    key={index}
+                                    className="text-xs text-muted-foreground"
+                                  >
+                                    Origem: {mov.origem} → Destino:{" "}
+                                    {mov.destino} ({mov.quantidade.toFixed(2)}{" "}
+                                    {mov.unidade})
+                                  </p>
+                                ))}
                               </div>
                             </div>
                           );
@@ -3635,7 +4120,7 @@ const OrdensServicos = () => {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       * A movimentação será registrada automaticamente ao salvar
-                      ou iniciar
+                      ou enviar ao supervisorio
                     </p>
                   </div>
                 )}
@@ -3672,19 +4157,23 @@ const OrdensServicos = () => {
                 <Button
                   variant="secondary"
                   onClick={handleSalvarContinuarDepois}
-                  disabled={!caminhaoSelecionado || !capacidadeEditada}
-                >
-                  Salvar e continuar depois
-                </Button>
-                <Button
-                  onClick={handleIniciarParcela}
                   disabled={
                     !smartCaldaSelecionada ||
                     !caminhaoSelecionado ||
                     !capacidadeEditada
                   }
                 >
-                  Iniciar
+                  Salvar e continuar depois
+                </Button>
+                <Button
+                  onClick={handleEnviarAoSupervisorio}
+                  disabled={
+                    !smartCaldaSelecionada ||
+                    !caminhaoSelecionado ||
+                    !capacidadeEditada
+                  }
+                >
+                  Enviar ao Supervisorio
                 </Button>
               </>
             )}
