@@ -3105,7 +3105,8 @@ const OrdensServicos = () => {
                                   Iniciada em:{" "}
                                   {formatarDataHora(ordem.iniciado)}
                                 </span>
-                                {!ordem.previsaoTermino && (
+                                {(!ordem.previsaoTermino ||
+                                  ordem.progresso < 100) && (
                                   <>
                                     <span className="text-muted-foreground">
                                       •
@@ -3115,17 +3116,20 @@ const OrdensServicos = () => {
                                     </span>
                                   </>
                                 )}
-                                {ordem.previsaoTermino && (
-                                  <>
-                                    <span className="text-muted-foreground">
-                                      •
-                                    </span>
-                                    <span className="text-sm font-medium whitespace-nowrap">
-                                      Finalizada em:{" "}
-                                      {formatarDataHora(ordem.previsaoTermino)}
-                                    </span>
-                                  </>
-                                )}
+                                {ordem.previsaoTermino &&
+                                  ordem.progresso >= 100 && (
+                                    <>
+                                      <span className="text-muted-foreground">
+                                        •
+                                      </span>
+                                      <span className="text-sm font-medium whitespace-nowrap">
+                                        Finalizada em:{" "}
+                                        {formatarDataHora(
+                                          ordem.previsaoTermino
+                                        )}
+                                      </span>
+                                    </>
+                                  )}
                               </div>
                             )}
                           </div>
