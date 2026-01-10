@@ -39,6 +39,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Plus,
   Search,
   FileText,
@@ -869,6 +874,10 @@ const OrdensServicos = () => {
   const [filtroTipoEstoqueInsumos, setFiltroTipoEstoqueInsumos] = useState<
     "TODOS" | "TÉCNICO" | "FRACIONÁRIO"
   >("TODOS");
+
+  // Estados para controlar expansão das seções
+  const [talhoesExpanded, setTalhoesExpanded] = useState(false);
+  const [insumosExpanded, setInsumosExpanded] = useState(false);
 
   // Dados simulados das ordens de serviços
   const [ordensServicos, setOrdensServicos] = useState<OrdemServico[]>([
@@ -2426,14 +2435,27 @@ const OrdensServicos = () => {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a fazenda" />
+                      <SelectValue placeholder="Selecione a fazenda">
+                        {novaOrdem.fazendaId
+                          ? (() => {
+                              const fazenda = fazendas.find(
+                                (f) => f.id === novaOrdem.fazendaId
+                              );
+                              return fazenda?.codigoExterno
+                                ? `${fazenda.codigoExterno} - ${fazenda.descricao}`
+                                : fazenda?.descricao || "";
+                            })()
+                          : "Selecione a fazenda"}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {fazendas
                         .filter((f) => !f.status || f.status === "Ativo")
                         .map((f) => (
                           <SelectItem key={f.id} value={f.id}>
-                            {f.descricao}
+                            {f.codigoExterno
+                              ? `${f.codigoExterno} - ${f.descricao}`
+                              : f.descricao}
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -2445,57 +2467,121 @@ const OrdensServicos = () => {
 
                 {/* Seleção de Talhões - Mostra apenas se fazenda estiver selecionada */}
                 {novaOrdem.fazendaId && (
-                  <div className="space-y-2">
+                  <Collapsible
+                    open={talhoesExpanded}
+                    onOpenChange={setTalhoesExpanded}
+                    className="space-y-2"
+                  >
                     <div className="flex items-center justify-between">
                       <Label>Talhões</Label>
-                      {talhoesSelecionados.size > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          {talhoesSelecionados.size} selecionado(s)
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {talhoesSelecionados.size > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {talhoesSelecionados.size} selecionado(s)
+                          </span>
+                        )}
+                        <CollapsibleTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            {talhoesExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </CollapsibleTrigger>
+                      </div>
                     </div>
-                    <div className="border rounded-lg p-2 max-h-80 overflow-y-auto">
-                      {talhoesFiltrados.length === 0 ? (
-                        <div className="text-center py-4 text-sm text-muted-foreground">
-                          Nenhum talhão encontrado
-                        </div>
-                      ) : (
-                        talhoesFiltrados.map((item) => {
-                          const isSelected = talhoesSelecionados.has(item.key);
-                          return (
-                            <div
-                              key={item.key}
-                              className="flex items-center space-x-2 py-2 px-2 hover:bg-muted/50 rounded transition-colors"
-                            >
-                              <Checkbox
-                                id={item.key}
-                                checked={isSelected}
-                                onCheckedChange={() =>
-                                  handleToggleTalhao(
-                                    item.fazenda.id,
-                                    item.talhao.id
-                                  )
-                                }
-                              />
-                              <Label
-                                htmlFor={item.key}
-                                className="text-sm font-normal cursor-pointer flex-1"
+
+                    {/* Lista de Talhões Selecionados */}
+                    {talhoesSelecionados.size > 0 && (
+                      <div className="border rounded-lg p-3 bg-muted/30">
+                        <p className="text-sm font-medium mb-2">
+                          Talhões Selecionados:
+                        </p>
+                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                          {Array.from(talhoesSelecionados).map((key) => {
+                            const [fazendaId, talhaoId] = key.split("-");
+                            const fazenda = fazendas.find(
+                              (f) => f.id === fazendaId
+                            );
+                            const talhao = fazenda?.talhoes.find(
+                              (t) => t.id === talhaoId
+                            );
+                            if (!talhao) return null;
+                            return (
+                              <div
+                                key={key}
+                                className="flex items-center justify-between text-sm py-1 px-2 bg-background rounded"
                               >
-                                <span className="font-medium">
-                                  {item.fazenda.descricao}
+                                <span>
+                                  {talhao.observacoes || `Talhão ${talhao.id}`}{" "}
+                                  <span className="text-muted-foreground">
+                                    ({talhao.area} ha)
+                                  </span>
                                 </span>
-                                {" - "}
-                                {item.talhao.observacoes ||
-                                  `Talhão ${item.talhao.id}`}
-                                {" ("}
-                                {item.talhao.area} ha)
-                              </Label>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                  onClick={() =>
+                                    handleToggleTalhao(fazendaId, talhaoId)
+                                  }
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <CollapsibleContent>
+                      <div className="border rounded-lg p-2 max-h-80 overflow-y-auto">
+                        {talhoesFiltrados.length === 0 ? (
+                          <div className="text-center py-4 text-sm text-muted-foreground">
+                            Nenhum talhão encontrado
+                          </div>
+                        ) : (
+                          talhoesFiltrados.map((item) => {
+                            const isSelected = talhoesSelecionados.has(
+                              item.key
+                            );
+                            return (
+                              <div
+                                key={item.key}
+                                className="flex items-center space-x-2 py-2 px-2 hover:bg-muted/50 rounded transition-colors"
+                              >
+                                <Checkbox
+                                  id={item.key}
+                                  checked={isSelected}
+                                  onCheckedChange={() =>
+                                    handleToggleTalhao(
+                                      item.fazenda.id,
+                                      item.talhao.id
+                                    )
+                                  }
+                                />
+                                <Label
+                                  htmlFor={item.key}
+                                  className="text-sm font-normal cursor-pointer flex-1"
+                                >
+                                  {item.talhao.observacoes ||
+                                    `Talhão ${item.talhao.id}`}
+                                  {" ("}
+                                  {item.talhao.area} ha)
+                                </Label>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 )}
 
                 <div className="grid grid-cols-2 gap-4">
@@ -2546,114 +2632,186 @@ const OrdensServicos = () => {
                 </div>
 
                 {/* Seleção de Insumos */}
-                <div className="space-y-2">
+                <Collapsible
+                  open={insumosExpanded}
+                  onOpenChange={setInsumosExpanded}
+                  className="space-y-2"
+                >
                   <div className="flex items-center justify-between">
                     <Label>Insumos</Label>
-                    {insumosSelecionados.size > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {insumosSelecionados.size} selecionado(s)
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div className="relative md:col-span-2 w-full">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Buscar por código, nome, grupo, classe ou lote."
-                        value={buscaInsumos}
-                        onChange={(e) => setBuscaInsumos(e.target.value)}
-                        className="pl-10"
-                      />
+                    <div className="flex items-center gap-2">
+                      {insumosSelecionados.size > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {insumosSelecionados.size} selecionado(s)
+                        </span>
+                      )}
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          {insumosExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
                     </div>
                   </div>
-                  <div className="border rounded-lg p-2 max-h-64 overflow-y-auto space-y-2">
-                    {insumosFiltrados.length === 0 ? (
-                      <div className="text-center py-4 text-sm text-muted-foreground">
-                        Nenhum insumo encontrado
-                      </div>
-                    ) : (
-                      insumosFiltrados.map((insumo) => {
-                        const material = materiaisAgricolas[insumo.idItem];
-                        const categoria = material?.categoriaId
-                          ? categorias[material.categoriaId]
-                          : null;
-                        const isSelected = insumosSelecionados.has(
-                          insumo.idEstoque
-                        );
-                        const dadosInsumo = insumosSelecionados.get(
-                          insumo.idEstoque
-                        ) || {
-                          idItem: insumo.idItem,
-                          doseHA: 0,
-                        };
 
-                        return (
-                          <div
-                            key={insumo.idEstoque}
-                            className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded transition-colors"
-                          >
-                            <Checkbox
-                              id={`insumo-${insumo.idEstoque}`}
-                              checked={isSelected}
-                              onCheckedChange={() =>
-                                handleToggleInsumo(
-                                  insumo.idEstoque,
-                                  insumo.idItem
-                                )
-                              }
-                            />
-                            <Label
-                              htmlFor={`insumo-${insumo.idEstoque}`}
-                              className="text-sm font-normal cursor-pointer flex-1"
-                            >
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium">
-                                  {material?.nomeComercial ||
-                                    `Item ${insumo.idItem}`}
-                                </span>
-                                <Badge variant="outline" className="text-xs">
-                                  {material?.codigo || insumo.idItem}
-                                </Badge>
-                                <Badge variant="secondary" className="text-xs">
-                                  {insumo.tipoEstoque}
-                                </Badge>
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {categoria?.descricaoResumida ||
-                                  "Sem descrição"}{" "}
-                                • Lote: {insumo.nLote} • Disponível:{" "}
-                                {insumo.saldoDispon} {insumo.unidade}
-                              </div>
-                            </Label>
-                            {isSelected && (
-                              <div className="flex items-center gap-2 ml-2">
-                                <Input
-                                  type="number"
-                                  placeholder="Dose/Ha"
-                                  value={dadosInsumo.doseHA}
-                                  onChange={(e) =>
-                                    handleDoseHAInsumo(
-                                      insumo.idEstoque,
-                                      insumo.idItem,
-                                      parseFloat(e.target.value) || 0
-                                    )
+                  {/* Lista de Insumos Selecionados */}
+                  {insumosSelecionados.size > 0 && (
+                    <div className="border rounded-lg p-3 bg-muted/30">
+                      <p className="text-sm font-medium mb-2">
+                        Insumos Selecionados:
+                      </p>
+                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                        {Array.from(insumosSelecionados.entries()).map(
+                          ([idEstoque, dados]) => {
+                            const insumo = insumos.find(
+                              (i) => i.idEstoque === idEstoque
+                            );
+                            if (!insumo) return null;
+                            const material = materiaisAgricolas[insumo.idItem];
+                            return (
+                              <div
+                                key={idEstoque}
+                                className="flex items-center justify-between text-sm py-1 px-2 bg-background rounded"
+                              >
+                                <div className="flex-1">
+                                  <span className="font-medium">
+                                    {material?.nomeComercial ||
+                                      `Item ${insumo.idItem}`}
+                                  </span>
+                                  <span className="text-muted-foreground ml-2">
+                                    • Dose/Ha: {dados.doseHA.toFixed(2)}{" "}
+                                    {insumo.unidade}
+                                  </span>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                  onClick={() =>
+                                    handleToggleInsumo(idEstoque, dados.idItem)
                                   }
-                                  className="w-24"
-                                  min={0}
-                                  step="0.01"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                                <span className="text-sm text-muted-foreground whitespace-nowrap">
-                                  Dose/Ha
-                                </span>
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
                               </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <CollapsibleContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="relative md:col-span-2 w-full">
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar por código, nome, grupo, classe ou lote."
+                          value={buscaInsumos}
+                          onChange={(e) => setBuscaInsumos(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                    <div className="border rounded-lg p-2 max-h-64 overflow-y-auto space-y-2">
+                      {insumosFiltrados.length === 0 ? (
+                        <div className="text-center py-4 text-sm text-muted-foreground">
+                          Nenhum insumo encontrado
+                        </div>
+                      ) : (
+                        insumosFiltrados.map((insumo) => {
+                          const material = materiaisAgricolas[insumo.idItem];
+                          const categoria = material?.categoriaId
+                            ? categorias[material.categoriaId]
+                            : null;
+                          const isSelected = insumosSelecionados.has(
+                            insumo.idEstoque
+                          );
+                          const dadosInsumo = insumosSelecionados.get(
+                            insumo.idEstoque
+                          ) || {
+                            idItem: insumo.idItem,
+                            doseHA: 0,
+                          };
+
+                          return (
+                            <div
+                              key={insumo.idEstoque}
+                              className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded transition-colors"
+                            >
+                              <Checkbox
+                                id={`insumo-${insumo.idEstoque}`}
+                                checked={isSelected}
+                                onCheckedChange={() =>
+                                  handleToggleInsumo(
+                                    insumo.idEstoque,
+                                    insumo.idItem
+                                  )
+                                }
+                              />
+                              <Label
+                                htmlFor={`insumo-${insumo.idEstoque}`}
+                                className="text-sm font-normal cursor-pointer flex-1"
+                              >
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium">
+                                    {material?.nomeComercial ||
+                                      `Item ${insumo.idItem}`}
+                                  </span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {material?.codigo || insumo.idItem}
+                                  </Badge>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    {insumo.tipoEstoque}
+                                  </Badge>
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {categoria?.descricaoResumida ||
+                                    "Sem descrição"}{" "}
+                                  • Lote: {insumo.nLote} • Disponível:{" "}
+                                  {insumo.saldoDispon} {insumo.unidade}
+                                </div>
+                              </Label>
+                              {isSelected && (
+                                <div className="flex items-center gap-2 ml-2">
+                                  <Input
+                                    type="number"
+                                    placeholder="Dose/Ha"
+                                    value={dadosInsumo.doseHA}
+                                    onChange={(e) =>
+                                      handleDoseHAInsumo(
+                                        insumo.idEstoque,
+                                        insumo.idItem,
+                                        parseFloat(e.target.value) || 0
+                                      )
+                                    }
+                                    className="w-24"
+                                    min={0}
+                                    step="0.01"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                  <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                    Dose/Ha
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
 
                 <div className="space-y-2">
                   <Label htmlFor="observacoes">Observações</Label>
